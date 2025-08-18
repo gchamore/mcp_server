@@ -78,9 +78,13 @@ class MultiTenantGmailManager {
     oauth2Client.setCredentials(tokens);
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
     
-    // Récupérer info utilisateur
+    // ✅ CORRECTION TYPESCRIPT
     const profile = await gmail.users.getProfile({ userId: 'me' });
-    const userEmail = profile.data.emailAddress;
+    const userEmail = profile.data.emailAddress as string;
+    
+    if (!userEmail) {
+      throw new Error('Email utilisateur manquant dans la réponse Gmail');
+    }
     
     // Stocker la session
     this.userSessions.set(userId, {
