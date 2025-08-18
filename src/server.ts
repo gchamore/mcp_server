@@ -1,4 +1,5 @@
 // src/server.ts - Version Railway avec un seul port
+import 'dotenv/config';
 import express from "express";
 import path from "path";
 import { fileURLToPath } from 'url';

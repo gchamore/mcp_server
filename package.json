@@ -2,12 +2,15 @@
   "name": "gmail-mcp-server-ts",
   "version": "1.0.0",
   "type": "module",
-  "main": "dist/server.ts",
+  "main": "dist/src/server.js",
   "scripts": {
-    "start": "node --loader ts-node/esm server.ts",
-    "dev": "tsx watch server.ts",
+    "start": "node dist/src/server.js",
+    "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "serve": "node dist/server.js"
+    "serve": "node dist/src/server.js",
+    "test": "node test-local.cjs",
+    "test:railway": "node test-railway.cjs",
+    "validate": "node validate-deployment.cjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
