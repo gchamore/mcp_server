@@ -1,0 +1,23 @@
+# Credentials et tokens
+credentials.json
+token.json
+tokens/
+*.token
+
+# Variables d'environnement
+.env
+.env.local
+.env.production
+
+# Dépendances
+node_modules/
+dist/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
