@@ -8,10 +8,12 @@
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "declaration": true,
+    "declaration": false,
+    "sourceMap": false,
+    "removeComments": true,
     "outDir": "./dist",
     "rootDir": "./"
   },
-  "include": ["*.ts", "**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
 }

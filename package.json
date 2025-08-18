@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node dist/src/server.js",
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "NODE_OPTIONS='--max-old-space-size=1024' tsc",
+    "build:production": "NODE_OPTIONS='--max-old-space-size=1024' tsc --incremental false",
+    "postinstall": "echo 'Using pre-compiled dist/ files for production'",
     "serve": "node dist/src/server.js",
     "test": "node test-local.cjs",
     "test:railway": "node test-railway.cjs",
