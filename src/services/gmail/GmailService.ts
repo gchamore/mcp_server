@@ -516,6 +516,18 @@ export class GmailService extends BaseService {
     }
   }
 
+  // Supprimer une session Gmail
+  removeSession(userId: string): boolean {
+    const sessionExists = this.gmailSessions.has(userId);
+    if (sessionExists) {
+      this.gmailSessions.delete(userId);
+      console.log(`🗑️ Session Gmail supprimée pour l'utilisateur: ${userId}`);
+      return true;
+    }
+    console.log(`⚠️ Aucune session Gmail trouvée pour l'utilisateur: ${userId}`);
+    return false;
+  }
+
   getAllSessions(): GmailSession[] {
     return Array.from(this.gmailSessions.values());
   }

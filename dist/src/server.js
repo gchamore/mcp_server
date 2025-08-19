@@ -217,18 +217,23 @@ app.post('/api/disconnect/:userId/:serviceName', async (req, res) => {
                 error: `Service ${serviceName} non trouvé`
             });
         }
-        if (!multiTenantManager.hasServiceSession(userId, serviceName)) {
+        let hasSession = multiTenantManager.hasServiceSession(userId, serviceName);
+        if (!hasSession && serviceName === 'gmail') {
+            const gmailSession = gmailService.getGmailSession(userId);
+            hasSession = !!gmailSession;
+            console.log(`[Disconnect] Session Gmail trouvée directement dans GmailService: ${!!gmailSession}`);
+        }
+        if (!hasSession) {
+            console.log(`[Disconnect] Aucune session ${serviceName} active pour l'utilisateur ${userId}`);
             return res.status(404).json({
                 success: false,
-                error: `Aucune session ${serviceName} trouvée pour l'utilisateur ${userId}`
+                error: `Aucune session active ${serviceName} trouvée pour l'utilisateur ${userId}`
             });
         }
         const removed = multiTenantManager.removeServiceSession(userId, serviceName);
-        if (removed && serviceName === 'gmail') {
-            const gmailSession = gmailService.getGmailSession(userId);
-            if (gmailSession) {
-                console.log(`[Disconnect] Nettoyage session Gmail pour ${userId}`);
-            }
+        if (serviceName === 'gmail') {
+            const gmailRemoved = gmailService.removeSession(userId);
+            console.log(`[Disconnect] Session Gmail supprimée du service: ${gmailRemoved}`);
         }
         if (removed) {
             console.log(`[Disconnect] Session ${serviceName} supprimée pour l'utilisateur ${userId}`);

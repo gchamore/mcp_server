@@ -318,10 +318,20 @@ app.post('/api/disconnect/:userId/:serviceName', async (req, res) => {
     }
     
     // Vérifier que l'utilisateur a une session pour ce service
-    if (!multiTenantManager.hasServiceSession(userId, serviceName)) {
+    let hasSession = multiTenantManager.hasServiceSession(userId, serviceName);
+    
+    // Pour Gmail, vérifier aussi directement dans le service Gmail
+    if (!hasSession && serviceName === 'gmail') {
+      const gmailSession = gmailService.getGmailSession(userId);
+      hasSession = !!gmailSession;
+      console.log(`[Disconnect] Session Gmail trouvée directement dans GmailService: ${!!gmailSession}`);
+    }
+    
+    if (!hasSession) {
+      console.log(`[Disconnect] Aucune session ${serviceName} active pour l'utilisateur ${userId}`);
       return res.status(404).json({
         success: false,
-        error: `Aucune session ${serviceName} trouvée pour l'utilisateur ${userId}`
+        error: `Aucune session active ${serviceName} trouvée pour l'utilisateur ${userId}`
       });
     }
     
@@ -329,13 +339,10 @@ app.post('/api/disconnect/:userId/:serviceName', async (req, res) => {
     const removed = multiTenantManager.removeServiceSession(userId, serviceName);
     
     // Si c'est Gmail, nettoyer aussi la session Gmail du service
-    if (removed && serviceName === 'gmail') {
-      // Supprimer aussi la session du service Gmail
-      const gmailSession = gmailService.getGmailSession(userId);
-      if (gmailSession) {
-        // Le service Gmail devrait avoir une méthode pour nettoyer les sessions
-        console.log(`[Disconnect] Nettoyage session Gmail pour ${userId}`);
-      }
+    if (serviceName === 'gmail') {
+      // Supprimer aussi la session du service Gmail directement
+      const gmailRemoved = gmailService.removeSession(userId);
+      console.log(`[Disconnect] Session Gmail supprimée du service: ${gmailRemoved}`);
     }
     
     if (removed) {

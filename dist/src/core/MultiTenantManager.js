@@ -50,10 +50,14 @@ export class MultiTenantManager {
     }
     hasServiceSession(userId, serviceName) {
         const userSession = this.getUserSession(userId);
-        if (!userSession)
+        if (!userSession) {
+            console.log(`[MultiTenant] Aucune session utilisateur trouvée pour ${userId}`);
             return false;
+        }
         if (serviceName === 'gmail') {
-            return !!userSession.services.gmail?.isAuthenticated;
+            const hasGmail = !!userSession.services.gmail?.isAuthenticated;
+            console.log(`[MultiTenant] Session Gmail pour ${userId}: ${hasGmail} (session: ${!!userSession.services.gmail})`);
+            return hasGmail;
         }
         return false;
     }
