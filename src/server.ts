@@ -247,6 +247,24 @@ app.get('/oauth/callback', async (req, res) => {
   }
 });
 
+// ✅ GESTION DES MESSAGES MCP
+app.post('/message', async (req, res) => {
+  console.log('🎯 Route /message appelée !');
+  const sessionId = req.query.sessionId as string;
+  
+  if (!sessionId) {
+    console.log('❌ SessionId manquant');
+    res.status(400).send("Missing sessionId");
+    return;
+  }
+
+  console.log(`✅ [MCP] Message reçu avec sessionId: ${sessionId}`);
+  res.status(200).send('OK');
+});
+
+// ✅ LOG IMMÉDIAT APRÈS LA DÉFINITION
+console.log('📋 Route POST /message définie !');
+
 // ✅ ENDPOINTS MCP PAR UTILISATEUR
 app.get('/:userId/gmail/sse', async (req, res) => {
   const userId = req.params.userId;
@@ -625,24 +643,24 @@ app.get('/:userId/gmail/sse', async (req, res) => {
   }
 });
 
-// ✅ GESTION DES MESSAGES MCP
-app.post('/message', async (req, res) => {
-  console.log('🎯 Route /message appelée !');
-  console.log('📝 Method:', req.method);
-  console.log('📝 URL:', req.url);
-  console.log('📝 Query:', req.query);
+// // ✅ GESTION DES MESSAGES MCP
+// app.post('/message', async (req, res) => {
+//   console.log('🎯 Route /message appelée !');
+//   console.log('📝 Method:', req.method);
+//   console.log('📝 URL:', req.url);
+//   console.log('📝 Query:', req.query);
   
-  const sessionId = req.query.sessionId as string;
+//   const sessionId = req.query.sessionId as string;
   
-  if (!sessionId) {
-    console.log('❌ SessionId manquant');
-    res.status(400).send("Missing sessionId");
-    return;
-  }
+//   if (!sessionId) {
+//     console.log('❌ SessionId manquant');
+//     res.status(400).send("Missing sessionId");
+//     return;
+//   }
 
-  console.log(`✅ [MCP] Message reçu avec sessionId: ${sessionId}`);
-  res.status(200).send('OK');
-});
+//   console.log(`✅ [MCP] Message reçu avec sessionId: ${sessionId}`);
+//   res.status(200).send('OK');
+// });
 
 // ✅ API DE STATUT
 app.get('/api/status', (req, res) => {
