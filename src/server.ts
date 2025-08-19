@@ -627,14 +627,20 @@ app.get('/:userId/gmail/sse', async (req, res) => {
 
 // ✅ GESTION DES MESSAGES MCP
 app.post('/message', async (req, res) => {
+  console.log('🎯 Route /message appelée !');
+  console.log('📝 Method:', req.method);
+  console.log('📝 URL:', req.url);
+  console.log('📝 Query:', req.query);
+  
   const sessionId = req.query.sessionId as string;
   
   if (!sessionId) {
+    console.log('❌ SessionId manquant');
     res.status(400).send("Missing sessionId");
     return;
   }
 
-  console.log(`[MCP] Message reçu avec sessionId: ${sessionId}`);
+  console.log(`✅ [MCP] Message reçu avec sessionId: ${sessionId}`);
   res.status(200).send('OK');
 });
 
@@ -673,4 +679,12 @@ app.listen(PORT, () => {
   console.log(`🌐 Base URL: ${BASE_URL}`);
   console.log(`📱 Interface: ${BASE_URL}`);
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+  
+  // ✅ DEBUG: Lister toutes les routes
+  console.log('🔍 Routes enregistrées:');
+  app._router.stack.forEach((r) => {
+    if (r.route && r.route.path) {
+      console.log(`  ${Object.keys(r.route.methods).join(',').toUpperCase()} ${r.route.path}`);
+    }
+  });
 });
