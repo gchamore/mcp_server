@@ -1,655 +1,662 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Axonaut MCP - Connexion</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Axonaut MCP - Connexion</title>
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #333;
-        }
+		body {
+			font-family: 'Inter', sans-serif;
+			background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+			min-height: 100vh;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: #333;
+		}
 
-        .back-btn {
-            position: fixed;
-            top: 2rem;
-            left: 2rem;
-            background: rgba(255, 255, 255, 0.9);
-            color: #333;
-            border: none;
-            padding: 0.8rem 1.2rem;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 500;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            backdrop-filter: blur(10px);
-        }
+		.back-btn {
+			position: fixed;
+			top: 2rem;
+			left: 2rem;
+			background: rgba(255, 255, 255, 0.9);
+			color: #333;
+			border: none;
+			padding: 0.8rem 1.2rem;
+			border-radius: 50px;
+			cursor: pointer;
+			transition: all 0.3s ease;
+			font-weight: 500;
+			text-decoration: none;
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			backdrop-filter: blur(10px);
+		}
 
-        .back-btn:hover {
-            background: white;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
+		.back-btn:hover {
+			background: white;
+			transform: translateY(-2px);
+			box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+		}
 
-        .container {
-            background: white;
-            border-radius: 20px;
-            padding: 3rem;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.1);
-            max-width: 500px;
-            width: 90%;
-            text-align: center;
-            backdrop-filter: blur(10px);
-        }
+		.container {
+			background: white;
+			border-radius: 20px;
+			padding: 3rem;
+			box-shadow: 0 30px 60px rgba(0, 0, 0, 0.1);
+			max-width: 500px;
+			width: 90%;
+			text-align: center;
+			backdrop-filter: blur(10px);
+		}
 
-        .logo {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 2rem;
-            font-size: 2rem;
-            color: white;
-        }
+		.logo {
+			width: 80px;
+			height: 80px;
+			background: linear-gradient(135deg, #1e3c72, #2a5298);
+			border-radius: 20px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			margin: 0 auto 2rem;
+			font-size: 2rem;
+			color: white;
+		}
 
-        h1 {
-            color: #1e3c72;
-            margin-bottom: 0.5rem;
-            font-weight: 700;
-            font-size: 2rem;
-        }
+		h1 {
+			color: #1e3c72;
+			margin-bottom: 0.5rem;
+			font-weight: 700;
+			font-size: 2rem;
+		}
 
-        .subtitle {
-            color: #666;
-            margin-bottom: 2rem;
-            font-size: 1.1rem;
-        }
+		.subtitle {
+			color: #666;
+			margin-bottom: 2rem;
+			font-size: 1.1rem;
+		}
 
-        .form-group {
-            margin-bottom: 1.5rem;
-            text-align: left;
-        }
+		.form-group {
+			margin-bottom: 1.5rem;
+			text-align: left;
+		}
 
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: #333;
-        }
+		label {
+			display: block;
+			margin-bottom: 0.5rem;
+			font-weight: 500;
+			color: #333;
+		}
 
-        input {
-            width: 100%;
-            padding: 0.8rem 1rem;
-            border: 2px solid #e1e5e9;
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            font-family: 'Inter', sans-serif;
-        }
+		input {
+			width: 100%;
+			padding: 0.8rem 1rem;
+			border: 2px solid #e1e5e9;
+			border-radius: 10px;
+			font-size: 1rem;
+			transition: all 0.3s ease;
+			font-family: 'Inter', sans-serif;
+		}
 
-        input:focus {
-            outline: none;
-            border-color: #1e3c72;
-            box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
-        }
+		input:focus {
+			outline: none;
+			border-color: #1e3c72;
+			box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
+		}
 
-        .auth-btn {
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
-            color: white;
-            border: none;
-            padding: 1rem 2rem;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
-            font-size: 1.1rem;
-            width: 100%;
-            margin-top: 1rem;
-        }
+		.auth-btn {
+			background: linear-gradient(135deg, #1e3c72, #2a5298);
+			color: white;
+			border: none;
+			padding: 1rem 2rem;
+			border-radius: 12px;
+			cursor: pointer;
+			transition: all 0.3s ease;
+			font-weight: 600;
+			font-size: 1.1rem;
+			width: 100%;
+			margin-top: 1rem;
+		}
 
-        .auth-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(30, 60, 114, 0.3);
-        }
+		.auth-btn:hover:not(:disabled) {
+			transform: translateY(-2px);
+			box-shadow: 0 10px 30px rgba(30, 60, 114, 0.3);
+		}
 
-        .auth-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
+		.auth-btn:disabled {
+			opacity: 0.6;
+			cursor: not-allowed;
+		}
 
-        .status {
-            margin-top: 1.5rem;
-            padding: 1rem;
-            border-radius: 10px;
-            font-weight: 500;
-            display: none;
-        }
+		.status {
+			margin-top: 1.5rem;
+			padding: 1rem;
+			border-radius: 10px;
+			font-weight: 500;
+			display: none;
+		}
 
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
+		.status.success {
+			background: #d4edda;
+			color: #155724;
+			border: 1px solid #c3e6cb;
+		}
 
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
+		.status.error {
+			background: #f8d7da;
+			color: #721c24;
+			border: 1px solid #f5c6cb;
+		}
 
-        .status.loading {
-            background: #cce5ff;
-            color: #004085;
-            border: 1px solid #b3d9ff;
-        }
+		.status.loading {
+			background: #cce5ff;
+			color: #004085;
+			border: 1px solid #b3d9ff;
+		}
 
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #004085;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 1s ease-in-out infinite;
-            margin-right: 0.5rem;
-        }
+		.loading-spinner {
+			display: inline-block;
+			width: 20px;
+			height: 20px;
+			border: 2px solid #004085;
+			border-radius: 50%;
+			border-top-color: transparent;
+			animation: spin 1s ease-in-out infinite;
+			margin-right: 0.5rem;
+		}
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+		@keyframes spin {
+			to {
+				transform: rotate(360deg);
+			}
+		}
 
-        .user-info {
-            background: #e8f4fd;
-            border: 1px solid #bee5eb;
-            border-radius: 10px;
-            padding: 1.5rem;
-            margin-top: 1.5rem;
-            display: none;
-        }
+		.user-info {
+			background: #e8f4fd;
+			border: 1px solid #bee5eb;
+			border-radius: 10px;
+			padding: 1.5rem;
+			margin-top: 1.5rem;
+			display: none;
+		}
 
-        .user-info h3 {
-            color: #0c5460;
-            margin-bottom: 1.5rem;
-            text-align: center;
-        }
+		.user-info h3 {
+			color: #0c5460;
+			margin-bottom: 1.5rem;
+			text-align: center;
+		}
 
-        .mcp-url-container {
-            margin-bottom: 1.5rem;
-        }
+		.mcp-url-container {
+			margin-bottom: 1.5rem;
+		}
 
-        .mcp-url-container label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            color: #0c5460;
-        }
+		.mcp-url-container label {
+			display: block;
+			margin-bottom: 0.5rem;
+			font-weight: 600;
+			color: #0c5460;
+		}
 
-        .url-copy-container {
-            display: flex;
-            gap: 0.5rem;
-        }
+		.url-copy-container {
+			display: flex;
+			gap: 0.5rem;
+		}
 
-        .url-copy-container input {
-            flex: 1;
-            padding: 0.8rem;
-            border: 2px solid #bee5eb;
-            border-radius: 8px;
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-            font-size: 0.9rem;
-            background: white;
-            color: #333;
-        }
+		.url-copy-container input {
+			flex: 1;
+			padding: 0.8rem;
+			border: 2px solid #bee5eb;
+			border-radius: 8px;
+			font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+			font-size: 0.9rem;
+			background: white;
+			color: #333;
+		}
 
-        .copy-btn {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 0.8rem 1.2rem;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
-            white-space: nowrap;
-        }
+		.copy-btn {
+			background: #28a745;
+			color: white;
+			border: none;
+			padding: 0.8rem 1.2rem;
+			border-radius: 8px;
+			cursor: pointer;
+			transition: all 0.3s ease;
+			font-weight: 600;
+			white-space: nowrap;
+		}
 
-        .copy-btn:hover {
-            background: #218838;
-            transform: translateY(-1px);
-        }
+		.copy-btn:hover {
+			background: #218838;
+			transform: translateY(-1px);
+		}
 
-        .copy-btn.copied {
-            background: #17a2b8;
-        }
+		.copy-btn.copied {
+			background: #17a2b8;
+		}
 
-        .disconnect-btn {
-            background: #dc3545;
-            color: white;
-            border: none;
-            padding: 0.8rem 1.5rem;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
-            width: 100%;
-        }
+		.disconnect-btn {
+			background: #dc3545;
+			color: white;
+			border: none;
+			padding: 0.8rem 1.5rem;
+			border-radius: 8px;
+			cursor: pointer;
+			transition: all 0.3s ease;
+			font-weight: 600;
+			width: 100%;
+		}
 
-        .disconnect-btn:hover {
-            background: #c82333;
-            transform: translateY(-1px);
-        }
+		.disconnect-btn:hover {
+			background: #c82333;
+			transform: translateY(-1px);
+		}
 
-        .help-text {
-            font-size: 0.85rem;
-            color: #6c757d;
-            margin-top: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
+		.help-text {
+			font-size: 0.85rem;
+			color: #6c757d;
+			margin-top: 0.5rem;
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+		}
 
-        .tools-section {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin-top: 1.5rem;
-            display: none;
-        }
+		.tools-section {
+			background: #f8f9fa;
+			border: 1px solid #dee2e6;
+			border-radius: 15px;
+			padding: 1.5rem;
+			margin-top: 1.5rem;
+			display: none;
+		}
 
-        .tools-section h3 {
-            color: #495057;
-            margin-bottom: 0.5rem;
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
+		.tools-section h3 {
+			color: #495057;
+			margin-bottom: 0.5rem;
+			font-size: 1.1rem;
+			font-weight: 600;
+		}
 
-        .tools-subtitle {
-            color: #6c757d;
-            font-size: 0.9rem;
-            margin-bottom: 1.5rem;
-        }
+		.tools-subtitle {
+			color: #6c757d;
+			font-size: 0.9rem;
+			margin-bottom: 1.5rem;
+		}
 
-        .tools-list {
-            display: grid;
-            gap: 0.75rem;
-        }
+		.tools-list {
+			display: grid;
+			gap: 0.75rem;
+		}
 
-        .tool-item {
-            background: white;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 0.75rem 1rem;
-            transition: all 0.2s ease;
-            cursor: default;
-        }
+		.tool-item {
+			background: white;
+			border: 1px solid #e9ecef;
+			border-radius: 8px;
+			padding: 0.75rem 1rem;
+			transition: all 0.2s ease;
+			cursor: default;
+		}
 
-        .tool-item:hover {
-            border-color: #2a5298;
-            box-shadow: 0 2px 8px rgba(42, 82, 152, 0.1);
-        }
+		.tool-item:hover {
+			border-color: #2a5298;
+			box-shadow: 0 2px 8px rgba(42, 82, 152, 0.1);
+		}
 
-        .tool-name {
-            font-weight: 500;
-            color: #495057;
-            margin-bottom: 0.25rem;
-        }
+		.tool-name {
+			font-weight: 500;
+			color: #495057;
+			margin-bottom: 0.25rem;
+		}
 
-        .tool-description {
-            font-size: 0.85rem;
-            color: #6c757d;
-            line-height: 1.4;
-        }
+		.tool-description {
+			font-size: 0.85rem;
+			color: #6c757d;
+			line-height: 1.4;
+		}
 
-        @media (max-width: 768px) {
-            .container {
-                padding: 2rem;
-                margin: 1rem;
-            }
-            
-            .back-btn {
-                position: relative;
-                top: auto;
-                left: auto;
-                margin-bottom: 2rem;
-                align-self: flex-start;
-            }
-        }        @media (max-width: 768px) {
-            .container {
-                padding: 2rem;
-                margin: 1rem;
-            }
-            
-            .back-btn {
-                top: 1rem;
-                left: 1rem;
-                padding: 0.6rem 1rem;
-            }
-        }
-    </style>
+		@media (max-width: 768px) {
+			.container {
+				padding: 2rem;
+				margin: 1rem;
+			}
+
+			.back-btn {
+				position: relative;
+				top: auto;
+				left: auto;
+				margin-bottom: 2rem;
+				align-self: flex-start;
+			}
+		}
+
+		@media (max-width: 768px) {
+			.container {
+				padding: 2rem;
+				margin: 1rem;
+			}
+
+			.back-btn {
+				top: 1rem;
+				left: 1rem;
+				padding: 0.6rem 1rem;
+			}
+		}
+	</style>
 </head>
+
 <body>
-    <a href="../" class="back-btn">
-        <i class="fas fa-arrow-left"></i>
-        Retour
-    </a>
+	<a href="../" class="back-btn">
+		<i class="fas fa-arrow-left"></i>
+		Retour
+	</a>
 
-    <div class="container">
-        <div class="logo">
-            <i class="fas fa-chart-line"></i>
-        </div>
-        <h1>Axonaut MCP</h1>
-        <p class="subtitle">Connectez votre compte Axonaut pour utiliser le Model Context Protocol</p>
+	<div class="container">
+		<div class="logo">
+			<i class="fas fa-chart-line"></i>
+		</div>
+		<h1>Axonaut MCP</h1>
+		<p class="subtitle">Connectez votre compte Axonaut pour utiliser le Model Context Protocol</p>
 
-        <div id="auth-form">
-            <div class="form-group">
-                <label for="apiKey">Votre clé API Axonaut :</label>
-                <input type="password" id="apiKey" placeholder="Votre clé API Axonaut" required>
-                <div class="help-text">
-                    <i class="fas fa-key"></i> 
-                    Vous pouvez générer votre clé API dans les paramètres de votre compte Axonaut
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="userEmail">Email (optionnel) :</label>
-                <input type="email" id="userEmail" placeholder="votre@email.com">
-                <div class="help-text">
-                    <i class="fas fa-envelope"></i> 
-                    Pour identifier la session dans l'interface MCP
-                </div>
-            </div>
+		<div id="auth-form">
+			<div class="form-group">
+				<label for="apiKey">Votre clé API Axonaut :</label>
+				<input type="password" id="apiKey" placeholder="Votre clé API Axonaut" required>
+				<div class="help-text">
+					<i class="fas fa-key"></i>
+					Vous pouvez générer votre clé API dans les paramètres de votre compte Axonaut
+				</div>
+			</div>
 
-            <button id="auth-btn" class="auth-btn">
-                <i class="fas fa-plug"></i>
-                Se connecter à Axonaut
-            </button>
-        </div>
+			<div class="form-group">
+				<label for="userEmail">Email (optionnel) :</label>
+				<input type="email" id="userEmail" placeholder="votre@email.com">
+				<div class="help-text">
+					<i class="fas fa-envelope"></i>
+					Pour identifier la session dans l'interface MCP
+				</div>
+			</div>
 
-        <div id="status" class="status"></div>
-        
-        <div id="user-info" class="user-info">
-            <h3><i class="fas fa-check-circle"></i> Connexion Axonaut établie</h3>
-            
-            <div class="mcp-url-container">
-                <label for="mcp-url">URL MCP à copier dans Dust :</label>
-                <div class="url-copy-container">
-                    <input type="text" id="mcp-url" readonly>
-                    <button id="copy-btn" class="copy-btn">
-                        <i class="fas fa-copy"></i>
-                        Copier
-                    </button>
-                </div>
-            </div>
-            
-            <button id="disconnect-btn" class="disconnect-btn">
-                <i class="fas fa-sign-out-alt"></i>
-                Se déconnecter
-            </button>
-        </div>
+			<button id="auth-btn" class="auth-btn">
+				<i class="fas fa-plug"></i>
+				Se connecter à Axonaut
+			</button>
+		</div>
 
-        <div id="tools-section" class="tools-section">
-            <h3><i class="fas fa-tools"></i> Available tools</h3>
-            <p class="tools-subtitle">Add all 6 actions as tools in your MCP client</p>
-            
-            <div class="tools-list">
-                <div class="tool-item">
-                    <div class="tool-name">axonaut_list_companies</div>
-                    <div class="tool-description">Lister les entreprises Axonaut avec recherche et pagination</div>
-                </div>
-                
-                <div class="tool-item">
-                    <div class="tool-name">axonaut_search_company</div>
-                    <div class="tool-description">Rechercher une entreprise spécifique par nom</div>
-                </div>
-                
-                <div class="tool-item">
-                    <div class="tool-name">axonaut_create_company</div>
-                    <div class="tool-description">Créer une nouvelle entreprise Axonaut</div>
-                </div>
-                
-                <div class="tool-item">
-                    <div class="tool-name">axonaut_list_invoices</div>
-                    <div class="tool-description">Lister les factures avec pagination et filtrage par statut</div>
-                </div>
-                
-                <div class="tool-item">
-                    <div class="tool-name">axonaut_get_invoice_detail</div>
-                    <div class="tool-description">Obtenir le détail complet d'une facture spécifique</div>
-                </div>
-                
-                <div class="tool-item">
-                    <div class="tool-name">axonaut_get_account_info</div>
-                    <div class="tool-description">Obtenir les informations du compte Axonaut</div>
-                </div>
-            </div>
-        </div>
-    </div>
+		<div id="status" class="status"></div>
 
-    <script>
-        // Configuration
-        const baseUrl = window.location.origin;
-        let currentUserId = null;
+		<div id="user-info" class="user-info">
+			<h3><i class="fas fa-check-circle"></i> Connexion Axonaut établie</h3>
 
-        // Éléments DOM
-        const authForm = document.getElementById('auth-form');
-        const authBtn = document.getElementById('auth-btn');
-        const status = document.getElementById('status');
-        const userInfo = document.getElementById('user-info');
-        const toolsSection = document.getElementById('tools-section');
-        const apiKeyInput = document.getElementById('apiKey');
-        const userEmailInput = document.getElementById('userEmail');
-        const disconnectBtn = document.getElementById('disconnect-btn');
-        const mcpUrlInput = document.getElementById('mcp-url');
-        const copyBtn = document.getElementById('copy-btn');
+			<div class="mcp-url-container">
+				<label for="mcp-url">URL MCP à copier dans Dust :</label>
+				<div class="url-copy-container">
+					<input type="text" id="mcp-url" readonly>
+					<button id="copy-btn" class="copy-btn">
+						<i class="fas fa-copy"></i>
+						Copier
+					</button>
+				</div>
+			</div>
 
-        // Fonctions utilitaires
-        function showStatus(message, type = 'loading') {
-            status.className = `status ${type}`;
-            status.style.display = 'block';
-            
-            if (type === 'loading') {
-                status.innerHTML = `<span class="loading-spinner"></span>${message}`;
-            } else {
-                const icon = type === 'success' ? 'check-circle' : 'exclamation-triangle';
-                status.innerHTML = `<i class="fas fa-${icon}"></i> ${message}`;
-            }
-        }
+			<button id="disconnect-btn" class="disconnect-btn">
+				<i class="fas fa-sign-out-alt"></i>
+				Se déconnecter
+			</button>
+		</div>
 
-        function hideStatus() {
-            status.style.display = 'none';
-        }
+		<div id="tools-section" class="tools-section">
+			<h3><i class="fas fa-tools"></i> Available tools</h3>
+			<p class="tools-subtitle">Add all 6 actions as tools in your MCP client</p>
 
-        function showUserInfo(userData) {
-            const mcpUrl = `${baseUrl}/${userData.userId}/mcp/sse`;
-            mcpUrlInput.value = mcpUrl;
-            
-            authForm.style.display = 'none';
-            userInfo.style.display = 'block';
-            toolsSection.style.display = 'block';
-            hideStatus();
-        }
+			<div class="tools-list">
+				<div class="tool-item">
+					<div class="tool-name">axonaut_list_companies</div>
+					<div class="tool-description">Lister les entreprises Axonaut avec recherche et pagination</div>
+				</div>
 
-        function showAuthForm() {
-            authForm.style.display = 'block';
-            userInfo.style.display = 'none';
-            toolsSection.style.display = 'none';
-            hideStatus();
-        }
+				<div class="tool-item">
+					<div class="tool-name">axonaut_search_company</div>
+					<div class="tool-description">Rechercher une entreprise spécifique par nom</div>
+				</div>
 
-        // Fonction de copie
-        async function copyMcpUrl() {
-            try {
-                await navigator.clipboard.writeText(mcpUrlInput.value);
-                
-                // Feedback visuel
-                const originalText = copyBtn.innerHTML;
-                copyBtn.innerHTML = '<i class="fas fa-check"></i> Copié !';
-                copyBtn.classList.add('copied');
-                
-                setTimeout(() => {
-                    copyBtn.innerHTML = originalText;
-                    copyBtn.classList.remove('copied');
-                }, 2000);
-                
-            } catch (error) {
-                // Fallback pour les navigateurs qui ne supportent pas l'API Clipboard
-                mcpUrlInput.select();
-                mcpUrlInput.setSelectionRange(0, 99999);
-                document.execCommand('copy');
-                
-                const originalText = copyBtn.innerHTML;
-                copyBtn.innerHTML = '<i class="fas fa-check"></i> Copié !';
-                copyBtn.classList.add('copied');
-                
-                setTimeout(() => {
-                    copyBtn.innerHTML = originalText;
-                    copyBtn.classList.remove('copied');
-                }, 2000);
-            }
-        }
+				<div class="tool-item">
+					<div class="tool-name">axonaut_create_company</div>
+					<div class="tool-description">Créer une nouvelle entreprise Axonaut</div>
+				</div>
 
-        // Gestion de l'authentification
-        async function authenticateAxonaut() {
-            const apiKey = apiKeyInput.value.trim();
-            const userEmail = userEmailInput.value.trim() || undefined;
+				<div class="tool-item">
+					<div class="tool-name">axonaut_list_invoices</div>
+					<div class="tool-description">Lister les factures avec pagination et filtrage par statut</div>
+				</div>
 
-            if (!apiKey) {
-                showStatus('Veuillez remplir votre clé API', 'error');
-                return;
-            }
+				<div class="tool-item">
+					<div class="tool-name">axonaut_get_invoice_detail</div>
+					<div class="tool-description">Obtenir le détail complet d'une facture spécifique</div>
+				</div>
 
-            authBtn.disabled = true;
-            showStatus('Connexion à Axonaut en cours...');
+				<div class="tool-item">
+					<div class="tool-name">axonaut_get_account_info</div>
+					<div class="tool-description">Obtenir les informations du compte Axonaut</div>
+				</div>
+			</div>
+		</div>
+	</div>
 
-            try {
-                // Générer un ID utilisateur unique
-                currentUserId = 'user-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+	<script>
+		// Configuration
+		const baseUrl = window.location.origin;
+		let currentUserId = null;
 
-                const response = await fetch(`${baseUrl}/api/axonaut/auth`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        userId: currentUserId,
-                        baseUrl: 'https://axonaut.com',
-                        apiKey: apiKey,
-                        userEmail: userEmail
-                    })
-                });
+		// Éléments DOM
+		const authForm = document.getElementById('auth-form');
+		const authBtn = document.getElementById('auth-btn');
+		const status = document.getElementById('status');
+		const userInfo = document.getElementById('user-info');
+		const toolsSection = document.getElementById('tools-section');
+		const apiKeyInput = document.getElementById('apiKey');
+		const userEmailInput = document.getElementById('userEmail');
+		const disconnectBtn = document.getElementById('disconnect-btn');
+		const mcpUrlInput = document.getElementById('mcp-url');
+		const copyBtn = document.getElementById('copy-btn');
 
-                const result = await response.json();
+		// Fonctions utilitaires
+		function showStatus(message, type = 'loading') {
+			status.className = `status ${type}`;
+			status.style.display = 'block';
 
-                if (result.success) {
-                    showStatus('Connexion réussie !', 'success');
-                    setTimeout(() => {
-                        showUserInfo({
-                            userId: currentUserId,
-                            userEmail: result.userEmail || userEmail
-                        });
-                    }, 1000);
-                } else {
-                    showStatus(`Erreur : ${result.error}`, 'error');
-                }
-            } catch (error) {
-                console.error('Erreur connexion:', error);
-                showStatus('Erreur de connexion au serveur', 'error');
-            } finally {
-                authBtn.disabled = false;
-            }
-        }
+			if (type === 'loading') {
+				status.innerHTML = `<span class="loading-spinner"></span>${message}`;
+			} else {
+				const icon = type === 'success' ? 'check-circle' : 'exclamation-triangle';
+				status.innerHTML = `<i class="fas fa-${icon}"></i> ${message}`;
+			}
+		}
 
-        // Gestion de la déconnexion
-        async function disconnect() {
-            if (!currentUserId) return;
+		function hideStatus() {
+			status.style.display = 'none';
+		}
 
-            disconnectBtn.disabled = true;
-            showStatus('Déconnexion en cours...');
+		function showUserInfo(userData) {
+			const mcpUrl = `${baseUrl}/${userData.userId}/mcp/sse`;
+			mcpUrlInput.value = mcpUrl;
 
-            try {
-                const response = await fetch(`${baseUrl}/api/disconnect/${currentUserId}/axonaut`, {
-                    method: 'POST'
-                });
+			authForm.style.display = 'none';
+			userInfo.style.display = 'block';
+			toolsSection.style.display = 'block';
+			hideStatus();
+		}
 
-                const result = await response.json();
+		function showAuthForm() {
+			authForm.style.display = 'block';
+			userInfo.style.display = 'none';
+			toolsSection.style.display = 'none';
+			hideStatus();
+		}
 
-                if (result.success) {
-                    showStatus('Déconnexion réussie !', 'success');
-                    setTimeout(() => {
-                        currentUserId = null;
-                        showAuthForm();
-                        // Réinitialiser le formulaire
-                        apiKeyInput.value = '';
-                        userEmailInput.value = '';
-                    }, 1000);
-                } else {
-                    showStatus(`Erreur : ${result.error}`, 'error');
-                }
-            } catch (error) {
-                console.error('Erreur déconnexion:', error);
-                showStatus('Erreur de déconnexion', 'error');
-            } finally {
-                disconnectBtn.disabled = false;
-            }
-        }
+		// Fonction de copie
+		async function copyMcpUrl() {
+			try {
+				await navigator.clipboard.writeText(mcpUrlInput.value);
 
-        // Vérification de l'état au chargement
-        function checkUrlParams() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const success = urlParams.get('success');
-            const error = urlParams.get('error');
-            const userId = urlParams.get('userId');
-            const email = urlParams.get('email');
+				// Feedback visuel
+				const originalText = copyBtn.innerHTML;
+				copyBtn.innerHTML = '<i class="fas fa-check"></i> Copié !';
+				copyBtn.classList.add('copied');
 
-            if (error) {
-                showStatus(`Erreur : ${decodeURIComponent(error)}`, 'error');
-            } else if (success === 'true' && userId) {
-                currentUserId = userId;
-                showUserInfo({
-                    userId: userId,
-                    userEmail: email ? decodeURIComponent(email) : 'N/A'
-                });
-            }
-        }
+				setTimeout(() => {
+					copyBtn.innerHTML = originalText;
+					copyBtn.classList.remove('copied');
+				}, 2000);
 
-        // Event listeners
-        authBtn.addEventListener('click', authenticateAxonaut);
-        disconnectBtn.addEventListener('click', disconnect);
-        copyBtn.addEventListener('click', copyMcpUrl);
+			} catch (error) {
+				// Fallback pour les navigateurs qui ne supportent pas l'API Clipboard
+				mcpUrlInput.select();
+				mcpUrlInput.setSelectionRange(0, 99999);
+				document.execCommand('copy');
 
-        // Permettre l'authentification avec Entrée
-        [apiKeyInput, userEmailInput].forEach(input => {
-            input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    authenticateAxonaut();
-                }
-            });
-        });
+				const originalText = copyBtn.innerHTML;
+				copyBtn.innerHTML = '<i class="fas fa-check"></i> Copié !';
+				copyBtn.classList.add('copied');
 
-        // Initialisation
-        document.addEventListener('DOMContentLoaded', () => {
-            checkUrlParams();
-        });
-    </script>
+				setTimeout(() => {
+					copyBtn.innerHTML = originalText;
+					copyBtn.classList.remove('copied');
+				}, 2000);
+			}
+		}
+
+		// Gestion de l'authentification
+		async function authenticateAxonaut() {
+			const apiKey = apiKeyInput.value.trim();
+			const userEmail = userEmailInput.value.trim() || undefined;
+
+			if (!apiKey) {
+				showStatus('Veuillez remplir votre clé API', 'error');
+				return;
+			}
+
+			authBtn.disabled = true;
+			showStatus('Connexion à Axonaut en cours...');
+
+			try {
+				// Générer un ID utilisateur unique
+				currentUserId = 'user-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+
+				const response = await fetch(`${baseUrl}/api/axonaut/auth`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						userId: currentUserId,
+						baseUrl: 'https://axonaut.com',
+						apiKey: apiKey,
+						userEmail: userEmail
+					})
+				});
+
+				const result = await response.json();
+
+				if (result.success) {
+					showStatus('Connexion réussie !', 'success');
+					setTimeout(() => {
+						showUserInfo({
+							userId: currentUserId,
+							userEmail: result.userEmail || userEmail
+						});
+					}, 1000);
+				} else {
+					showStatus(`Erreur : ${result.error}`, 'error');
+				}
+			} catch (error) {
+				console.error('Erreur connexion:', error);
+				showStatus('Erreur de connexion au serveur', 'error');
+			} finally {
+				authBtn.disabled = false;
+			}
+		}
+
+		// Gestion de la déconnexion
+		async function disconnect() {
+			if (!currentUserId) return;
+
+			disconnectBtn.disabled = true;
+			showStatus('Déconnexion en cours...');
+
+			try {
+				const response = await fetch(`${baseUrl}/api/disconnect/${currentUserId}/axonaut`, {
+					method: 'POST'
+				});
+
+				const result = await response.json();
+
+				if (result.success) {
+					showStatus('Déconnexion réussie !', 'success');
+					setTimeout(() => {
+						currentUserId = null;
+						showAuthForm();
+						// Réinitialiser le formulaire
+						apiKeyInput.value = '';
+						userEmailInput.value = '';
+					}, 1000);
+				} else {
+					showStatus(`Erreur : ${result.error}`, 'error');
+				}
+			} catch (error) {
+				console.error('Erreur déconnexion:', error);
+				showStatus('Erreur de déconnexion', 'error');
+			} finally {
+				disconnectBtn.disabled = false;
+			}
+		}
+
+		// Vérification de l'état au chargement
+		function checkUrlParams() {
+			const urlParams = new URLSearchParams(window.location.search);
+			const success = urlParams.get('success');
+			const error = urlParams.get('error');
+			const userId = urlParams.get('userId');
+			const email = urlParams.get('email');
+
+			if (error) {
+				showStatus(`Erreur : ${decodeURIComponent(error)}`, 'error');
+			} else if (success === 'true' && userId) {
+				currentUserId = userId;
+				showUserInfo({
+					userId: userId,
+					userEmail: email ? decodeURIComponent(email) : 'N/A'
+				});
+			}
+		}
+
+		// Event listeners
+		authBtn.addEventListener('click', authenticateAxonaut);
+		disconnectBtn.addEventListener('click', disconnect);
+		copyBtn.addEventListener('click', copyMcpUrl);
+
+		// Permettre l'authentification avec Entrée
+		[apiKeyInput, userEmailInput].forEach(input => {
+			input.addEventListener('keypress', (e) => {
+				if (e.key === 'Enter') {
+					authenticateAxonaut();
+				}
+			});
+		});
+
+		// Initialisation
+		document.addEventListener('DOMContentLoaded', () => {
+			checkUrlParams();
+		});
+	</script>
 </body>
+
 </html>

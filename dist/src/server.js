@@ -30,7 +30,7 @@ const gmailService = new GmailService(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, BA
 const axonautService = new AxonautService();
 serviceRegistry.registerService(gmailService);
 serviceRegistry.registerService(axonautService);
-console.log('✅ Architecture initialisée avec les services:', serviceRegistry.getServiceNames());
+console.log('Architecture initialisée avec les services:', serviceRegistry.getServiceNames());
 setInterval(() => {
     multiTenantManager.cleanupExpiredSessions();
     gmailService.cleanupExpiredSessions();

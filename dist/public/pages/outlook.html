@@ -1,310 +1,313 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Service Bientôt Disponible - MCP Wesype</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Service Bientôt Disponible - MCP Wesype</title>
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #333;
-        }
+		body {
+			font-family: 'Inter', sans-serif;
+			background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+			min-height: 100vh;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: #333;
+		}
 
-        .back-btn {
-            position: fixed;
-            top: 2rem;
-            left: 2rem;
-            background: rgba(255, 255, 255, 0.9);
-            color: #333;
-            border: none;
-            padding: 0.8rem 1.2rem;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 500;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            backdrop-filter: blur(10px);
-        }
+		.back-btn {
+			position: fixed;
+			top: 2rem;
+			left: 2rem;
+			background: rgba(255, 255, 255, 0.9);
+			color: #333;
+			border: none;
+			padding: 0.8rem 1.2rem;
+			border-radius: 50px;
+			cursor: pointer;
+			transition: all 0.3s ease;
+			font-weight: 500;
+			text-decoration: none;
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			backdrop-filter: blur(10px);
+		}
 
-        .back-btn:hover {
-            background: white;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
+		.back-btn:hover {
+			background: white;
+			transform: translateY(-2px);
+			box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+		}
 
-        .container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 3rem;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            max-width: 500px;
-            width: 90%;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
+		.container {
+			background: rgba(255, 255, 255, 0.95);
+			backdrop-filter: blur(20px);
+			border-radius: 20px;
+			padding: 3rem;
+			box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+			max-width: 500px;
+			width: 90%;
+			text-align: center;
+			border: 1px solid rgba(255, 255, 255, 0.2);
+		}
 
-        .service-icon {
-            font-size: 4rem;
-            margin-bottom: 1.5rem;
-            color: #f39c12;
-        }
+		.service-icon {
+			font-size: 4rem;
+			margin-bottom: 1.5rem;
+			color: #f39c12;
+		}
 
-        .service-title {
-            font-size: 2.2rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            color: #2c3e50;
-        }
+		.service-title {
+			font-size: 2.2rem;
+			font-weight: 700;
+			margin-bottom: 1rem;
+			color: #2c3e50;
+		}
 
-        .coming-soon-badge {
-            background: #fff3cd;
-            color: #856404;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-weight: 600;
-            margin-bottom: 2rem;
-            display: inline-block;
-        }
+		.coming-soon-badge {
+			background: #fff3cd;
+			color: #856404;
+			padding: 0.5rem 1rem;
+			border-radius: 20px;
+			font-weight: 600;
+			margin-bottom: 2rem;
+			display: inline-block;
+		}
 
-        .description {
-            color: #6c757d;
-            line-height: 1.6;
-            margin-bottom: 2rem;
-            font-size: 1.1rem;
-        }
+		.description {
+			color: #6c757d;
+			line-height: 1.6;
+			margin-bottom: 2rem;
+			font-size: 1.1rem;
+		}
 
-        .features-preview {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 2rem;
-            margin: 2rem 0;
-            text-align: left;
-        }
+		.features-preview {
+			background: #f8f9fa;
+			border-radius: 15px;
+			padding: 2rem;
+			margin: 2rem 0;
+			text-align: left;
+		}
 
-        .features-title {
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: #2c3e50;
-            text-align: center;
-        }
+		.features-title {
+			font-weight: 600;
+			margin-bottom: 1rem;
+			color: #2c3e50;
+			text-align: center;
+		}
 
-        .feature-item {
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
-            padding: 0.5rem 0;
-            color: #495057;
-        }
+		.feature-item {
+			display: flex;
+			align-items: center;
+			gap: 0.8rem;
+			padding: 0.5rem 0;
+			color: #495057;
+		}
 
-        .feature-icon {
-            color: #f39c12;
-            width: 20px;
-        }
+		.feature-icon {
+			color: #f39c12;
+			width: 20px;
+		}
 
-        .notify-btn {
-            background: linear-gradient(45deg, #f39c12, #e67e22);
-            color: white;
-            border: none;
-            padding: 1rem 2rem;
-            border-radius: 50px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            text-decoration: none;
-            margin: 1rem;
-        }
+		.notify-btn {
+			background: linear-gradient(45deg, #f39c12, #e67e22);
+			color: white;
+			border: none;
+			padding: 1rem 2rem;
+			border-radius: 50px;
+			font-size: 1.1rem;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 0.3s ease;
+			display: inline-flex;
+			align-items: center;
+			gap: 0.5rem;
+			text-decoration: none;
+			margin: 1rem;
+		}
 
-        .notify-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(243, 156, 18, 0.3);
-        }
+		.notify-btn:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 10px 25px rgba(243, 156, 18, 0.3);
+		}
 
-        .timeline {
-            background: #e3f2fd;
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin: 2rem 0;
-        }
+		.timeline {
+			background: #e3f2fd;
+			border-radius: 15px;
+			padding: 1.5rem;
+			margin: 2rem 0;
+		}
 
-        .timeline-title {
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: #2c3e50;
-        }
+		.timeline-title {
+			font-weight: 600;
+			margin-bottom: 1rem;
+			color: #2c3e50;
+		}
 
-        .progress-bar {
-            background: #dee2e6;
-            border-radius: 10px;
-            height: 8px;
-            margin: 1rem 0;
-            overflow: hidden;
-        }
+		.progress-bar {
+			background: #dee2e6;
+			border-radius: 10px;
+			height: 8px;
+			margin: 1rem 0;
+			overflow: hidden;
+		}
 
-        .progress-fill {
-            background: linear-gradient(45deg, #f39c12, #e67e22);
-            height: 100%;
-            border-radius: 10px;
-            width: 30%;
-            transition: width 0.3s ease;
-        }
-    </style>
+		.progress-fill {
+			background: linear-gradient(45deg, #f39c12, #e67e22);
+			height: 100%;
+			border-radius: 10px;
+			width: 30%;
+			transition: width 0.3s ease;
+		}
+	</style>
 </head>
+
 <body>
-    <a href="/" class="back-btn">
-        <i class="fas fa-arrow-left"></i>
-        Retour à l'accueil
-    </a>
+	<a href="/" class="back-btn">
+		<i class="fas fa-arrow-left"></i>
+		Retour à l'accueil
+	</a>
 
-    <div class="container">
-        <div class="service-icon">
-            <i class="fas fa-clock"></i>
-        </div>
-        
-        <h1 class="service-title" id="serviceName">Service à venir</h1>
-        
-        <div class="coming-soon-badge">
-            <i class="fas fa-calendar-alt"></i>
-            Bientôt disponible
-        </div>
+	<div class="container">
+		<div class="service-icon">
+			<i class="fas fa-clock"></i>
+		</div>
 
-        <div class="description" id="serviceDescription">
-            Ce service sera bientôt disponible dans notre écosystème MCP Wesype.
-        </div>
+		<h1 class="service-title" id="serviceName">Service à venir</h1>
 
-        <div class="timeline">
-            <div class="timeline-title">🚀 Développement en cours</div>
-            <div class="progress-bar">
-                <div class="progress-fill"></div>
-            </div>
-            <div style="font-size: 0.9rem; color: #6c757d;">30% terminé</div>
-        </div>
+		<div class="coming-soon-badge">
+			<i class="fas fa-calendar-alt"></i>
+			Bientôt disponible
+		</div>
 
-        <div class="features-preview" id="featuresPreview">
-            <div class="features-title">🌟 Fonctionnalités prévues</div>
-            <div id="featuresList">
-                <!-- Les fonctionnalités seront ajoutées dynamiquement -->
-            </div>
-        </div>
+		<div class="description" id="serviceDescription">
+			Ce service sera bientôt disponible dans notre écosystème MCP Wesype.
+		</div>
 
-        <div>
-            <button class="notify-btn" onclick="requestNotification()">
-                <i class="fas fa-bell"></i>
-                Me notifier quand c'est prêt
-            </button>
-            
-            <button class="notify-btn" onclick="goBack()" style="background: #6c757d;">
-                <i class="fas fa-arrow-left"></i>
-                Retour aux services
-            </button>
-        </div>
+		<div class="timeline">
+			<div class="timeline-title">🚀 Développement en cours</div>
+			<div class="progress-bar">
+				<div class="progress-fill"></div>
+			</div>
+			<div style="font-size: 0.9rem; color: #6c757d;">30% terminé</div>
+		</div>
 
-        <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #eee; color: #7f8c8d; font-size: 0.9rem;">
-            <p>📧 Contactez-nous pour être prioritaire sur ce service</p>
-            <p>🔔 Notifications automatiques dès la sortie</p>
-        </div>
-    </div>
+		<div class="features-preview" id="featuresPreview">
+			<div class="features-title">🌟 Fonctionnalités prévues</div>
+			<div id="featuresList">
+				<!-- Les fonctionnalités seront ajoutées dynamiquement -->
+			</div>
+		</div>
 
-    <script>
-        // Configuration des services
-        const servicesConfig = {
-            outlook: {
-                name: 'Outlook',
-                icon: 'fab fa-microsoft',
-                description: 'Intégration complète avec Microsoft Outlook et Exchange pour gérer vos emails, calendriers et contacts professionnels.',
-                features: [
-                    'Gestion des emails Outlook',
-                    'Calendrier et rendez-vous',
-                    'Contacts et carnets d\'adresses',
-                    'Intégration Teams',
-                    'Synchronisation Exchange'
-                ]
-            },
-            notion: {
-                name: 'Notion',
-                icon: 'fas fa-file-alt',
-                description: 'Créez, modifiez et recherchez dans vos espaces de travail Notion. Automatisez vos workflows de documentation.',
-                features: [
-                    'Création et édition de pages',
-                    'Gestion des bases de données',
-                    'Templates personnalisés',
-                    'Recherche avancée',
-                    'Collaboration en équipe'
-                ]
-            },
-            axonaut: {
-                name: 'Axonaut CRM',
-                icon: 'fas fa-briefcase',
-                description: 'Gérez vos contacts, opportunités et données CRM avec votre IA pour un pilotage commercial intelligent.',
-                features: [
-                    'Gestion des contacts',
-                    'Suivi des opportunités',
-                    'Facturation automatisée',
-                    'Reporting commercial',
-                    'Pipeline de ventes'
-                ]
-            }
-        };
+		<div>
+			<button class="notify-btn" onclick="requestNotification()">
+				<i class="fas fa-bell"></i>
+				Me notifier quand c'est prêt
+			</button>
 
-        window.addEventListener('load', function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const serviceName = getServiceFromURL();
-            
-            if (serviceName && servicesConfig[serviceName]) {
-                loadServiceInfo(servicesConfig[serviceName]);
-            } else {
-                loadGenericInfo();
-            }
-        });
+			<button class="notify-btn" onclick="goBack()" style="background: #6c757d;">
+				<i class="fas fa-arrow-left"></i>
+				Retour aux services
+			</button>
+		</div>
 
-        function getServiceFromURL() {
-            const path = window.location.pathname;
-            const match = path.match(/\/pages\/(.+)\.html/);
-            return match ? match[1] : null;
-        }
+		<div
+			style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #eee; color: #7f8c8d; font-size: 0.9rem;">
+			<p>📧 Contactez-nous pour être prioritaire sur ce service</p>
+			<p>🔔 Notifications automatiques dès la sortie</p>
+		</div>
+	</div>
 
-        function loadServiceInfo(serviceConfig) {
-            document.getElementById('serviceName').textContent = serviceConfig.name;
-            document.getElementById('serviceDescription').textContent = serviceConfig.description;
-            
-            // Changer l'icône du service
-            const serviceIcon = document.querySelector('.service-icon i');
-            serviceIcon.className = serviceConfig.icon;
-            
-            // Afficher les fonctionnalités
-            const featuresList = document.getElementById('featuresList');
-            featuresList.innerHTML = serviceConfig.features.map(feature => `
+	<script>
+		// Configuration des services
+		const servicesConfig = {
+			outlook: {
+				name: 'Outlook',
+				icon: 'fab fa-microsoft',
+				description: 'Intégration complète avec Microsoft Outlook et Exchange pour gérer vos emails, calendriers et contacts professionnels.',
+				features: [
+					'Gestion des emails Outlook',
+					'Calendrier et rendez-vous',
+					'Contacts et carnets d\'adresses',
+					'Intégration Teams',
+					'Synchronisation Exchange'
+				]
+			},
+			notion: {
+				name: 'Notion',
+				icon: 'fas fa-file-alt',
+				description: 'Créez, modifiez et recherchez dans vos espaces de travail Notion. Automatisez vos workflows de documentation.',
+				features: [
+					'Création et édition de pages',
+					'Gestion des bases de données',
+					'Templates personnalisés',
+					'Recherche avancée',
+					'Collaboration en équipe'
+				]
+			},
+			axonaut: {
+				name: 'Axonaut CRM',
+				icon: 'fas fa-briefcase',
+				description: 'Gérez vos contacts, opportunités et données CRM avec votre IA pour un pilotage commercial intelligent.',
+				features: [
+					'Gestion des contacts',
+					'Suivi des opportunités',
+					'Facturation automatisée',
+					'Reporting commercial',
+					'Pipeline de ventes'
+				]
+			}
+		};
+
+		window.addEventListener('load', function () {
+			const urlParams = new URLSearchParams(window.location.search);
+			const serviceName = getServiceFromURL();
+
+			if (serviceName && servicesConfig[serviceName]) {
+				loadServiceInfo(servicesConfig[serviceName]);
+			} else {
+				loadGenericInfo();
+			}
+		});
+
+		function getServiceFromURL() {
+			const path = window.location.pathname;
+			const match = path.match(/\/pages\/(.+)\.html/);
+			return match ? match[1] : null;
+		}
+
+		function loadServiceInfo(serviceConfig) {
+			document.getElementById('serviceName').textContent = serviceConfig.name;
+			document.getElementById('serviceDescription').textContent = serviceConfig.description;
+
+			// Changer l'icône du service
+			const serviceIcon = document.querySelector('.service-icon i');
+			serviceIcon.className = serviceConfig.icon;
+
+			// Afficher les fonctionnalités
+			const featuresList = document.getElementById('featuresList');
+			featuresList.innerHTML = serviceConfig.features.map(feature => `
                 <div class="feature-item">
                     <i class="fas fa-star feature-icon"></i>
                     <span>${feature}</span>
                 </div>
             `).join('');
-        }
+		}
 
-        function loadGenericInfo() {
-            // Configuration par défaut si le service n'est pas reconnu
-            const featuresList = document.getElementById('featuresList');
-            featuresList.innerHTML = `
+		function loadGenericInfo() {
+			// Configuration par défaut si le service n'est pas reconnu
+			const featuresList = document.getElementById('featuresList');
+			featuresList.innerHTML = `
                 <div class="feature-item">
                     <i class="fas fa-star feature-icon"></i>
                     <span>Intégration MCP complète</span>
@@ -318,21 +321,22 @@
                     <span>Sécurité et confidentialité</span>
                 </div>
             `;
-        }
+		}
 
-        function requestNotification() {
-            const serviceName = getServiceFromURL();
-            
-            // Simuler une inscription aux notifications
-            alert(`🔔 Vous serez notifié dès que ${servicesConfig[serviceName]?.name || 'ce service'} sera disponible !`);
-            
-            // Ici vous pourriez ajouter un vrai système de notification
-            // Par exemple, envoyer l'email à votre backend
-        }
+		function requestNotification() {
+			const serviceName = getServiceFromURL();
 
-        function goBack() {
-            window.location.href = '/';
-        }
-    </script>
+			// Simuler une inscription aux notifications
+			alert(`🔔 Vous serez notifié dès que ${servicesConfig[serviceName]?.name || 'ce service'} sera disponible !`);
+
+			// Ici vous pourriez ajouter un vrai système de notification
+			// Par exemple, envoyer l'email à votre backend
+		}
+
+		function goBack() {
+			window.location.href = '/';
+		}
+	</script>
 </body>
+
 </html>

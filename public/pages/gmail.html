@@ -491,8 +491,6 @@
 
         function updateConnectedState(userId, email, endpoint) {
             const statusCard = document.getElementById('statusCard');
-            const statusTitle = document.getElementById('statusTitle');
-            const statusMessage = document.getElementById('statusMessage');
             const userInfo = document.getElementById('userInfo');
             const userEmail = document.getElementById('userEmail');
             const endpointInfo = document.getElementById('endpointInfo');
@@ -503,9 +501,6 @@
 
             // Mettre à jour le statut
             statusCard.classList.add('connected');
-            statusCard.querySelector('.status-icon').innerHTML = '<i class="fas fa-check-circle"></i>';
-            statusTitle.textContent = 'Gmail connecté';
-            statusMessage.textContent = 'Votre compte Gmail est prêt à être utilisé par votre IA';
 
             // Afficher les informations utilisateur
             userEmail.textContent = email || 'Email non disponible';
@@ -517,12 +512,23 @@
             endpointInfo.style.display = 'block';
             toolsSection.style.display = 'block';
 
-            // Mettre à jour le bouton pour déconnexion
-            connectText.textContent = 'Se déconnecter';
-            connectBtn.querySelector('.fab').className = 'fas fa-sign-out-alt';
-            connectBtn.style.background = '#e74c3c';
-            connectBtn.disabled = false;
-            connectBtn.onclick = () => disconnectGmail();
+            // Cacher le bouton de connexion et afficher un bouton de déconnexion
+            if (connectBtn) {
+                connectBtn.style.display = 'none';
+            }
+            
+            // Créer un bouton de déconnexion s'il n'existe pas déjà
+            let disconnectBtn = document.getElementById('disconnectBtn');
+            if (!disconnectBtn) {
+                disconnectBtn = document.createElement('button');
+                disconnectBtn.id = 'disconnectBtn';
+                disconnectBtn.className = 'connect-btn';
+                disconnectBtn.style.background = '#e74c3c';
+                disconnectBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Se déconnecter';
+                disconnectBtn.onclick = () => disconnectGmail();
+                statusCard.appendChild(disconnectBtn);
+            }
+            disconnectBtn.style.display = 'block';
 
             currentUserId = userId;
         }
@@ -612,6 +618,8 @@
             const userInfo = document.getElementById('userInfo');
             const endpointInfo = document.getElementById('endpointInfo');
             const toolsSection = document.getElementById('tools-section');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
 
             // Remettre le statut à déconnecté
             statusCard.classList.remove('connected');
@@ -621,7 +629,15 @@
             endpointInfo.style.display = 'none';
             toolsSection.style.display = 'none';
 
-            // Remettre le bouton de connexion
+            // Afficher le bouton de connexion et cacher celui de déconnexion
+            if (connectBtn) {
+                connectBtn.style.display = 'block';
+            }
+            if (disconnectBtn) {
+                disconnectBtn.style.display = 'none';
+            }
+
+            // Remettre le bouton de connexion à son état initial
             resetButton();
 
             // Réinitialiser l'ID utilisateur
