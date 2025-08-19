@@ -115,8 +115,23 @@ app.get('/:userId/mcp/sse', async (req, res) => {
     sessionId = transport.sessionId;
 
     // ✅ 2. CRÉER LE SERVEUR MCP MULTI-SERVICES
+    // Nom dynamique basé sur les services connectés
+    let serverName = "MCP";
+    if (connectedServices.length === 1) {
+      // Un seul service : "MCP Gmail"
+      const serviceName = connectedServices[0];
+      const service = serviceRegistry.getService(serviceName);
+      serverName = `MCP ${service?.displayName || serviceName}`;
+    } else if (connectedServices.length > 1) {
+      // Plusieurs services : "MCP Multi-Services"
+      serverName = "MCP Multi-Services";
+    } else {
+      // Aucun service : "MCP Wesype"
+      serverName = "MCP Wesype";
+    }
+    
     const server = new McpServer({
-      name: `Multi-Service Assistant - ${userId}`,
+      name: serverName,
       version: "2.0.0",
     });
 

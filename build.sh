@@ -40,6 +40,30 @@ if [ $? -eq 0 ]; then
     if [ -d "public" ]; then
         cp -r public dist/
         echo "✅ Fichiers publics copiés vers dist/"
+        
+        # Convertir les liens symboliques en vrais fichiers pour Railway
+        echo "🔗 Conversion des liens symboliques pour Railway..."
+        cd dist/public/pages/
+        
+        # Si axonaut.html est un lien symbolique, le remplacer par le vrai fichier
+        if [ -L "axonaut.html" ]; then
+            cp coming-soon.html axonaut.html.tmp && mv axonaut.html.tmp axonaut.html
+            echo "   ✅ axonaut.html converti"
+        fi
+        
+        # Si notion.html est un lien symbolique, le remplacer par le vrai fichier
+        if [ -L "notion.html" ]; then
+            cp coming-soon.html notion.html.tmp && mv notion.html.tmp notion.html
+            echo "   ✅ notion.html converti"
+        fi
+        
+        # Si outlook.html est un lien symbolique, le remplacer par le vrai fichier
+        if [ -L "outlook.html" ]; then
+            cp coming-soon.html outlook.html.tmp && mv outlook.html.tmp outlook.html
+            echo "   ✅ outlook.html converti"
+        fi
+        
+        cd ../../..
     fi
     
     echo "🎉 Build terminé avec succès !"

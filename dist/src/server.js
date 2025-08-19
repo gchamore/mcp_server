@@ -65,8 +65,20 @@ app.get('/:userId/mcp/sse', async (req, res) => {
         req.socket.setKeepAlive(true);
         transport = new SSEServerTransport(`/${userId}/mcp/message`, res);
         sessionId = transport.sessionId;
+        let serverName = "MCP";
+        if (connectedServices.length === 1) {
+            const serviceName = connectedServices[0];
+            const service = serviceRegistry.getService(serviceName);
+            serverName = `MCP ${service?.displayName || serviceName}`;
+        }
+        else if (connectedServices.length > 1) {
+            serverName = "MCP Multi-Services";
+        }
+        else {
+            serverName = "MCP Wesype";
+        }
         const server = new McpServer({
-            name: `Multi-Service Assistant - ${userId}`,
+            name: serverName,
             version: "2.0.0",
         });
         for (const serviceName of connectedServices) {
