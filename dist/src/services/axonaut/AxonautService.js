@@ -150,7 +150,7 @@ export class AxonautService extends BaseService {
                                 (data.data || []).map((company) => `• **${company.name}**\n` +
                                     `  📧 ${company.email || 'N/A'}\n` +
                                     `  💰 ${company.currency || 'N/A'}\n` +
-                                    `  � ${company.comments || 'N/A'}\n`).join('\n')
+                                    `  💬 ${company.comments || 'N/A'}\n`).join('\n')
                         }
                     ]
                 };
@@ -161,6 +161,54 @@ export class AxonautService extends BaseService {
                         {
                             type: "text",
                             text: `❌ Erreur lors de la récupération des contacts: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
+                        }
+                    ],
+                    isError: true
+                };
+            }
+        });
+        server.tool("axonaut_search_company", "Rechercher une entreprise spécifique par nom", {
+            query: z.string().describe("Nom ou partie du nom de l'entreprise à rechercher"),
+            exactMatch: z.boolean().optional().default(false).describe("Correspondance exacte du nom")
+        }, async ({ query, exactMatch = false }) => {
+            try {
+                const endpoint = `/companies?search=${encodeURIComponent(query)}`;
+                const data = await userSession.axonautClient.request(endpoint);
+                let companies = data.data || [];
+                if (exactMatch) {
+                    companies = companies.filter((company) => company.name.toLowerCase() === query.toLowerCase());
+                }
+                if (companies.length === 0) {
+                    return {
+                        content: [
+                            {
+                                type: "text",
+                                text: `🔍 **Recherche entreprise: "${query}"**\n\n❌ Aucune entreprise trouvée.`
+                            }
+                        ]
+                    };
+                }
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: `🔍 **Recherche entreprise: "${query}"** (${companies.length} résultat${companies.length > 1 ? 's' : ''})\n\n` +
+                                companies.map((company, index) => `${index + 1}. **${company.name}**\n` +
+                                    `   📧 Email: ${company.email || 'N/A'}\n` +
+                                    `   💰 Devise: ${company.currency || 'N/A'}\n` +
+                                    `   📊 Statut: ${company.is_customer ? '👤 Client' : ''}${company.is_prospect ? '🎯 Prospect' : ''}\n` +
+                                    `   💬 Commentaires: ${company.comments || 'N/A'}\n` +
+                                    `   🆔 ID: ${company.id}\n`).join('\n')
+                        }
+                    ]
+                };
+            }
+            catch (error) {
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: `❌ Erreur lors de la recherche d'entreprise: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
                         }
                     ],
                     isError: true
@@ -192,8 +240,8 @@ export class AxonautService extends BaseService {
                             type: "text",
                             text: `✅ **Entreprise créée avec succès !**\n\n` +
                                 `🏢 **${result.name}**\n` +
-                                `� Devise: ${result.currency}\n` +
-                                `� Commentaires: ${result.comments || 'N/A'}\n` +
+                                `💰 Devise: ${result.currency}\n` +
+                                `💬 Commentaires: ${result.comments || 'N/A'}\n` +
                                 `🆔 ID: ${result.id}`
                         }
                     ]
@@ -232,11 +280,11 @@ export class AxonautService extends BaseService {
                         {
                             type: "text",
                             text: `🧾 **Factures Axonaut** (${invoices.length} résultats, page ${page})\n\n` +
-                                invoices.map((invoice) => `• **Facture ${invoice.number || invoice.id}**\n` +
-                                    `  💰 ${invoice.amount || invoice.total_amount || 'N/A'}€\n` +
-                                    `  📅 ${invoice.date || invoice.creation_date || 'N/A'}\n` +
-                                    `  🔔 ${invoice.status || 'N/A'}\n` +
-                                    `  🆔 ${invoice.id}\n`).join('\n')
+                                invoices.map((invoice, index) => `${index + 1}. **Facture ${invoice.number || invoice.id}**\n` +
+                                    `   💰 ${invoice.amount || invoice.total_amount || 'N/A'}€\n` +
+                                    `   📅 ${invoice.date || invoice.creation_date || 'N/A'}\n` +
+                                    `   🔔 ${invoice.status || 'N/A'}\n` +
+                                    `   🆔 ${invoice.id}\n`).join('\n')
                         }
                     ]
                 };
@@ -247,6 +295,49 @@ export class AxonautService extends BaseService {
                         {
                             type: "text",
                             text: `❌ Erreur lors de la récupération des factures: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
+                        }
+                    ],
+                    isError: true
+                };
+            }
+        });
+        server.tool("axonaut_get_invoice_detail", "Obtenir le détail complet d'une facture spécifique", {
+            invoiceId: z.number().describe("ID de la facture à récupérer")
+        }, async ({ invoiceId }) => {
+            try {
+                const invoice = await userSession.axonautClient.request(`/invoices/${invoiceId}`);
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: `🧾 **Détail de la facture ${invoice.number || invoice.id}**\n\n` +
+                                `📋 **Informations générales:**\n` +
+                                `   • Numéro: ${invoice.number || 'N/A'}\n` +
+                                `   • Date: ${invoice.date || invoice.creation_date || 'N/A'}\n` +
+                                `   • Statut: ${invoice.status || 'N/A'}\n` +
+                                `   • Montant HT: ${invoice.pre_tax_amount || 'N/A'}€\n` +
+                                `   • Montant TTC: ${invoice.amount || invoice.total_amount || 'N/A'}€\n\n` +
+                                `🏢 **Client:**\n` +
+                                `   • Nom: ${invoice.company?.name || 'N/A'}\n` +
+                                `   • Email: ${invoice.company?.email || 'N/A'}\n\n` +
+                                (invoice.invoice_lines && invoice.invoice_lines.length > 0 ?
+                                    `📦 **Lignes de facture:**\n` +
+                                        invoice.invoice_lines.map((line, index) => `   ${index + 1}. ${line.product_name || line.description || 'Produit'}\n` +
+                                            `      • Quantité: ${line.quantity || 'N/A'}\n` +
+                                            `      • Prix unitaire: ${line.unit_price || 'N/A'}€\n` +
+                                            `      • Total HT: ${line.total_pre_tax_amount || 'N/A'}€\n`).join('\n') :
+                                    `📦 **Lignes de facture:** Aucune ligne détectée\n`) +
+                                `\n🆔 **ID:** ${invoice.id}`
+                        }
+                    ]
+                };
+            }
+            catch (error) {
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: `❌ Erreur lors de la récupération du détail de la facture: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
                         }
                     ],
                     isError: true

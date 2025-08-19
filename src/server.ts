@@ -363,7 +363,8 @@ app.post('/api/axonaut/auth', express.json(), async (req, res) => {
           message: 'Authentification Axonaut réussie',
           userId,
           service: 'axonaut',
-          userEmail: authResult.userEmail
+          userEmail: authResult.userEmail,
+          mcpEndpoint: `${BASE_URL}/${userId}/mcp/sse`
         });
       } else {
         throw new Error('Erreur lors de la création de la session utilisateur');

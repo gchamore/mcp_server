@@ -201,7 +201,7 @@ export class AxonautService extends BaseService {
                         `• **${company.name}**\n` +
                         `  📧 ${company.email || 'N/A'}\n` +
                         `  💰 ${company.currency || 'N/A'}\n` +
-                        `  � ${company.comments || 'N/A'}\n`
+                        `  💬 ${company.comments || 'N/A'}\n`
                       ).join('\n')
               }
             ]
@@ -220,7 +220,70 @@ export class AxonautService extends BaseService {
       }
     );
 
-    // OUTIL 2: Créer une entreprise
+    // OUTIL 2: Rechercher une entreprise spécifique
+    server.tool(
+      "axonaut_search_company",
+      "Rechercher une entreprise spécifique par nom",
+      {
+        query: z.string().describe("Nom ou partie du nom de l'entreprise à rechercher"),
+        exactMatch: z.boolean().optional().default(false).describe("Correspondance exacte du nom")
+      },
+      async ({ query, exactMatch = false }) => {
+        try {
+          const endpoint = `/companies?search=${encodeURIComponent(query)}`;
+          const data = await userSession.axonautClient.request(endpoint);
+          
+          let companies = data.data || [];
+          
+          // Filtrage pour correspondance exacte si demandé
+          if (exactMatch) {
+            companies = companies.filter((company: any) => 
+              company.name.toLowerCase() === query.toLowerCase()
+            );
+          }
+          
+          if (companies.length === 0) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `🔍 **Recherche entreprise: "${query}"**\n\n❌ Aucune entreprise trouvée.`
+                }
+              ]
+            };
+          }
+          
+          return {
+            content: [
+              {
+                type: "text",
+                text: `🔍 **Recherche entreprise: "${query}"** (${companies.length} résultat${companies.length > 1 ? 's' : ''})\n\n` +
+                      companies.map((company: any, index: number) => 
+                        `${index + 1}. **${company.name}**\n` +
+                        `   📧 Email: ${company.email || 'N/A'}\n` +
+                        `   💰 Devise: ${company.currency || 'N/A'}\n` +
+                        `   📊 Statut: ${company.is_customer ? '👤 Client' : ''}${company.is_prospect ? '🎯 Prospect' : ''}\n` +
+                        `   💬 Commentaires: ${company.comments || 'N/A'}\n` +
+                        `   🆔 ID: ${company.id}\n`
+                      ).join('\n')
+              }
+            ]
+          };
+        } catch (error) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `❌ Erreur lors de la recherche d'entreprise: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
+              }
+            ],
+            isError: true
+          };
+        }
+      }
+    );
+
+    // OUTIL 3: Créer une entreprise
     server.tool(
       "axonaut_create_company",
       "Créer une nouvelle entreprise Axonaut",
@@ -252,8 +315,8 @@ export class AxonautService extends BaseService {
                 type: "text",
                 text: `✅ **Entreprise créée avec succès !**\n\n` +
                       `🏢 **${result.name}**\n` +
-                      `� Devise: ${result.currency}\n` +
-                      `� Commentaires: ${result.comments || 'N/A'}\n` +
+                      `💰 Devise: ${result.currency}\n` +
+                      `💬 Commentaires: ${result.comments || 'N/A'}\n` +
                       `🆔 ID: ${result.id}`
               }
             ]
@@ -272,7 +335,7 @@ export class AxonautService extends BaseService {
       }
     );
 
-    // OUTIL 3: Lister les factures
+    // OUTIL 4: Lister les factures
     server.tool(
       "axonaut_list_invoices",
       "Lister les factures Axonaut",
@@ -302,12 +365,12 @@ export class AxonautService extends BaseService {
               {
                 type: "text",
                 text: `🧾 **Factures Axonaut** (${invoices.length} résultats, page ${page})\n\n` +
-                      invoices.map((invoice: AxonautInvoice) => 
-                        `• **Facture ${invoice.number || invoice.id}**\n` +
-                        `  💰 ${invoice.amount || invoice.total_amount || 'N/A'}€\n` +
-                        `  📅 ${invoice.date || invoice.creation_date || 'N/A'}\n` +
-                        `  🔔 ${invoice.status || 'N/A'}\n` +
-                        `  🆔 ${invoice.id}\n`
+                      invoices.map((invoice: AxonautInvoice, index: number) => 
+                        `${index + 1}. **Facture ${invoice.number || invoice.id}**\n` +
+                        `   💰 ${invoice.amount || invoice.total_amount || 'N/A'}€\n` +
+                        `   📅 ${invoice.date || invoice.creation_date || 'N/A'}\n` +
+                        `   🔔 ${invoice.status || 'N/A'}\n` +
+                        `   🆔 ${invoice.id}\n`
                       ).join('\n')
               }
             ]
@@ -326,7 +389,63 @@ export class AxonautService extends BaseService {
       }
     );
 
-    // OUTIL 4: Informations du compte
+    // OUTIL 5: Récupérer le détail d'une facture
+    server.tool(
+      "axonaut_get_invoice_detail",
+      "Obtenir le détail complet d'une facture spécifique",
+      {
+        invoiceId: z.number().describe("ID de la facture à récupérer")
+      },
+      async ({ invoiceId }) => {
+        try {
+          const invoice = await userSession.axonautClient.request(`/invoices/${invoiceId}`);
+          
+          return {
+            content: [
+              {
+                type: "text",
+                text: `🧾 **Détail de la facture ${invoice.number || invoice.id}**\n\n` +
+                      `📋 **Informations générales:**\n` +
+                      `   • Numéro: ${invoice.number || 'N/A'}\n` +
+                      `   • Date: ${invoice.date || invoice.creation_date || 'N/A'}\n` +
+                      `   • Statut: ${invoice.status || 'N/A'}\n` +
+                      `   • Montant HT: ${invoice.pre_tax_amount || 'N/A'}€\n` +
+                      `   • Montant TTC: ${invoice.amount || invoice.total_amount || 'N/A'}€\n\n` +
+                      
+                      `🏢 **Client:**\n` +
+                      `   • Nom: ${invoice.company?.name || 'N/A'}\n` +
+                      `   • Email: ${invoice.company?.email || 'N/A'}\n\n` +
+                      
+                      (invoice.invoice_lines && invoice.invoice_lines.length > 0 ? 
+                        `📦 **Lignes de facture:**\n` +
+                        invoice.invoice_lines.map((line: any, index: number) => 
+                          `   ${index + 1}. ${line.product_name || line.description || 'Produit'}\n` +
+                          `      • Quantité: ${line.quantity || 'N/A'}\n` +
+                          `      • Prix unitaire: ${line.unit_price || 'N/A'}€\n` +
+                          `      • Total HT: ${line.total_pre_tax_amount || 'N/A'}€\n`
+                        ).join('\n') : 
+                        `📦 **Lignes de facture:** Aucune ligne détectée\n`
+                      ) +
+                      
+                      `\n🆔 **ID:** ${invoice.id}`
+              }
+            ]
+          };
+        } catch (error) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `❌ Erreur lors de la récupération du détail de la facture: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
+              }
+            ],
+            isError: true
+          };
+        }
+      }
+    );
+
+    // OUTIL 6: Informations du compte
     server.tool(
       "axonaut_get_account_info",
       "Obtenir les informations du compte Axonaut",
