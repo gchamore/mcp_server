@@ -247,24 +247,6 @@ app.get('/oauth/callback', async (req, res) => {
   }
 });
 
-// ✅ GESTION DES MESSAGES MCP
-app.post('/message', async (req, res) => {
-  console.log('🎯 Route /message appelée !');
-  const sessionId = req.query.sessionId as string;
-  
-  if (!sessionId) {
-    console.log('❌ SessionId manquant');
-    res.status(400).send("Missing sessionId");
-    return;
-  }
-
-  console.log(`✅ [MCP] Message reçu avec sessionId: ${sessionId}`);
-  res.status(200).send('OK');
-});
-
-// ✅ LOG IMMÉDIAT APRÈS LA DÉFINITION
-console.log('📋 Route POST /message définie !');
-
 // ✅ ENDPOINTS MCP PAR UTILISATEUR
 app.get('/:userId/gmail/sse', async (req, res) => {
   const userId = req.params.userId;
@@ -285,7 +267,7 @@ app.get('/:userId/gmail/sse', async (req, res) => {
     req.socket.setNoDelay(true);
     req.socket.setKeepAlive(true);
 
-    transport = new SSEServerTransport("/message", res);
+    transport = new SSEServerTransport(`/${userId}/gmail/message`, res);
     sessionId = transport.sessionId;
 
     const server = new McpServer({
@@ -643,24 +625,33 @@ app.get('/:userId/gmail/sse', async (req, res) => {
   }
 });
 
-// // ✅ GESTION DES MESSAGES MCP
-// app.post('/message', async (req, res) => {
-//   console.log('🎯 Route /message appelée !');
-//   console.log('📝 Method:', req.method);
-//   console.log('📝 URL:', req.url);
-//   console.log('📝 Query:', req.query);
-  
-//   const sessionId = req.query.sessionId as string;
-  
-//   if (!sessionId) {
-//     console.log('❌ SessionId manquant');
-//     res.status(400).send("Missing sessionId");
-//     return;
-//   }
+// ✅ GESTION DES MESSAGES MCP
+app.post('/:userId/gmail/message', async (req, res) => {
+  const userId = req.params.userId;
+  const sessionId = req.query.sessionId as string;
 
-//   console.log(`✅ [MCP] Message reçu avec sessionId: ${sessionId}`);
-//   res.status(200).send('OK');
-// });
+  const userSession = gmailManager.getUserSession(userId);
+  if (!userSession) {
+    res.status(404).send('User session not found');
+    return;
+  }
+
+  try {
+    if (!sessionId) {
+      res.status(400).send("Missing sessionId query parameter");
+      return;
+    }
+
+    // Le transport MCP gère automatiquement les messages
+    res.status(200).send('OK');
+
+  } catch (error) {
+    console.error(`[MCP] Error handling message for user ${userId}:`, error);
+    if (!res.headersSent) {
+      res.status(500).send("Error processing message");
+    }
+  }
+});
 
 // ✅ API DE STATUT
 app.get('/api/status', (req, res) => {
@@ -697,15 +688,4 @@ app.listen(PORT, () => {
   console.log(`🌐 Base URL: ${BASE_URL}`);
   console.log(`📱 Interface: ${BASE_URL}`);
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-  
-  // ✅ DEBUG: Lister toutes les routes (avec typage correct)
-  console.log('🔍 Routes enregistrées:');
-  const router = (app as any)._router;
-  if (router && router.stack) {
-    router.stack.forEach((r: any) => {
-      if (r.route && r.route.path) {
-        console.log(`  ${Object.keys(r.route.methods).join(',').toUpperCase()} ${r.route.path}`);
-      }
-    });
-  }
 });

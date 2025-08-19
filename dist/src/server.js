@@ -164,18 +164,6 @@ app.get('/oauth/callback', async (req, res) => {
     `);
     }
 });
-app.post('/message', async (req, res) => {
-    console.log('🎯 Route /message appelée !');
-    const sessionId = req.query.sessionId;
-    if (!sessionId) {
-        console.log('❌ SessionId manquant');
-        res.status(400).send("Missing sessionId");
-        return;
-    }
-    console.log(`✅ [MCP] Message reçu avec sessionId: ${sessionId}`);
-    res.status(200).send('OK');
-});
-console.log('📋 Route POST /message définie !');
 app.get('/:userId/gmail/sse', async (req, res) => {
     const userId = req.params.userId;
     const userSession = gmailManager.getUserSession(userId);
@@ -190,7 +178,7 @@ app.get('/:userId/gmail/sse', async (req, res) => {
         req.socket.setTimeout(0);
         req.socket.setNoDelay(true);
         req.socket.setKeepAlive(true);
-        transport = new SSEServerTransport("/message", res);
+        transport = new SSEServerTransport(`/${userId}/gmail/message`, res);
         sessionId = transport.sessionId;
         const server = new McpServer({
             name: `Gmail Assistant - ${userSession.userEmail}`,
@@ -487,6 +475,28 @@ app.get('/:userId/gmail/sse', async (req, res) => {
         }
     }
 });
+app.post('/:userId/gmail/message', async (req, res) => {
+    const userId = req.params.userId;
+    const sessionId = req.query.sessionId;
+    const userSession = gmailManager.getUserSession(userId);
+    if (!userSession) {
+        res.status(404).send('User session not found');
+        return;
+    }
+    try {
+        if (!sessionId) {
+            res.status(400).send("Missing sessionId query parameter");
+            return;
+        }
+        res.status(200).send('OK');
+    }
+    catch (error) {
+        console.error(`[MCP] Error handling message for user ${userId}:`, error);
+        if (!res.headersSent) {
+            res.status(500).send("Error processing message");
+        }
+    }
+});
 app.get('/api/status', (req, res) => {
     res.json({
         status: 'OK',
@@ -515,13 +525,4 @@ app.listen(PORT, () => {
     console.log(`🌐 Base URL: ${BASE_URL}`);
     console.log(`📱 Interface: ${BASE_URL}`);
     console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log('🔍 Routes enregistrées:');
-    const router = app._router;
-    if (router && router.stack) {
-        router.stack.forEach((r) => {
-            if (r.route && r.route.path) {
-                console.log(`  ${Object.keys(r.route.methods).join(',').toUpperCase()} ${r.route.path}`);
-            }
-        });
-    }
 });
