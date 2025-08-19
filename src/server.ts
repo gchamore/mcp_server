@@ -626,31 +626,29 @@ app.get('/:userId/gmail/sse', async (req, res) => {
 });
 
 // ✅ GESTION DES MESSAGES MCP
+// ✅ GESTION DES MESSAGES MCP PAR UTILISATEUR
 app.post('/:userId/gmail/message', async (req, res) => {
   const userId = req.params.userId;
   const sessionId = req.query.sessionId as string;
 
+  console.log(`🎯 Route /${userId}/gmail/message appelée !`);
+  console.log('📦 Body:', JSON.stringify(req.body, null, 2));
+  
   const userSession = gmailManager.getUserSession(userId);
   if (!userSession) {
     res.status(404).send('User session not found');
     return;
   }
 
-  try {
-    if (!sessionId) {
-      res.status(400).send("Missing sessionId query parameter");
-      return;
-    }
-
-    // Le transport MCP gère automatiquement les messages
-    res.status(200).send('OK');
-
-  } catch (error) {
-    console.error(`[MCP] Error handling message for user ${userId}:`, error);
-    if (!res.headersSent) {
-      res.status(500).send("Error processing message");
-    }
+  if (!sessionId) {
+    res.status(400).send("Missing sessionId query parameter");
+    return;
   }
+
+  console.log(`✅ [MCP] Message traité pour ${userSession.userEmail}`);
+  
+  // ✅ IMPORTANT: Répondre en JSON
+  res.status(200).json({ success: true });
 });
 
 // ✅ API DE STATUT

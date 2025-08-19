@@ -478,24 +478,19 @@ app.get('/:userId/gmail/sse', async (req, res) => {
 app.post('/:userId/gmail/message', async (req, res) => {
     const userId = req.params.userId;
     const sessionId = req.query.sessionId;
+    console.log(`🎯 Route /${userId}/gmail/message appelée !`);
+    console.log('📦 Body:', JSON.stringify(req.body, null, 2));
     const userSession = gmailManager.getUserSession(userId);
     if (!userSession) {
         res.status(404).send('User session not found');
         return;
     }
-    try {
-        if (!sessionId) {
-            res.status(400).send("Missing sessionId query parameter");
-            return;
-        }
-        res.status(200).send('OK');
+    if (!sessionId) {
+        res.status(400).send("Missing sessionId query parameter");
+        return;
     }
-    catch (error) {
-        console.error(`[MCP] Error handling message for user ${userId}:`, error);
-        if (!res.headersSent) {
-            res.status(500).send("Error processing message");
-        }
-    }
+    console.log(`✅ [MCP] Message traité pour ${userSession.userEmail}`);
+    res.status(200).json({ success: true });
 });
 app.get('/api/status', (req, res) => {
     res.json({
