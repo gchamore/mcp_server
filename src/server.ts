@@ -267,7 +267,7 @@ app.get('/:userId/gmail/sse', async (req, res) => {
     req.socket.setNoDelay(true);
     req.socket.setKeepAlive(true);
 
-    transport = new SSEServerTransport("/message", res);
+    transport = new SSEServerTransport(`/${userId}/gmail/message`, res);
     sessionId = transport.sessionId;
 
     const server = new McpServer({
