@@ -16,6 +16,7 @@ const __dirname = dirname(__filename);
 
 // ✅ CONFIGURATION POUR RAILWAY (un seul port)
 const PORT = process.env.PORT || 3000;
+const activeMcpSessions = new Map<string, SSEServerTransport>();
 
 // ✅ CONFIGURATION OAUTH VIA VARIABLES D'ENVIRONNEMENT
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -267,15 +268,17 @@ app.get('/:userId/gmail/sse', async (req, res) => {
     req.socket.setNoDelay(true);
     req.socket.setKeepAlive(true);
 
+    // ✅ 1. CRÉER LE TRANSPORT
     transport = new SSEServerTransport(`/${userId}/gmail/message`, res);
     sessionId = transport.sessionId;
 
+    // ✅ 2. CRÉER LE SERVEUR MCP
     const server = new McpServer({
       name: `Gmail Assistant - ${userSession.userEmail}`,
       version: "1.0.0",
     });
 
-    // ✅ OUTIL 1: GET_PROFILE
+    // OUTIL 1: GET_PROFILE
     server.tool(
       "get_profile",
       "Obtenir le profil Gmail",
@@ -309,7 +312,7 @@ app.get('/:userId/gmail/sse', async (req, res) => {
       }
     );
 
-    // ✅ OUTIL 2: LIST_EMAILS
+    // OUTIL 2: LIST_EMAILS
     server.tool(
       "list_emails",
       "Lister les emails Gmail",
@@ -399,7 +402,7 @@ app.get('/:userId/gmail/sse', async (req, res) => {
       }
     );
 
-    // ✅ OUTIL 3: SEND_EMAIL
+    // OUTIL 3: SEND_EMAIL
     server.tool(
       "send_email",
       "Envoyer un email",
@@ -460,7 +463,7 @@ app.get('/:userId/gmail/sse', async (req, res) => {
       }
     );
 
-    // ✅ OUTIL 4: SEARCH_EMAILS
+    // OUTIL 4: SEARCH_EMAILS
     server.tool(
       "search_emails",
       "Recherche avancée d'emails",
@@ -553,7 +556,7 @@ app.get('/:userId/gmail/sse', async (req, res) => {
       }
     );
 
-    // ✅ OUTIL 5: GET_EMAIL_CONTENT (Bonus)
+    // OUTIL 5: GET_EMAIL_CONTENT
     server.tool(
       "get_email_content",
       "Obtenir le contenu complet d'un email",
@@ -570,7 +573,6 @@ app.get('/:userId/gmail/sse', async (req, res) => {
           
           const headers: GmailHeader[] = message.data.payload?.headers || [];
           
-          // Extraire le contenu du message
           let emailContent = '';
           
           if (message.data.payload?.body?.data) {
@@ -615,7 +617,12 @@ app.get('/:userId/gmail/sse', async (req, res) => {
       }
     );
 
+    // ✅ 4. CONNECTER LE SERVEUR AU TRANSPORT
     await server.connect(transport);
+
+    // ✅ 5. MAINTENANT STOCKER LE TRANSPORT
+    activeMcpSessions.set(sessionId, transport);
+    console.log(`✅ [MCP] Session ${sessionId} stockée`);
 
   } catch (error) {
     console.error("[MCP] Error:", error);
@@ -626,29 +633,17 @@ app.get('/:userId/gmail/sse', async (req, res) => {
 });
 
 // ✅ GESTION DES MESSAGES MCP
-// ✅ GESTION DES MESSAGES MCP PAR UTILISATEUR
 app.post('/:userId/gmail/message', async (req, res) => {
-  const userId = req.params.userId;
   const sessionId = req.query.sessionId as string;
-
-  console.log(`🎯 Route /${userId}/gmail/message appelée !`);
-  console.log('📦 Body:', JSON.stringify(req.body, null, 2));
   
-  const userSession = gmailManager.getUserSession(userId);
-  if (!userSession) {
-    res.status(404).send('User session not found');
-    return;
+  // ✅ RÉCUPÉRER LE TRANSPORT ET TRAITER LE MESSAGE
+  const transport = activeMcpSessions.get(sessionId);
+  if (!transport) {
+    return res.status(404).send('Session not found');
   }
-
-  if (!sessionId) {
-    res.status(400).send("Missing sessionId query parameter");
-    return;
-  }
-
-  console.log(`✅ [MCP] Message traité pour ${userSession.userEmail}`);
   
-  // ✅ IMPORTANT: Répondre en JSON
-  res.status(200).json({ success: true });
+  // ✅ LA MAGIE : PASSER AU TRANSPORT MCP
+  transport.handlePostMessage(req, res);
 });
 
 // ✅ API DE STATUT

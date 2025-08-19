@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const PORT = process.env.PORT || 3000;
+const activeMcpSessions = new Map();
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const BASE_URL = process.env.BASE_URL ||
@@ -467,6 +468,8 @@ app.get('/:userId/gmail/sse', async (req, res) => {
             }
         });
         await server.connect(transport);
+        activeMcpSessions.set(sessionId, transport);
+        console.log(`✅ [MCP] Session ${sessionId} stockée`);
     }
     catch (error) {
         console.error("[MCP] Error:", error);
@@ -476,21 +479,12 @@ app.get('/:userId/gmail/sse', async (req, res) => {
     }
 });
 app.post('/:userId/gmail/message', async (req, res) => {
-    const userId = req.params.userId;
     const sessionId = req.query.sessionId;
-    console.log(`🎯 Route /${userId}/gmail/message appelée !`);
-    console.log('📦 Body:', JSON.stringify(req.body, null, 2));
-    const userSession = gmailManager.getUserSession(userId);
-    if (!userSession) {
-        res.status(404).send('User session not found');
-        return;
+    const transport = activeMcpSessions.get(sessionId);
+    if (!transport) {
+        return res.status(404).send('Session not found');
     }
-    if (!sessionId) {
-        res.status(400).send("Missing sessionId query parameter");
-        return;
-    }
-    console.log(`✅ [MCP] Message traité pour ${userSession.userEmail}`);
-    res.status(200).json({ success: true });
+    transport.handlePostMessage(req, res);
 });
 app.get('/api/status', (req, res) => {
     res.json({
