@@ -259,13 +259,81 @@
         }
 
         .help-text {
-            color: #666;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+            color: #6c757d;
             margin-top: 0.5rem;
-            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tools-section {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            display: none;
+        }
+
+        .tools-section h3 {
+            color: #495057;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .tools-subtitle {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tools-list {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .tool-item {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            transition: all 0.2s ease;
+            cursor: default;
+        }
+
+        .tool-item:hover {
+            border-color: #2a5298;
+            box-shadow: 0 2px 8px rgba(42, 82, 152, 0.1);
+        }
+
+        .tool-name {
+            font-weight: 500;
+            color: #495057;
+            margin-bottom: 0.25rem;
+        }
+
+        .tool-description {
+            font-size: 0.85rem;
+            color: #6c757d;
+            line-height: 1.4;
         }
 
         @media (max-width: 768px) {
+            .container {
+                padding: 2rem;
+                margin: 1rem;
+            }
+            
+            .back-btn {
+                position: relative;
+                top: auto;
+                left: auto;
+                margin-bottom: 2rem;
+                align-self: flex-start;
+            }
+        }        @media (max-width: 768px) {
             .container {
                 padding: 2rem;
                 margin: 1rem;
@@ -338,6 +406,43 @@
                 Se déconnecter
             </button>
         </div>
+
+        <div id="tools-section" class="tools-section">
+            <h3><i class="fas fa-tools"></i> Available tools</h3>
+            <p class="tools-subtitle">Add all 6 actions as tools in your MCP client</p>
+            
+            <div class="tools-list">
+                <div class="tool-item">
+                    <div class="tool-name">axonaut_list_companies</div>
+                    <div class="tool-description">Lister les entreprises Axonaut avec recherche et pagination</div>
+                </div>
+                
+                <div class="tool-item">
+                    <div class="tool-name">axonaut_search_company</div>
+                    <div class="tool-description">Rechercher une entreprise spécifique par nom</div>
+                </div>
+                
+                <div class="tool-item">
+                    <div class="tool-name">axonaut_create_company</div>
+                    <div class="tool-description">Créer une nouvelle entreprise Axonaut</div>
+                </div>
+                
+                <div class="tool-item">
+                    <div class="tool-name">axonaut_list_invoices</div>
+                    <div class="tool-description">Lister les factures avec pagination et filtrage par statut</div>
+                </div>
+                
+                <div class="tool-item">
+                    <div class="tool-name">axonaut_get_invoice_detail</div>
+                    <div class="tool-description">Obtenir le détail complet d'une facture spécifique</div>
+                </div>
+                
+                <div class="tool-item">
+                    <div class="tool-name">axonaut_get_account_info</div>
+                    <div class="tool-description">Obtenir les informations du compte Axonaut</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -350,6 +455,7 @@
         const authBtn = document.getElementById('auth-btn');
         const status = document.getElementById('status');
         const userInfo = document.getElementById('user-info');
+        const toolsSection = document.getElementById('tools-section');
         const apiKeyInput = document.getElementById('apiKey');
         const userEmailInput = document.getElementById('userEmail');
         const disconnectBtn = document.getElementById('disconnect-btn');
@@ -379,12 +485,14 @@
             
             authForm.style.display = 'none';
             userInfo.style.display = 'block';
+            toolsSection.style.display = 'block';
             hideStatus();
         }
 
         function showAuthForm() {
             authForm.style.display = 'block';
             userInfo.style.display = 'none';
+            toolsSection.style.display = 'none';
             hideStatus();
         }
 

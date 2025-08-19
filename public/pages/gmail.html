@@ -253,6 +253,59 @@
         .loading {
             animation: pulse 2s infinite;
         }
+
+        .tools-section {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            display: none;
+        }
+
+        .tools-section h3 {
+            color: #495057;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .tools-subtitle {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tools-list {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .tool-item {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            transition: all 0.2s ease;
+            cursor: default;
+        }
+
+        .tool-item:hover {
+            border-color: #4285f4;
+            box-shadow: 0 2px 8px rgba(66, 133, 244, 0.1);
+        }
+
+        .tool-name {
+            font-weight: 500;
+            color: #495057;
+            margin-bottom: 0.25rem;
+        }
+
+        .tool-description {
+            font-size: 0.85rem;
+            color: #6c757d;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -314,6 +367,38 @@
             <button class="copy-btn" onclick="copyEndpoint()">
                 <i class="fas fa-copy"></i> Copier
             </button>
+        </div>
+
+        <div id="tools-section" class="tools-section">
+            <h3><i class="fas fa-tools"></i> Available tools</h3>
+            <p class="tools-subtitle">Add all 5 actions as tools in your MCP client</p>
+            
+            <div class="tools-list">
+                <div class="tool-item">
+                    <div class="tool-name">gmail_get_profile</div>
+                    <div class="tool-description">Obtenir le profil Gmail de l'utilisateur connecté</div>
+                </div>
+                
+                <div class="tool-item">
+                    <div class="tool-name">gmail_list_emails</div>
+                    <div class="tool-description">Lister les emails Gmail avec requête de recherche</div>
+                </div>
+                
+                <div class="tool-item">
+                    <div class="tool-name">gmail_send_email</div>
+                    <div class="tool-description">Envoyer un email via Gmail</div>
+                </div>
+                
+                <div class="tool-item">
+                    <div class="tool-name">gmail_search_emails</div>
+                    <div class="tool-description">Recherche avancée d'emails avec filtres</div>
+                </div>
+                
+                <div class="tool-item">
+                    <div class="tool-name">gmail_get_email_content</div>
+                    <div class="tool-description">Obtenir le contenu complet d'un email spécifique</div>
+                </div>
+            </div>
         </div>
 
         <div id="errorMessage" class="message error-message"></div>
@@ -419,6 +504,7 @@
             const userInfo = document.getElementById('userInfo');
             const userEmail = document.getElementById('userEmail');
             const endpointInfo = document.getElementById('endpointInfo');
+            const toolsSection = document.getElementById('tools-section');
             const endpointUrl = document.getElementById('endpointUrl');
             const connectBtn = document.getElementById('connectBtn');
             const connectText = document.getElementById('connectText');
@@ -437,6 +523,7 @@
             const mcpEndpoint = endpoint || `${window.location.origin}/${userId}/mcp/sse`;
             endpointUrl.textContent = mcpEndpoint;
             endpointInfo.style.display = 'block';
+            toolsSection.style.display = 'block';
 
             // Mettre à jour le bouton pour déconnexion
             connectText.textContent = 'Se déconnecter';
@@ -534,6 +621,7 @@
             const statusMessage = document.getElementById('statusMessage');
             const userInfo = document.getElementById('userInfo');
             const endpointInfo = document.getElementById('endpointInfo');
+            const toolsSection = document.getElementById('tools-section');
 
             // Remettre le statut à déconnecté
             statusCard.classList.remove('connected');
@@ -544,6 +632,7 @@
             // Masquer les informations utilisateur et endpoint
             userInfo.style.display = 'none';
             endpointInfo.style.display = 'none';
+            toolsSection.style.display = 'none';
 
             // Remettre le bouton de connexion
             resetButton();
