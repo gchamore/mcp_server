@@ -22,6 +22,14 @@ export interface GmailSession extends BaseServiceSession {
   oauth2Client: OAuth2Client;
 }
 
+// Session Axonaut spécifique
+export interface AxonautSession extends BaseServiceSession {
+  serviceName: 'axonaut';
+  apiKey: string;
+  baseUrl: string;
+  axonautClient: any; // Instance client Axonaut
+}
+
 // Session utilisateur multi-services
 export interface UserSession {
   userId: string;
@@ -29,9 +37,9 @@ export interface UserSession {
   lastAccessed: Date;
   services: {
     gmail?: GmailSession;
+    axonaut?: AxonautSession;
     // outlook?: OutlookSession;    // Pour plus tard
     // notion?: NotionSession;      // Pour plus tard
-    // axonaut?: AxonautSession;    // Pour plus tard
   };
 }
 
@@ -56,6 +64,33 @@ export interface EmailData {
 export interface GmailHeader {
   name: string;
   value: string;
+}
+
+// Interface pour les données Axonaut
+export interface AxonautContact {
+  id: string;
+  name: string;
+  email: string;
+  company?: string;
+  phone?: string;
+}
+
+export interface AxonautInvoice {
+  id: string;
+  number?: string;
+  contact_id?: string;
+  amount?: number;
+  total_amount?: number;
+  status?: string;
+  date?: string;
+  creation_date?: string;
+  // Autres champs possibles selon l'API Axonaut
+  [key: string]: any;
+}
+
+export interface AxonautApiConfig {
+  apiKey: string;
+  baseUrl: string;
 }
 
 // Résultat d'authentification

@@ -182,75 +182,31 @@
             background: #e8f4fd;
             border: 1px solid #bee5eb;
             border-radius: 10px;
-            padding: 1.5rem;
+            padding: 1rem;
             margin-top: 1.5rem;
             display: none;
         }
 
         .user-info h3 {
             color: #0c5460;
-            margin-bottom: 1.5rem;
-            text-align: center;
-        }
-
-        .mcp-url-container {
-            margin-bottom: 1.5rem;
-        }
-
-        .mcp-url-container label {
-            display: block;
             margin-bottom: 0.5rem;
-            font-weight: 600;
+        }
+
+        .user-info p {
             color: #0c5460;
-        }
-
-        .url-copy-container {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .url-copy-container input {
-            flex: 1;
-            padding: 0.8rem;
-            border: 2px solid #bee5eb;
-            border-radius: 8px;
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-            font-size: 0.9rem;
-            background: white;
-            color: #333;
-        }
-
-        .copy-btn {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 0.8rem 1.2rem;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .copy-btn:hover {
-            background: #218838;
-            transform: translateY(-1px);
-        }
-
-        .copy-btn.copied {
-            background: #17a2b8;
+            margin: 0.25rem 0;
         }
 
         .disconnect-btn {
             background: #dc3545;
             color: white;
             border: none;
-            padding: 0.8rem 1.5rem;
+            padding: 0.6rem 1.5rem;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
-            font-weight: 600;
-            width: 100%;
+            font-weight: 500;
+            margin-top: 1rem;
         }
 
         .disconnect-btn:hover {
@@ -263,6 +219,24 @@
             font-size: 0.9rem;
             margin-top: 0.5rem;
             text-align: left;
+        }
+
+        .mcp-link {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .mcp-link:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
         }
 
         @media (max-width: 768px) {
@@ -320,19 +294,18 @@
         <div id="status" class="status"></div>
         
         <div id="user-info" class="user-info">
-            <h3><i class="fas fa-check-circle"></i> Connexion Axonaut établie</h3>
+            <h3><i class="fas fa-check-circle"></i> Connexion établie</h3>
+            <p><strong>Service :</strong> Axonaut</p>
+            <p><strong>URL :</strong> <span id="connected-url"></span></p>
+            <p><strong>Email :</strong> <span id="connected-email"></span></p>
+            <p><strong>ID Utilisateur :</strong> <span id="connected-userId"></span></p>
             
-            <div class="mcp-url-container">
-                <label for="mcp-url">URL MCP à copier dans Dust :</label>
-                <div class="url-copy-container">
-                    <input type="text" id="mcp-url" readonly>
-                    <button id="copy-btn" class="copy-btn">
-                        <i class="fas fa-copy"></i>
-                        Copier
-                    </button>
-                </div>
-            </div>
+            <a id="mcp-link" class="mcp-link" href="#" target="_blank">
+                <i class="fas fa-external-link-alt"></i>
+                Ouvrir l'interface MCP
+            </a>
             
+            <br>
             <button id="disconnect-btn" class="disconnect-btn">
                 <i class="fas fa-sign-out-alt"></i>
                 Se déconnecter
@@ -353,8 +326,7 @@
         const apiKeyInput = document.getElementById('apiKey');
         const userEmailInput = document.getElementById('userEmail');
         const disconnectBtn = document.getElementById('disconnect-btn');
-        const mcpUrlInput = document.getElementById('mcp-url');
-        const copyBtn = document.getElementById('copy-btn');
+        const mcpLink = document.getElementById('mcp-link');
 
         // Fonctions utilitaires
         function showStatus(message, type = 'loading') {
@@ -374,8 +346,11 @@
         }
 
         function showUserInfo(userData) {
-            const mcpUrl = `${baseUrl}/${userData.userId}/mcp/sse`;
-            mcpUrlInput.value = mcpUrl;
+            document.getElementById('connected-url').textContent = 'https://axonaut.com';
+            document.getElementById('connected-email').textContent = userData.userEmail || 'N/A';
+            document.getElementById('connected-userId').textContent = userData.userId || 'N/A';
+            
+            mcpLink.href = `${baseUrl}/${userData.userId}/mcp/sse`;
             
             authForm.style.display = 'none';
             userInfo.style.display = 'block';
@@ -386,38 +361,6 @@
             authForm.style.display = 'block';
             userInfo.style.display = 'none';
             hideStatus();
-        }
-
-        // Fonction de copie
-        async function copyMcpUrl() {
-            try {
-                await navigator.clipboard.writeText(mcpUrlInput.value);
-                
-                // Feedback visuel
-                const originalText = copyBtn.innerHTML;
-                copyBtn.innerHTML = '<i class="fas fa-check"></i> Copié !';
-                copyBtn.classList.add('copied');
-                
-                setTimeout(() => {
-                    copyBtn.innerHTML = originalText;
-                    copyBtn.classList.remove('copied');
-                }, 2000);
-                
-            } catch (error) {
-                // Fallback pour les navigateurs qui ne supportent pas l'API Clipboard
-                mcpUrlInput.select();
-                mcpUrlInput.setSelectionRange(0, 99999);
-                document.execCommand('copy');
-                
-                const originalText = copyBtn.innerHTML;
-                copyBtn.innerHTML = '<i class="fas fa-check"></i> Copié !';
-                copyBtn.classList.add('copied');
-                
-                setTimeout(() => {
-                    copyBtn.innerHTML = originalText;
-                    copyBtn.classList.remove('copied');
-                }, 2000);
-            }
         }
 
         // Gestion de l'authentification
@@ -444,7 +387,7 @@
                     },
                     body: JSON.stringify({
                         userId: currentUserId,
-                        baseUrl: 'https://axonaut.com',
+                        baseUrl: 'https://axonaut.com', // URL fixe pour tous
                         apiKey: apiKey,
                         userEmail: userEmail
                     })
@@ -527,7 +470,6 @@
         // Event listeners
         authBtn.addEventListener('click', authenticateAxonaut);
         disconnectBtn.addEventListener('click', disconnect);
-        copyBtn.addEventListener('click', copyMcpUrl);
 
         // Permettre l'authentification avec Entrée
         [apiKeyInput, userEmailInput].forEach(input => {

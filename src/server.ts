@@ -12,6 +12,7 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { ServiceRegistry } from "./core/ServiceRegistry.js";
 import { MultiTenantManager } from "./core/MultiTenantManager.js";
 import { GmailService } from "./services/gmail/GmailService.js";
+import { AxonautService } from "./services/axonaut/AxonautService.js";
 import { UserSession } from "./types/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -51,8 +52,12 @@ const gmailService = new GmailService(
   BASE_URL
 );
 
-// 4. Enregistrer le service Gmail
+// 4. Initialiser le service Axonaut
+const axonautService = new AxonautService();
+
+// 5. Enregistrer les services
 serviceRegistry.registerService(gmailService);
+serviceRegistry.registerService(axonautService);
 
 console.log('✅ Architecture initialisée avec les services:', serviceRegistry.getServiceNames());
 
@@ -60,6 +65,7 @@ console.log('✅ Architecture initialisée avec les services:', serviceRegistry.
 setInterval(() => {
   multiTenantManager.cleanupExpiredSessions();
   gmailService.cleanupExpiredSessions();
+  axonautService.cleanupExpiredSessions();
 }, 60 * 60 * 1000);
 
 // ✅ APPLICATION EXPRESS UNIFIÉE
@@ -316,6 +322,67 @@ app.get('/oauth/callback', async (req, res) => {
   }
 });
 
+// ✅ ROUTES AXONAUT 
+app.post('/api/axonaut/auth', express.json(), async (req, res) => {
+  const { userId, apiKey, baseUrl, userEmail } = req.body;
+  
+  if (!userId || !apiKey || !baseUrl) {
+    return res.status(400).json({
+      success: false,
+      error: 'userId, apiKey et baseUrl sont requis'
+    });
+  }
+  
+  try {
+    console.log(`[Axonaut] Tentative d'authentification pour l'utilisateur ${userId}`);
+    
+    const authResult = await axonautService.authenticateWithApiKey(apiKey, baseUrl, userEmail);
+    
+    if (authResult.success && authResult.userId) {
+      // Récupérer la session créée par le service
+      const axonautSession = axonautService.getAxonautSession(authResult.userId);
+      
+      if (!axonautSession) {
+        throw new Error('Session Axonaut non trouvée après création');
+      }
+      
+      // Créer/récupérer la session utilisateur
+      let userSession = multiTenantManager.getUserSession(userId);
+      if (!userSession) {
+        multiTenantManager.createUserSession(userId);
+        userSession = multiTenantManager.getUserSession(userId);
+      }
+      
+      // Ajouter la session Axonaut
+      if (userSession) {
+        multiTenantManager.addServiceSession(userId, 'axonaut', axonautSession);
+        console.log(`[Axonaut] Authentification réussie pour ${userId}`);
+        
+        res.json({
+          success: true,
+          message: 'Authentification Axonaut réussie',
+          userId,
+          service: 'axonaut',
+          userEmail: authResult.userEmail
+        });
+      } else {
+        throw new Error('Erreur lors de la création de la session utilisateur');
+      }
+    } else {
+      res.status(401).json({
+        success: false,
+        error: authResult.error || 'Erreur d\'authentification Axonaut'
+      });
+    }
+  } catch (error) {
+    console.error('[Axonaut] Erreur authentification:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de l\'authentification Axonaut'
+    });
+  }
+});
+
 // ✅ API DE DÉCONNEXION
 app.post('/api/disconnect/:userId/:serviceName', async (req, res) => {
   const { userId, serviceName } = req.params;
@@ -342,6 +409,13 @@ app.post('/api/disconnect/:userId/:serviceName', async (req, res) => {
       console.log(`[Disconnect] Session Gmail trouvée directement dans GmailService: ${!!gmailSession}`);
     }
     
+    // Pour Axonaut, vérifier aussi directement dans le service Axonaut
+    if (!hasSession && serviceName === 'axonaut') {
+      const axonautSession = axonautService.getAxonautSession(userId);
+      hasSession = !!axonautSession;
+      console.log(`[Disconnect] Session Axonaut trouvée directement dans AxonautService: ${!!axonautSession}`);
+    }
+    
     if (!hasSession) {
       console.log(`[Disconnect] Aucune session ${serviceName} active pour l'utilisateur ${userId}`);
       return res.status(404).json({
@@ -352,21 +426,24 @@ app.post('/api/disconnect/:userId/:serviceName', async (req, res) => {
     
     // Supprimer la session du service
     let removed = false;
-    let gmailRemoved = false;
+    let serviceSpecificRemoved = false;
     
     try {
       // Supprimer la session du MultiTenantManager
       removed = multiTenantManager.removeServiceSession(userId, serviceName);
       console.log(`[Disconnect] Session ${serviceName} supprimée du MultiTenantManager: ${removed}`);
       
-      // Si c'est Gmail, nettoyer aussi la session Gmail du service
+      // Nettoyer aussi dans le service spécifique
       if (serviceName === 'gmail') {
-        gmailRemoved = gmailService.removeSession(userId);
-        console.log(`[Disconnect] Session Gmail supprimée du service: ${gmailRemoved}`);
+        serviceSpecificRemoved = gmailService.removeSession(userId);
+        console.log(`[Disconnect] Session Gmail supprimée du service: ${serviceSpecificRemoved}`);
+      } else if (serviceName === 'axonaut') {
+        serviceSpecificRemoved = axonautService.removeSession(userId);
+        console.log(`[Disconnect] Session Axonaut supprimée du service: ${serviceSpecificRemoved}`);
       }
       
       // Considérer la suppression réussie si au moins une des deux a fonctionné
-      const overallSuccess = removed || gmailRemoved;
+      const overallSuccess = removed || serviceSpecificRemoved;
       
       if (overallSuccess) {
         console.log(`[Disconnect] Déconnexion ${serviceName} réussie pour l'utilisateur ${userId}`);
@@ -377,7 +454,7 @@ app.post('/api/disconnect/:userId/:serviceName', async (req, res) => {
           service: serviceName,
           details: {
             multiTenantManager: removed,
-            serviceSpecific: gmailRemoved
+            serviceSpecific: serviceSpecificRemoved
           }
         });
       } else {

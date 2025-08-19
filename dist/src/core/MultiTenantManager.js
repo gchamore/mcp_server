@@ -34,6 +34,9 @@ export class MultiTenantManager {
         if (serviceName === 'gmail') {
             userSession.services.gmail = serviceSession;
         }
+        else if (serviceName === 'axonaut') {
+            userSession.services.axonaut = serviceSession;
+        }
         console.log(`✅ Service ${serviceName} ajouté à la session ${userId}`);
         return true;
     }
@@ -54,6 +57,16 @@ export class MultiTenantManager {
                 console.log(`[MultiTenant] Aucune session Gmail à supprimer pour ${userId}`);
             }
         }
+        else if (serviceName === 'axonaut') {
+            wasPresent = !!userSession.services.axonaut;
+            if (wasPresent) {
+                delete userSession.services.axonaut;
+                console.log(`🗑️ Service Axonaut supprimé de la session ${userId}`);
+            }
+            else {
+                console.log(`[MultiTenant] Aucune session Axonaut à supprimer pour ${userId}`);
+            }
+        }
         return wasPresent;
     }
     hasServiceSession(userId, serviceName) {
@@ -67,6 +80,11 @@ export class MultiTenantManager {
             console.log(`[MultiTenant] Session Gmail pour ${userId}: ${hasGmail} (session: ${!!userSession.services.gmail})`);
             return hasGmail;
         }
+        if (serviceName === 'axonaut') {
+            const hasAxonaut = !!userSession.services.axonaut?.isAuthenticated;
+            console.log(`[MultiTenant] Session Axonaut pour ${userId}: ${hasAxonaut} (session: ${!!userSession.services.axonaut})`);
+            return hasAxonaut;
+        }
         return false;
     }
     getServiceSession(userId, serviceName) {
@@ -75,6 +93,9 @@ export class MultiTenantManager {
             return null;
         if (serviceName === 'gmail') {
             return userSession.services.gmail || null;
+        }
+        if (serviceName === 'axonaut') {
+            return userSession.services.axonaut || null;
         }
         return null;
     }
@@ -85,6 +106,9 @@ export class MultiTenantManager {
         const connectedServices = [];
         if (userSession.services.gmail?.isAuthenticated) {
             connectedServices.push('gmail');
+        }
+        if (userSession.services.axonaut?.isAuthenticated) {
+            connectedServices.push('axonaut');
         }
         return connectedServices;
     }

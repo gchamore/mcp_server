@@ -51,6 +51,10 @@ export class MultiTenantManager {
     if (serviceName === 'gmail') {
       userSession.services.gmail = serviceSession as any; // Cast nécessaire pour le moment
     }
+    // Typage sécurisé pour Axonaut
+    else if (serviceName === 'axonaut') {
+      userSession.services.axonaut = serviceSession as any;
+    }
     // Ici on ajoutera d'autres services plus tard
     
     console.log(`✅ Service ${serviceName} ajouté à la session ${userId}`);
@@ -76,6 +80,15 @@ export class MultiTenantManager {
         console.log(`[MultiTenant] Aucune session Gmail à supprimer pour ${userId}`);
       }
     }
+    else if (serviceName === 'axonaut') {
+      wasPresent = !!userSession.services.axonaut;
+      if (wasPresent) {
+        delete userSession.services.axonaut;
+        console.log(`🗑️ Service Axonaut supprimé de la session ${userId}`);
+      } else {
+        console.log(`[MultiTenant] Aucune session Axonaut à supprimer pour ${userId}`);
+      }
+    }
     
     return wasPresent;
   }
@@ -94,6 +107,12 @@ export class MultiTenantManager {
       return hasGmail;
     }
     
+    if (serviceName === 'axonaut') {
+      const hasAxonaut = !!userSession.services.axonaut?.isAuthenticated;
+      console.log(`[MultiTenant] Session Axonaut pour ${userId}: ${hasAxonaut} (session: ${!!userSession.services.axonaut})`);
+      return hasAxonaut;
+    }
+    
     return false;
   }
   
@@ -104,6 +123,10 @@ export class MultiTenantManager {
     
     if (serviceName === 'gmail') {
       return userSession.services.gmail || null;
+    }
+    
+    if (serviceName === 'axonaut') {
+      return userSession.services.axonaut || null;
     }
     
     return null;
@@ -118,6 +141,10 @@ export class MultiTenantManager {
     
     if (userSession.services.gmail?.isAuthenticated) {
       connectedServices.push('gmail');
+    }
+    
+    if (userSession.services.axonaut?.isAuthenticated) {
+      connectedServices.push('axonaut');
     }
     
     return connectedServices;
