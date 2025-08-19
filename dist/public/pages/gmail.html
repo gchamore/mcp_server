@@ -465,17 +465,8 @@
                 const data = await response.json();
                 
                 if (data.success && data.authUrl) {
-                    // Ouvrir la popup OAuth
-                    const popup = window.open(data.authUrl, 'gmailOAuth', 'width=500,height=600,scrollbars=yes,resizable=yes');
-                    
-                    // Surveiller la fermeture de la popup
-                    const checkClosed = setInterval(function() {
-                        if (popup.closed) {
-                            clearInterval(checkClosed);
-                            setTimeout(checkServerStatus, 1000);
-                            resetButton();
-                        }
-                    }, 1000);
+                    // Rediriger directement vers l'URL OAuth au lieu d'une popup
+                    window.location.href = data.authUrl;
                 } else {
                     throw new Error(data.error || 'Erreur lors du démarrage OAuth');
                 }

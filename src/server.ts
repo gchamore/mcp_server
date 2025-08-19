@@ -282,7 +282,7 @@ app.get('/oauth/callback', async (req, res) => {
 
   if (error || !code) {
     console.error('[OAuth] Erreur callback:', error || 'Code manquant');
-    return res.redirect(`/?error=${encodeURIComponent(error || 'Code d\'autorisation manquant')}`);
+    return res.redirect(`/pages/gmail.html?error=${encodeURIComponent(error || 'Code d\'autorisation manquant')}`);
   }
 
   try {
@@ -291,13 +291,13 @@ app.get('/oauth/callback', async (req, res) => {
     
     if (authResult.success && authResult.userId) {
       console.log(`[OAuth] Authentification réussie pour ${authResult.userEmail}: ${authResult.userId}`);
-      res.redirect(`/?success=true&userId=${authResult.userId}&email=${encodeURIComponent(authResult.userEmail || '')}&service=gmail`);
+      res.redirect(`/pages/gmail.html?success=true&userId=${authResult.userId}&email=${encodeURIComponent(authResult.userEmail || '')}&service=gmail`);
     } else {
       throw new Error(authResult.error || 'Erreur inconnue');
     }
   } catch (error) {
     console.error('[OAuth] Erreur traitement callback:', error);
-    res.redirect(`/?error=${encodeURIComponent('Erreur lors de l\'authentification')}`);
+    res.redirect(`/pages/gmail.html?error=${encodeURIComponent('Erreur lors de l\'authentification')}`);
   }
 });
 
