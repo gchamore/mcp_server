@@ -40,13 +40,21 @@ export class MultiTenantManager {
     removeServiceSession(userId, serviceName) {
         const userSession = this.getUserSession(userId);
         if (!userSession) {
+            console.log(`[MultiTenant] Aucune session utilisateur trouvée pour ${userId} lors de la suppression`);
             return false;
         }
+        let wasPresent = false;
         if (serviceName === 'gmail') {
-            delete userSession.services.gmail;
+            wasPresent = !!userSession.services.gmail;
+            if (wasPresent) {
+                delete userSession.services.gmail;
+                console.log(`🗑️ Service Gmail supprimé de la session ${userId}`);
+            }
+            else {
+                console.log(`[MultiTenant] Aucune session Gmail à supprimer pour ${userId}`);
+            }
         }
-        console.log(`🗑️ Service ${serviceName} supprimé de la session ${userId}`);
-        return true;
+        return wasPresent;
     }
     hasServiceSession(userId, serviceName) {
         const userSession = this.getUserSession(userId);

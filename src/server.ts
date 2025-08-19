@@ -336,25 +336,54 @@ app.post('/api/disconnect/:userId/:serviceName', async (req, res) => {
     }
     
     // Supprimer la session du service
-    const removed = multiTenantManager.removeServiceSession(userId, serviceName);
+    let removed = false;
+    let gmailRemoved = false;
     
-    // Si c'est Gmail, nettoyer aussi la session Gmail du service
-    if (serviceName === 'gmail') {
-      // Supprimer aussi la session du service Gmail directement
-      const gmailRemoved = gmailService.removeSession(userId);
-      console.log(`[Disconnect] Session Gmail supprimée du service: ${gmailRemoved}`);
-    }
-    
-    if (removed) {
-      console.log(`[Disconnect] Session ${serviceName} supprimée pour l'utilisateur ${userId}`);
+    try {
+      // Supprimer la session du MultiTenantManager
+      removed = multiTenantManager.removeServiceSession(userId, serviceName);
+      console.log(`[Disconnect] Session ${serviceName} supprimée du MultiTenantManager: ${removed}`);
+      
+      // Si c'est Gmail, nettoyer aussi la session Gmail du service
+      if (serviceName === 'gmail') {
+        gmailRemoved = gmailService.removeSession(userId);
+        console.log(`[Disconnect] Session Gmail supprimée du service: ${gmailRemoved}`);
+      }
+      
+      // Considérer la suppression réussie si au moins une des deux a fonctionné
+      const overallSuccess = removed || gmailRemoved;
+      
+      if (overallSuccess) {
+        console.log(`[Disconnect] Déconnexion ${serviceName} réussie pour l'utilisateur ${userId}`);
+        res.json({
+          success: true,
+          message: `Déconnexion ${serviceName} réussie`,
+          userId,
+          service: serviceName,
+          details: {
+            multiTenantManager: removed,
+            serviceSpecific: gmailRemoved
+          }
+        });
+      } else {
+        console.warn(`[Disconnect] Aucune session trouvée à supprimer pour ${userId}/${serviceName}`);
+        res.json({
+          success: true,
+          message: `Aucune session active à supprimer pour ${serviceName}`,
+          userId,
+          service: serviceName
+        });
+      }
+    } catch (cleanupError) {
+      console.error(`[Disconnect] Erreur lors du nettoyage:`, cleanupError);
+      // Même si le nettoyage échoue, on peut considérer que la déconnexion a réussi
       res.json({
         success: true,
-        message: `Déconnexion ${serviceName} réussie`,
+        message: `Déconnexion ${serviceName} effectuée (avec avertissements)`,
         userId,
-        service: serviceName
+        service: serviceName,
+        warning: 'Nettoyage partiel'
       });
-    } else {
-      throw new Error('Erreur lors de la suppression de la session');
     }
     
   } catch (error) {

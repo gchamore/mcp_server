@@ -230,22 +230,48 @@ app.post('/api/disconnect/:userId/:serviceName', async (req, res) => {
                 error: `Aucune session active ${serviceName} trouvée pour l'utilisateur ${userId}`
             });
         }
-        const removed = multiTenantManager.removeServiceSession(userId, serviceName);
-        if (serviceName === 'gmail') {
-            const gmailRemoved = gmailService.removeSession(userId);
-            console.log(`[Disconnect] Session Gmail supprimée du service: ${gmailRemoved}`);
+        let removed = false;
+        let gmailRemoved = false;
+        try {
+            removed = multiTenantManager.removeServiceSession(userId, serviceName);
+            console.log(`[Disconnect] Session ${serviceName} supprimée du MultiTenantManager: ${removed}`);
+            if (serviceName === 'gmail') {
+                gmailRemoved = gmailService.removeSession(userId);
+                console.log(`[Disconnect] Session Gmail supprimée du service: ${gmailRemoved}`);
+            }
+            const overallSuccess = removed || gmailRemoved;
+            if (overallSuccess) {
+                console.log(`[Disconnect] Déconnexion ${serviceName} réussie pour l'utilisateur ${userId}`);
+                res.json({
+                    success: true,
+                    message: `Déconnexion ${serviceName} réussie`,
+                    userId,
+                    service: serviceName,
+                    details: {
+                        multiTenantManager: removed,
+                        serviceSpecific: gmailRemoved
+                    }
+                });
+            }
+            else {
+                console.warn(`[Disconnect] Aucune session trouvée à supprimer pour ${userId}/${serviceName}`);
+                res.json({
+                    success: true,
+                    message: `Aucune session active à supprimer pour ${serviceName}`,
+                    userId,
+                    service: serviceName
+                });
+            }
         }
-        if (removed) {
-            console.log(`[Disconnect] Session ${serviceName} supprimée pour l'utilisateur ${userId}`);
+        catch (cleanupError) {
+            console.error(`[Disconnect] Erreur lors du nettoyage:`, cleanupError);
             res.json({
                 success: true,
-                message: `Déconnexion ${serviceName} réussie`,
+                message: `Déconnexion ${serviceName} effectuée (avec avertissements)`,
                 userId,
-                service: serviceName
+                service: serviceName,
+                warning: 'Nettoyage partiel'
             });
-        }
-        else {
-            throw new Error('Erreur lors de la suppression de la session');
         }
     }
     catch (error) {
