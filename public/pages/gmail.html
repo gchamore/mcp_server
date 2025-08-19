@@ -438,10 +438,12 @@
             endpointUrl.textContent = mcpEndpoint;
             endpointInfo.style.display = 'block';
 
-            // Mettre à jour le bouton
-            connectText.textContent = '✓ Connecté';
-            connectBtn.style.background = '#27ae60';
-            connectBtn.disabled = true;
+            // Mettre à jour le bouton pour déconnexion
+            connectText.textContent = 'Se déconnecter';
+            connectBtn.querySelector('.fab').className = 'fas fa-sign-out-alt';
+            connectBtn.style.background = '#e74c3c';
+            connectBtn.disabled = false;
+            connectBtn.onclick = () => disconnectGmail();
 
             currentUserId = userId;
         }
@@ -483,7 +485,71 @@
 
             connectBtn.disabled = false;
             connectText.textContent = 'Se connecter avec Gmail';
+            connectBtn.querySelector('.fas, .fab').className = 'fab fa-google';
+            connectBtn.style.background = 'linear-gradient(45deg, #4285f4, #34a853)';
+            connectBtn.onclick = () => startOAuth();
             loadingIcon.classList.remove('show');
+        }
+
+        async function disconnectGmail() {
+            if (!currentUserId) {
+                showErrorMessage('Aucune session active à déconnecter');
+                return;
+            }
+
+            const connectBtn = document.getElementById('connectBtn');
+            const connectText = document.getElementById('connectText');
+            const loadingIcon = document.getElementById('loadingIcon');
+
+            // État de chargement
+            connectBtn.disabled = true;
+            connectText.textContent = 'Déconnexion...';
+            loadingIcon.classList.add('show');
+            hideMessages();
+
+            try {
+                const response = await fetch(`/api/disconnect/${currentUserId}/gmail`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccessMessage('Déconnexion réussie !');
+                    resetToDisconnectedState();
+                } else {
+                    throw new Error(data.error || 'Erreur lors de la déconnexion');
+                }
+            } catch (error) {
+                console.error('Erreur déconnexion:', error);
+                showErrorMessage('Erreur: ' + error.message);
+                resetButton();
+            }
+        }
+
+        function resetToDisconnectedState() {
+            // Remettre l'interface à l'état déconnecté
+            const statusCard = document.getElementById('statusCard');
+            const statusTitle = document.getElementById('statusTitle');
+            const statusMessage = document.getElementById('statusMessage');
+            const userInfo = document.getElementById('userInfo');
+            const endpointInfo = document.getElementById('endpointInfo');
+
+            // Remettre le statut à déconnecté
+            statusCard.classList.remove('connected');
+            statusCard.querySelector('.status-icon').innerHTML = '<i class="fas fa-times-circle"></i>';
+            statusTitle.textContent = 'Non connecté';
+            statusMessage.textContent = 'Cliquez sur "Se connecter" pour authentifier votre compte Gmail';
+
+            // Masquer les informations utilisateur et endpoint
+            userInfo.style.display = 'none';
+            endpointInfo.style.display = 'none';
+
+            // Remettre le bouton de connexion
+            resetButton();
+
+            // Réinitialiser l'ID utilisateur
+            currentUserId = null;
         }
 
         function copyEndpoint() {

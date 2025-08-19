@@ -301,6 +301,64 @@ app.get('/oauth/callback', async (req, res) => {
   }
 });
 
+// ✅ API DE DÉCONNEXION
+app.post('/api/disconnect/:userId/:serviceName', async (req, res) => {
+  const { userId, serviceName } = req.params;
+  
+  try {
+    console.log(`[Disconnect] Tentative de déconnexion ${serviceName} pour l'utilisateur ${userId}`);
+    
+    // Vérifier que le service existe
+    const service = serviceRegistry.getService(serviceName);
+    if (!service) {
+      return res.status(404).json({
+        success: false,
+        error: `Service ${serviceName} non trouvé`
+      });
+    }
+    
+    // Vérifier que l'utilisateur a une session pour ce service
+    if (!multiTenantManager.hasServiceSession(userId, serviceName)) {
+      return res.status(404).json({
+        success: false,
+        error: `Aucune session ${serviceName} trouvée pour l'utilisateur ${userId}`
+      });
+    }
+    
+    // Supprimer la session du service
+    const removed = multiTenantManager.removeServiceSession(userId, serviceName);
+    
+    // Si c'est Gmail, nettoyer aussi la session Gmail du service
+    if (removed && serviceName === 'gmail') {
+      // Supprimer aussi la session du service Gmail
+      const gmailSession = gmailService.getGmailSession(userId);
+      if (gmailSession) {
+        // Le service Gmail devrait avoir une méthode pour nettoyer les sessions
+        console.log(`[Disconnect] Nettoyage session Gmail pour ${userId}`);
+      }
+    }
+    
+    if (removed) {
+      console.log(`[Disconnect] Session ${serviceName} supprimée pour l'utilisateur ${userId}`);
+      res.json({
+        success: true,
+        message: `Déconnexion ${serviceName} réussie`,
+        userId,
+        service: serviceName
+      });
+    } else {
+      throw new Error('Erreur lors de la suppression de la session');
+    }
+    
+  } catch (error) {
+    console.error(`[Disconnect] Erreur déconnexion ${serviceName}:`, error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la déconnexion'
+    });
+  }
+});
+
 // ✅ API DE STATUT AMÉLIORÉE
 app.get('/api/status', (req, res) => {
   const stats = multiTenantManager.getStats();

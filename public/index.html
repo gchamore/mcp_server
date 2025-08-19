@@ -180,40 +180,6 @@
             font-style: italic;
         }
 
-        .popular-services {
-            margin-top: 2rem;
-        }
-
-        .popular-title {
-            color: rgba(255,255,255,0.8);
-            font-size: 1rem;
-            margin-bottom: 1rem;
-            font-weight: 400;
-        }
-
-        .popular-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.8rem;
-            justify-content: center;
-        }
-
-        .popular-tag {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.9rem;
-            backdrop-filter: blur(10px);
-        }
-
-        .popular-tag:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
-        }
-
         .footer-info {
             margin-top: 4rem;
             color: rgba(255,255,255,0.6);
@@ -228,11 +194,6 @@
             .search-input {
                 font-size: 1.1rem;
                 padding: 1.2rem 1.2rem 1.2rem 3.5rem;
-            }
-            
-            .popular-tags {
-                flex-direction: column;
-                align-items: center;
             }
         }
 
@@ -274,16 +235,6 @@
                     <div class="search-results" id="searchResults">
                         <!-- Les résultats apparaîtront ici -->
                     </div>
-                </div>
-            </div>
-
-            <div class="popular-services">
-                <div class="popular-title">Services populaires :</div>
-                <div class="popular-tags">
-                    <span class="popular-tag" onclick="searchFor('gmail')">Gmail</span>
-                    <span class="popular-tag" onclick="searchFor('outlook')">Outlook</span>
-                    <span class="popular-tag" onclick="searchFor('notion')">Notion</span>
-                    <span class="popular-tag" onclick="searchFor('axonaut')">Axonaut</span>
                 </div>
             </div>
         </div>

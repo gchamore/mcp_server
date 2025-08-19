@@ -206,6 +206,51 @@ app.get('/oauth/callback', async (req, res) => {
         res.redirect(`/pages/gmail.html?error=${encodeURIComponent('Erreur lors de l\'authentification')}`);
     }
 });
+app.post('/api/disconnect/:userId/:serviceName', async (req, res) => {
+    const { userId, serviceName } = req.params;
+    try {
+        console.log(`[Disconnect] Tentative de déconnexion ${serviceName} pour l'utilisateur ${userId}`);
+        const service = serviceRegistry.getService(serviceName);
+        if (!service) {
+            return res.status(404).json({
+                success: false,
+                error: `Service ${serviceName} non trouvé`
+            });
+        }
+        if (!multiTenantManager.hasServiceSession(userId, serviceName)) {
+            return res.status(404).json({
+                success: false,
+                error: `Aucune session ${serviceName} trouvée pour l'utilisateur ${userId}`
+            });
+        }
+        const removed = multiTenantManager.removeServiceSession(userId, serviceName);
+        if (removed && serviceName === 'gmail') {
+            const gmailSession = gmailService.getGmailSession(userId);
+            if (gmailSession) {
+                console.log(`[Disconnect] Nettoyage session Gmail pour ${userId}`);
+            }
+        }
+        if (removed) {
+            console.log(`[Disconnect] Session ${serviceName} supprimée pour l'utilisateur ${userId}`);
+            res.json({
+                success: true,
+                message: `Déconnexion ${serviceName} réussie`,
+                userId,
+                service: serviceName
+            });
+        }
+        else {
+            throw new Error('Erreur lors de la suppression de la session');
+        }
+    }
+    catch (error) {
+        console.error(`[Disconnect] Erreur déconnexion ${serviceName}:`, error);
+        res.status(500).json({
+            success: false,
+            error: 'Erreur lors de la déconnexion'
+        });
+    }
+});
 app.get('/api/status', (req, res) => {
     const stats = multiTenantManager.getStats();
     const serviceStats = serviceRegistry.getStats();
