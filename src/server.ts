@@ -20,9 +20,10 @@ const PORT = process.env.PORT || 3000;
 // ✅ CONFIGURATION OAUTH VIA VARIABLES D'ENVIRONNEMENT
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const BASE_URL = process.env.RAILWAY_PUBLIC_DOMAIN 
-  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` 
-  : `http://localhost:${PORT}`;
+const BASE_URL = process.env.BASE_URL || 
+  (process.env.RAILWAY_PUBLIC_DOMAIN 
+    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` 
+    : `http://localhost:${PORT}`);
 
 // Vérification des variables d'environnement
 if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
