@@ -680,11 +680,14 @@ app.listen(PORT, () => {
   console.log(`📱 Interface: ${BASE_URL}`);
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
   
-  // ✅ DEBUG: Lister toutes les routes
+  // ✅ DEBUG: Lister toutes les routes (avec typage correct)
   console.log('🔍 Routes enregistrées:');
-  app._router.stack.forEach((r) => {
-    if (r.route && r.route.path) {
-      console.log(`  ${Object.keys(r.route.methods).join(',').toUpperCase()} ${r.route.path}`);
-    }
-  });
+  const router = (app as any)._router;
+  if (router && router.stack) {
+    router.stack.forEach((r: any) => {
+      if (r.route && r.route.path) {
+        console.log(`  ${Object.keys(r.route.methods).join(',').toUpperCase()} ${r.route.path}`);
+      }
+    });
+  }
 });
