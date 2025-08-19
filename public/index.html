@@ -15,7 +15,7 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -228,7 +228,7 @@
                     <input 
                         type="text" 
                         class="search-input" 
-                        placeholder="Recherchez un service (Gmail, Outlook, Notion...)"
+                        placeholder="Recherchez un service (Gmail, Axonaut, Outlook...)"
                         id="searchInput"
                         autocomplete="off"
                     >
@@ -240,7 +240,7 @@
         </div>
 
         <div class="footer-info">
-            <p>🚀 Powered by Model Context Protocol</p>
+            <p>Powered by Wesype</p>
         </div>
     </div>
 
@@ -255,6 +255,15 @@
                 color: '#ea4335',
                 status: 'available',
                 keywords: ['gmail', 'google', 'email', 'mail', 'messagerie']
+            },
+            {
+                id: 'axonaut',
+                name: 'Axonaut CRM',
+                description: 'Gérez votre CRM et vos données commerciales',
+                icon: 'fas fa-chart-line',
+                color: '#1e3c72',
+                status: 'available',
+                keywords: ['axonaut', 'crm', 'commercial', 'ventes', 'clients', 'contacts']
             },
             {
                 id: 'outlook',
@@ -273,15 +282,6 @@
                 color: '#000000',
                 status: 'coming-soon',
                 keywords: ['notion', 'notes', 'documentation', 'wiki', 'base de données']
-            },
-            {
-                id: 'axonaut',
-                name: 'Axonaut CRM',
-                description: 'Gérez votre CRM et vos données commerciales',
-                icon: 'fas fa-chart-line',
-                color: '#1e3c72',
-                status: 'available',
-                keywords: ['axonaut', 'crm', 'commercial', 'ventes', 'clients', 'contacts']
             }
         ];
 
@@ -345,7 +345,7 @@
                     <div class="no-results">
                         <i class="fas fa-search" style="font-size: 2rem; margin-bottom: 1rem; color: #dee2e6;"></i>
                         <div>Aucun service trouvé pour "${query}"</div>
-                        <div style="margin-top: 0.5rem; font-size: 0.8rem;">Essayez "Gmail", "Outlook" ou "Notion"</div>
+                        <div style="margin-top: 0.5rem; font-size: 0.8rem;">Essayez "Gmail", "Axonaut" ou "Outlook"</div>
                     </div>
                 `;
             } else {

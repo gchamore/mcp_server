@@ -15,7 +15,7 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -117,12 +117,14 @@
             border-radius: 15px;
             padding: 2rem;
             margin: 2rem 0;
-            border-left: 4px solid #e74c3c;
             transition: all 0.3s ease;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         .status-card.connected {
-            border-left-color: #27ae60;
             background: #f0fff4;
         }
 
@@ -348,11 +350,11 @@
         </div>
 
         <div id="statusCard" class="status-card">
-            <div class="status-icon">
-                <i class="fas fa-times-circle"></i>
-            </div>
-            <h3 id="statusTitle">Non connecté</h3>
-            <p id="statusMessage">Cliquez sur "Se connecter" pour authentifier votre compte Gmail</p>
+            <button id="connectBtn" class="connect-btn" onclick="startOAuth()">
+                <i class="fab fa-google"></i>
+                <span id="connectText">Se connecter avec Gmail</span>
+                <i id="loadingIcon" class="fas fa-spinner fa-spin loading"></i>
+            </button>
         </div>
 
         <div id="userInfo" class="user-info">
@@ -403,14 +405,6 @@
 
         <div id="errorMessage" class="message error-message"></div>
         <div id="successMessage" class="message success-message"></div>
-
-        <div style="margin: 2rem 0;">
-            <button id="connectBtn" class="connect-btn" onclick="startOAuth()">
-                <i class="fab fa-google"></i>
-                <span id="connectText">Se connecter avec Gmail</span>
-                <i id="loadingIcon" class="fas fa-spinner fa-spin loading"></i>
-            </button>
-        </div>
 
         <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #eee; color: #7f8c8d; font-size: 0.9rem;">
             <p>🔒 Vos données restent privées et sécurisées</p>
@@ -465,19 +459,17 @@
 
         function updateServerUI(status) {
             const statusCard = document.getElementById('statusCard');
-            const statusTitle = document.getElementById('statusTitle');
-            const statusMessage = document.getElementById('statusMessage');
+            const connectBtn = document.getElementById('connectBtn');
 
             if (status.status === 'OK') {
-                if (!currentUserId) {
-                    statusTitle.textContent = 'Serveur prêt';
-                    statusMessage.textContent = 'Cliquez sur "Se connecter" pour authentifier votre Gmail';
+                if (!currentUserId && connectBtn) {
+                    connectBtn.style.display = 'block';
                 }
             } else {
                 statusCard.classList.remove('connected');
-                statusTitle.textContent = 'Serveur hors ligne';
-                statusMessage.textContent = status.error || 'Impossible de contacter le serveur';
-                statusCard.querySelector('.status-icon').innerHTML = '<i class="fas fa-times-circle"></i>';
+                if (connectBtn) {
+                    connectBtn.style.display = 'none';
+                }
             }
         }
 
@@ -617,17 +609,12 @@
         function resetToDisconnectedState() {
             // Remettre l'interface à l'état déconnecté
             const statusCard = document.getElementById('statusCard');
-            const statusTitle = document.getElementById('statusTitle');
-            const statusMessage = document.getElementById('statusMessage');
             const userInfo = document.getElementById('userInfo');
             const endpointInfo = document.getElementById('endpointInfo');
             const toolsSection = document.getElementById('tools-section');
 
             // Remettre le statut à déconnecté
             statusCard.classList.remove('connected');
-            statusCard.querySelector('.status-icon').innerHTML = '<i class="fas fa-times-circle"></i>';
-            statusTitle.textContent = 'Non connecté';
-            statusMessage.textContent = 'Cliquez sur "Se connecter" pour authentifier votre compte Gmail';
 
             // Masquer les informations utilisateur et endpoint
             userInfo.style.display = 'none';
