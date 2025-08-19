@@ -267,7 +267,7 @@ app.get('/:userId/gmail/sse', async (req, res) => {
     req.socket.setNoDelay(true);
     req.socket.setKeepAlive(true);
 
-    transport = new SSEServerTransport(`/${userId}/gmail/message`, res);
+    transport = new SSEServerTransport("/message", res);
     sessionId = transport.sessionId;
 
     const server = new McpServer({
@@ -626,31 +626,16 @@ app.get('/:userId/gmail/sse', async (req, res) => {
 });
 
 // ✅ GESTION DES MESSAGES MCP
-app.post('/:userId/gmail/message', async (req, res) => {
-  const userId = req.params.userId;
+app.post('/message', async (req, res) => {
   const sessionId = req.query.sessionId as string;
-
-  const userSession = gmailManager.getUserSession(userId);
-  if (!userSession) {
-    res.status(404).send('User session not found');
+  
+  if (!sessionId) {
+    res.status(400).send("Missing sessionId");
     return;
   }
 
-  try {
-    if (!sessionId) {
-      res.status(400).send("Missing sessionId query parameter");
-      return;
-    }
-
-    // Le transport MCP gère automatiquement les messages
-    res.status(200).send('OK');
-
-  } catch (error) {
-    console.error(`[MCP] Error handling message for user ${userId}:`, error);
-    if (!res.headersSent) {
-      res.status(500).send("Error processing message");
-    }
-  }
+  console.log(`[MCP] Message reçu avec sessionId: ${sessionId}`);
+  res.status(200).send('OK');
 });
 
 // ✅ API DE STATUT
