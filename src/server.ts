@@ -164,90 +164,7 @@ setInterval(() => {
 // ✅ APPLICATION EXPRESS UNIFIÉE
 const app = express();
 
-app.use(express.json());
-app.use(express.static(path.join(__dirname, '..', 'public')));
-
-// ✅ ROUTES FRONTEND
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
-});
-
-// ✅ API OAUTH
-app.post('/api/auth/start', async (req, res) => {
-  try {
-    const authUrl = gmailManager.createAuthUrl();
-    res.json({
-      success: true,
-      authUrl: authUrl
-    });
-  } catch (error) {
-    res.json({
-      success: false,
-      error: (error as Error).message
-    });
-  }
-});
-
-app.get('/oauth/callback', async (req, res) => {
-  const code = req.query.code as string;
-  const error = req.query.error as string;
-
-  if (error || !code) {
-    res.send(`
-      <html>
-        <body style="font-family: Arial; text-align: center; padding: 2rem;">
-          <h1>❌ Erreur OAuth</h1>
-          <p>Erreur: ${error || 'Code manquant'}</p>
-          <script>setTimeout(() => window.close(), 3000);</script>
-        </body>
-      </html>
-    `);
-    return;
-  }
-
-  try {
-    const userId = await gmailManager.handleOAuthCallback(code);
-    const userEndpoint = `${BASE_URL}/${userId}/gmail/sse`;
-
-    res.send(`
-      <html>
-        <head><title>OAuth Réussi</title></head>
-        <body style="font-family: Arial; text-align: center; padding: 2rem; background: #f0fff4;">
-          <h1 style="color: #27ae60;">✅ Authentification réussie!</h1>
-          <p>Votre endpoint MCP personnel :</p>
-          <div style="background: #263238; color: #4fc3f7; padding: 1rem; margin: 1rem 0; border-radius: 8px; word-break: break-all; font-family: monospace;">
-            ${userEndpoint}
-          </div>
-          <button onclick="copyEndpoint()" style="background: #3498db; color: white; border: none; padding: 0.5rem 1rem; border-radius: 5px; cursor: pointer;">
-            Copier pour Dust
-          </button>
-          <p style="margin-top: 1rem; color: #666;">
-            Copiez cette URL dans Dust pour connecter votre Gmail
-          </p>
-          <script>
-            function copyEndpoint() {
-              navigator.clipboard.writeText('${userEndpoint}');
-              alert('Endpoint copié dans le presse-papiers !');
-            }
-          </script>
-        </body>
-      </html>
-    `);
-
-  } catch (error) {
-    console.error('❌ Erreur callback OAuth:', error);
-    res.send(`
-      <html>
-        <body style="font-family: Arial; text-align: center; padding: 2rem;">
-          <h1>❌ Erreur lors du traitement</h1>
-          <p>Erreur: ${(error as Error).message}</p>
-          <script>setTimeout(() => window.close(), 3000);</script>
-        </body>
-      </html>
-    `);
-  }
-});
-
+// ✅ D'ABORD LES ROUTES MCP (AVANT le middleware JSON)
 // ✅ ENDPOINTS MCP PAR UTILISATEUR
 app.get('/:userId/gmail/sse', async (req, res) => {
   const userId = req.params.userId;
@@ -644,6 +561,91 @@ app.post('/:userId/gmail/message', async (req, res) => {
   
   // ✅ LA MAGIE : PASSER AU TRANSPORT MCP
   transport.handlePostMessage(req, res);
+});
+
+// ✅ MAINTENANT les middlewares
+app.use(express.json());
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// ✅ ROUTES FRONTEND
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+});
+
+// ✅ API OAUTH
+app.post('/api/auth/start', async (req, res) => {
+  try {
+    const authUrl = gmailManager.createAuthUrl();
+    res.json({
+      success: true,
+      authUrl: authUrl
+    });
+  } catch (error) {
+    res.json({
+      success: false,
+      error: (error as Error).message
+    });
+  }
+});
+
+app.get('/oauth/callback', async (req, res) => {
+  const code = req.query.code as string;
+  const error = req.query.error as string;
+
+  if (error || !code) {
+    res.send(`
+      <html>
+        <body style="font-family: Arial; text-align: center; padding: 2rem;">
+          <h1>❌ Erreur OAuth</h1>
+          <p>Erreur: ${error || 'Code manquant'}</p>
+          <script>setTimeout(() => window.close(), 3000);</script>
+        </body>
+      </html>
+    `);
+    return;
+  }
+
+  try {
+    const userId = await gmailManager.handleOAuthCallback(code);
+    const userEndpoint = `${BASE_URL}/${userId}/gmail/sse`;
+
+    res.send(`
+      <html>
+        <head><title>OAuth Réussi</title></head>
+        <body style="font-family: Arial; text-align: center; padding: 2rem; background: #f0fff4;">
+          <h1 style="color: #27ae60;">✅ Authentification réussie!</h1>
+          <p>Votre endpoint MCP personnel :</p>
+          <div style="background: #263238; color: #4fc3f7; padding: 1rem; margin: 1rem 0; border-radius: 8px; word-break: break-all; font-family: monospace;">
+            ${userEndpoint}
+          </div>
+          <button onclick="copyEndpoint()" style="background: #3498db; color: white; border: none; padding: 0.5rem 1rem; border-radius: 5px; cursor: pointer;">
+            Copier pour Dust
+          </button>
+          <p style="margin-top: 1rem; color: #666;">
+            Copiez cette URL dans Dust pour connecter votre Gmail
+          </p>
+          <script>
+            function copyEndpoint() {
+              navigator.clipboard.writeText('${userEndpoint}');
+              alert('Endpoint copié dans le presse-papiers !');
+            }
+          </script>
+        </body>
+      </html>
+    `);
+
+  } catch (error) {
+    console.error('❌ Erreur callback OAuth:', error);
+    res.send(`
+      <html>
+        <body style="font-family: Arial; text-align: center; padding: 2rem;">
+          <h1>❌ Erreur lors du traitement</h1>
+          <p>Erreur: ${(error as Error).message}</p>
+          <script>setTimeout(() => window.close(), 3000);</script>
+        </body>
+      </html>
+    `);
+  }
 });
 
 // ✅ API DE STATUT
