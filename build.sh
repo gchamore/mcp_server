@@ -4,7 +4,7 @@
 echo "🏗️  Démarrage du build optimisé..."
 
 # Augmenter la limite de mémoire pour Node.js
-export NODE_OPTIONS="--max-old-space-size=1024 --optimize-for-size"
+export NODE_OPTIONS="--max-old-space-size=1024"
 
 # Nettoyer le dossier dist s'il existe
 if [ -d "dist" ]; then
@@ -39,7 +39,7 @@ if [ $? -eq 0 ]; then
     # Copier les fichiers statiques
     if [ -d "public" ]; then
         cp -r public dist/
-        echo "✅ Fichiers publics copiés"
+        echo "✅ Fichiers publics copiés vers dist/"
     fi
     
     echo "🎉 Build terminé avec succès !"

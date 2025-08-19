@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gmail MCP Server - OAuth Dashboard</title>
+    <title>MCP Wesype - Recherchez vos services IA</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -21,363 +21,473 @@
             align-items: center;
             justify-content: center;
             color: #333;
+            padding: 2rem;
         }
 
-        .container {
+        .main-container {
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        .brand-section {
+            margin-bottom: 4rem;
+        }
+
+        .brand-text {
+            font-size: 5rem;
+            font-weight: 800;
+            color: white;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            margin-bottom: 1rem;
+            letter-spacing: -2px;
+        }
+
+        .brand-subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.2rem;
+            font-weight: 300;
+            margin-bottom: 3rem;
+        }
+
+        .search-section {
+            margin-bottom: 4rem;
+        }
+
+        .search-container {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 3rem;
+            border-radius: 25px;
+            padding: 1.5rem;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            max-width: 500px;
-            width: 90%;
-            text-align: center;
             border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
         }
 
-        .logo {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            background: linear-gradient(45deg, #4285f4, #ea4335, #fbbc04, #34a853);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        .search-box {
+            position: relative;
         }
 
-        h1 {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
+        .search-input {
+            width: 100%;
+            padding: 1.5rem 1.5rem 1.5rem 4rem;
+            border: none;
+            border-radius: 20px;
+            font-size: 1.3rem;
+            background: white;
+            transition: all 0.3s ease;
+            outline: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .search-input:focus {
+            box-shadow: 0 8px 30px rgba(66, 133, 244, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            font-size: 1.4rem;
+        }
+
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+            margin-top: 0.5rem;
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+
+        .result-item {
+            padding: 1.2rem 1.5rem;
+            border-bottom: 1px solid #f1f3f4;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .result-item:hover {
+            background: #f8f9fa;
+            transform: translateX(5px);
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+            border-radius: 0 0 15px 15px;
+        }
+
+        .result-item:first-child {
+            border-radius: 15px 15px 0 0;
+        }
+
+        .result-icon {
+            font-size: 1.5rem;
+            width: 40px;
+            text-align: center;
+        }
+
+        .result-content {
+            flex: 1;
+            text-align: left;
+        }
+
+        .result-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.3rem;
             color: #2c3e50;
         }
 
-        .subtitle {
-            color: #7f8c8d;
-            margin-bottom: 2rem;
-            font-size: 1.1rem;
+        .result-description {
+            color: #6c757d;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .result-status {
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-available {
+            background: #e8f5e8;
+            color: #27ae60;
+        }
+
+        .status-coming-soon {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .no-results {
+            padding: 2rem;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .popular-services {
+            margin-top: 2rem;
+        }
+
+        .popular-title {
+            color: rgba(255,255,255,0.8);
+            font-size: 1rem;
+            margin-bottom: 1rem;
             font-weight: 400;
         }
 
-        .status-card {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 2rem;
-            margin: 2rem 0;
-            border-left: 4px solid #e74c3c;
-            transition: all 0.3s ease;
-        }
-
-        .status-card.connected {
-            border-left-color: #27ae60;
-            background: #f0fff4;
-        }
-
-        .status-icon {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-        }
-
-        .status-card .status-icon {
-            color: #e74c3c;
-        }
-
-        .status-card.connected .status-icon {
-            color: #27ae60;
-        }
-
-        .login-btn {
-            background: linear-gradient(45deg, #4285f4, #34a853);
-            color: white;
-            border: none;
-            padding: 1rem 2rem;
-            border-radius: 50px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            text-decoration: none;
-            min-width: 200px;
+        .popular-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
             justify-content: center;
         }
 
-        .login-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(66, 133, 244, 0.3);
-        }
-
-        .login-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .user-info {
-            background: #f0fff4;
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin: 1rem 0;
-            border: 1px solid #d4edda;
-        }
-
-        .user-email {
-            font-weight: 600;
-            color: #27ae60;
-            font-size: 1.1rem;
-        }
-
-        .server-info {
-            background: #e3f2fd;
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin: 1rem 0;
-            border: 1px solid #bbdefb;
-        }
-
-        .endpoint-url {
-            font-family: 'Monaco', 'Consolas', monospace;
-            background: #263238;
-            color: #4fc3f7;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            margin: 0.5rem 0;
-            word-break: break-all;
-            font-size: 0.9rem;
-        }
-
-        .loading {
-            display: none;
-            color: #3498db;
-        }
-
-        .loading.show {
-            display: inline-block;
-        }
-
-        .error-message {
-            background: #fee;
-            color: #c33;
-            padding: 1rem;
-            border-radius: 10px;
-            margin: 1rem 0;
-            border: 1px solid #fcc;
-            display: none;
-        }
-
-        .success-message {
-            background: #efe;
-            color: #363;
-            padding: 1rem;
-            border-radius: 10px;
-            margin: 1rem 0;
-            border: 1px solid #cfc;
-            display: none;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .loading {
-            animation: pulse 1.5s infinite;
-        }
-
-        .footer {
-            margin-top: 2rem;
-            color: #95a5a6;
-            font-size: 0.9rem;
-        }
-
-        .copy-btn {
-            background: #3498db;
+        .popular-tag {
+            background: rgba(255, 255, 255, 0.2);
             color: white;
-            border: none;
-            padding: 0.3rem 0.8rem;
-            border-radius: 5px;
-            font-size: 0.8rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
             cursor: pointer;
-            margin-left: 0.5rem;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
         }
 
-        .copy-btn:hover {
-            background: #2980b9;
+        .popular-tag:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .footer-info {
+            margin-top: 4rem;
+            color: rgba(255,255,255,0.6);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .brand-text {
+                font-size: 3rem;
+            }
+            
+            .search-input {
+                font-size: 1.1rem;
+                padding: 1.2rem 1.2rem 1.2rem 3.5rem;
+            }
+            
+            .popular-tags {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+        /* Animation pour l'apparition */
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="logo">
-            <i class="fab fa-google"></i>
+    <div class="main-container fade-in">
+        <div class="brand-section">
+            <h1 class="brand-text">MCP WESYPE</h1>
+            <p class="brand-subtitle">Recherchez et connectez vos services IA</p>
         </div>
-        
-        <h1>Gmail MCP Server</h1>
-        <p class="subtitle">Interface OAuth pour DUST AI</p>
 
-        <div id="statusCard" class="status-card">
-            <div class="status-icon">
-                <i class="fas fa-times-circle"></i>
+        <div class="search-section">
+            <div class="search-container">
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input 
+                        type="text" 
+                        class="search-input" 
+                        placeholder="Recherchez un service (Gmail, Outlook, Notion...)"
+                        id="searchInput"
+                        autocomplete="off"
+                    >
+                    <div class="search-results" id="searchResults">
+                        <!-- Les résultats apparaîtront ici -->
+                    </div>
+                </div>
             </div>
-            <h3 id="statusTitle">Non connecté</h3>
-            <p id="statusMessage">Cliquez sur "Se connecter" pour authentifier votre compte Gmail</p>
+
+            <div class="popular-services">
+                <div class="popular-title">Services populaires :</div>
+                <div class="popular-tags">
+                    <span class="popular-tag" onclick="searchFor('gmail')">Gmail</span>
+                    <span class="popular-tag" onclick="searchFor('outlook')">Outlook</span>
+                    <span class="popular-tag" onclick="searchFor('notion')">Notion</span>
+                    <span class="popular-tag" onclick="searchFor('axonaut')">Axonaut</span>
+                </div>
+            </div>
         </div>
 
-        <div id="userInfo" class="user-info" style="display: none;">
-            <h4>👤 Compte connecté</h4>
-            <div id="userEmail" class="user-email"></div>
-        </div>
-
-        <div id="serverInfo" class="server-info" style="display: none;">
-            <h4>🚀 Serveur MCP Actif</h4>
-            <p>Endpoint pour DUST :</p>
-            <div id="endpointUrl" class="endpoint-url"></div>
-            <button class="copy-btn" onclick="copyEndpoint()">
-                <i class="fas fa-copy"></i> Copier
-            </button>
-        </div>
-
-        <div id="errorMessage" class="error-message"></div>
-        <div id="successMessage" class="success-message"></div>
-
-        <div style="margin: 2rem 0;">
-            <button id="loginBtn" class="login-btn" onclick="startOAuth()">
-                <i class="fab fa-google"></i>
-                <span id="loginText">Se connecter avec Google</span>
-                <i id="loadingIcon" class="fas fa-spinner fa-spin loading"></i>
-            </button>
-        </div>
-
-        <div class="footer">
-            <p>🔒 Authentification sécurisée via Google OAuth 2.0</p>
+        <div class="footer-info">
+            <p>🚀 Powered by Model Context Protocol</p>
         </div>
     </div>
 
     <script>
-        let checkStatusInterval;
+        // Configuration des services
+        const services = [
+            {
+                id: 'gmail',
+                name: 'Gmail',
+                description: 'Lisez, envoyez et gérez vos emails Gmail avec votre IA',
+                icon: 'fab fa-google',
+                color: '#ea4335',
+                status: 'available',
+                keywords: ['gmail', 'google', 'email', 'mail', 'messagerie']
+            },
+            {
+                id: 'outlook',
+                name: 'Outlook',
+                description: 'Intégration Microsoft Outlook et Exchange',
+                icon: 'fab fa-microsoft',
+                color: '#0078d4',
+                status: 'coming-soon',
+                keywords: ['outlook', 'microsoft', 'exchange', 'email', 'mail', 'office']
+            },
+            {
+                id: 'notion',
+                name: 'Notion',
+                description: 'Créez et gérez vos espaces de travail Notion',
+                icon: 'fas fa-file-alt',
+                color: '#000000',
+                status: 'coming-soon',
+                keywords: ['notion', 'notes', 'documentation', 'wiki', 'base de données']
+            },
+            {
+                id: 'axonaut',
+                name: 'Axonaut CRM',
+                description: 'Gérez votre CRM et vos données commerciales',
+                icon: 'fas fa-briefcase',
+                color: '#2c5aa0',
+                status: 'coming-soon',
+                keywords: ['axonaut', 'crm', 'commercial', 'ventes', 'clients', 'contacts']
+            }
+        ];
 
-        // Vérifier le statut au chargement
+        let searchTimeout;
+
+        // Initialisation
         window.addEventListener('load', function() {
-            checkServerStatus();
-            checkStatusInterval = setInterval(checkServerStatus, 3000);
+            const searchInput = document.getElementById('searchInput');
+            
+            // Focus automatique sur la barre de recherche
+            searchInput.focus();
+
+            // Événement de recherche
+            searchInput.addEventListener('input', handleSearch);
+            searchInput.addEventListener('focus', showRecentOrAll);
+            
+            // Fermer les résultats en cliquant ailleurs
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.search-container')) {
+                    hideResults();
+                }
+            });
+
+            // Navigation au clavier
+            searchInput.addEventListener('keydown', handleKeyNavigation);
         });
 
-        async function checkServerStatus() {
-            try {
-                const response = await fetch('/api/status');
-                const data = await response.json();
-                
-                updateUI(data);
-            } catch (error) {
-                console.error('Erreur lors de la vérification du statut:', error);
-            }
-        }
-
-        function updateUI(status) {
-            const statusCard = document.getElementById('statusCard');
-            const statusTitle = document.getElementById('statusTitle');
-            const statusMessage = document.getElementById('statusMessage');
-            const userInfo = document.getElementById('userInfo');
-            const serverInfo = document.getElementById('serverInfo');
-            const loginBtn = document.getElementById('loginBtn');
-            const loginText = document.getElementById('loginText');
-
-            if (status.connected) {
-                statusCard.classList.add('connected');
-                statusCard.querySelector('.status-icon').innerHTML = '<i class="fas fa-check-circle"></i>';
-                statusTitle.textContent = 'Connecté à Gmail';
-                statusMessage.textContent = 'Service Gmail opérationnel';
-                
-                userInfo.style.display = 'block';
-                serverInfo.style.display = 'block';
-                document.getElementById('userEmail').textContent = status.userEmail || 'Email non disponible';
-                document.getElementById('endpointUrl').textContent = status.endpoint || 'Endpoint non disponible';
-                
-                loginText.textContent = 'Reconnexion';
-                loginBtn.style.background = 'linear-gradient(45deg, #27ae60, #2ecc71)';
-            } else {
-                statusCard.classList.remove('connected');
-                statusCard.querySelector('.status-icon').innerHTML = '<i class="fas fa-times-circle"></i>';
-                statusTitle.textContent = 'Non connecté';
-                statusMessage.textContent = status.error || 'Cliquez sur "Se connecter" pour authentifier votre compte Gmail';
-                
-                userInfo.style.display = 'none';
-                serverInfo.style.display = 'none';
-                
-                loginText.textContent = 'Se connecter avec Google';
-                loginBtn.style.background = 'linear-gradient(45deg, #4285f4, #34a853)';
-            }
-        }
-
-        async function startOAuth() {
-            const loginBtn = document.getElementById('loginBtn');
-            const loginText = document.getElementById('loginText');
-            const loadingIcon = document.getElementById('loadingIcon');
-            const errorMessage = document.getElementById('errorMessage');
-            const successMessage = document.getElementById('successMessage');
-
-            // UI loading state
-            loginBtn.disabled = true;
-            loginText.textContent = 'Connexion en cours...';
-            loadingIcon.classList.add('show');
-            errorMessage.style.display = 'none';
-            successMessage.style.display = 'none';
-
-            try {
-                const response = await fetch('/api/auth/start', {
-                    method: 'POST'
-                });
-                
-                const data = await response.json();
-                
-                if (data.success && data.authUrl) {
-                    
-                    // Ouvrir la popup OAuth
-                    const popup = window.open(data.authUrl, 'googleOAuth', 'width=500,height=600,scrollbars=yes,resizable=yes');
-                    
-                    // Surveiller la fermeture de la popup
-                    const checkClosed = setInterval(function() {
-                        if (popup.closed) {
-                            clearInterval(checkClosed);
-                            // Vérifier le statut après fermeture
-                            setTimeout(checkServerStatus, 1000);
-                            resetButton();
-                        }
-                    }, 1000);
+        function handleSearch(e) {
+            const query = e.target.value.toLowerCase().trim();
+            
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                if (query.length === 0) {
+                    showRecentOrAll();
                 } else {
-                    throw new Error(data.error || 'Erreur lors du démarrage OAuth');
+                    performSearch(query);
                 }
-            } catch (error) {
-                console.error('Erreur OAuth:', error);
-                errorMessage.textContent = 'Erreur: ' + error.message;
-                errorMessage.style.display = 'block';
-                resetButton();
+            }, 200);
+        }
+
+        function performSearch(query) {
+            const results = services.filter(service => {
+                return service.name.toLowerCase().includes(query) ||
+                       service.description.toLowerCase().includes(query) ||
+                       service.keywords.some(keyword => keyword.toLowerCase().includes(query));
+            });
+
+            displayResults(results, query);
+        }
+
+        function showRecentOrAll() {
+            // Afficher tous les services disponibles
+            displayResults(services);
+        }
+
+        function displayResults(results, query = '') {
+            const resultsContainer = document.getElementById('searchResults');
+            
+            if (results.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="no-results">
+                        <i class="fas fa-search" style="font-size: 2rem; margin-bottom: 1rem; color: #dee2e6;"></i>
+                        <div>Aucun service trouvé pour "${query}"</div>
+                        <div style="margin-top: 0.5rem; font-size: 0.8rem;">Essayez "Gmail", "Outlook" ou "Notion"</div>
+                    </div>
+                `;
+            } else {
+                resultsContainer.innerHTML = results.map(service => `
+                    <div class="result-item" onclick="openService('${service.id}')" data-service="${service.id}">
+                        <div class="result-icon" style="color: ${service.color};">
+                            <i class="${service.icon}"></i>
+                        </div>
+                        <div class="result-content">
+                            <div class="result-name">${service.name}</div>
+                            <div class="result-description">${service.description}</div>
+                        </div>
+                        <div class="result-status ${service.status === 'available' ? 'status-available' : 'status-coming-soon'}">
+                            ${service.status === 'available' ? '✅ Disponible' : '🕐 Bientôt'}
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            resultsContainer.style.display = 'block';
+        }
+
+        function hideResults() {
+            const resultsContainer = document.getElementById('searchResults');
+            resultsContainer.style.display = 'none';
+        }
+
+        function searchFor(serviceName) {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.value = serviceName;
+            searchInput.focus();
+            performSearch(serviceName.toLowerCase());
+        }
+
+        function openService(serviceId) {
+            const service = services.find(s => s.id === serviceId);
+            
+            if (!service) {
+                alert('Service non trouvé');
+                return;
+            }
+            
+            // Redirection vers la page du service
+            window.location.href = `/pages/${serviceId}.html`;
+        }
+
+        function handleKeyNavigation(e) {
+            const results = document.querySelectorAll('.result-item');
+            let currentIndex = -1;
+            
+            // Trouver l'élément actuellement sélectionné
+            results.forEach((result, index) => {
+                if (result.classList.contains('selected')) {
+                    currentIndex = index;
+                }
+            });
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                currentIndex = Math.min(currentIndex + 1, results.length - 1);
+                updateSelection(results, currentIndex);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                currentIndex = Math.max(currentIndex - 1, 0);
+                updateSelection(results, currentIndex);
+            } else if (e.key === 'Enter' && currentIndex >= 0) {
+                e.preventDefault();
+                const selectedService = results[currentIndex].dataset.service;
+                openService(selectedService);
+            } else if (e.key === 'Escape') {
+                hideResults();
             }
         }
 
-        function resetButton() {
-            const loginBtn = document.getElementById('loginBtn');
-            const loginText = document.getElementById('loginText');
-            const loadingIcon = document.getElementById('loadingIcon');
-
-            loginBtn.disabled = false;
-            loginText.textContent = 'Se connecter avec Google';
-            loadingIcon.classList.remove('show');
-        }
-
-        function copyEndpoint() {
-            const endpointUrl = document.getElementById('endpointUrl').textContent;
-            navigator.clipboard.writeText(endpointUrl).then(function() {
-                const successMessage = document.getElementById('successMessage');
-                successMessage.textContent = 'Endpoint copié dans le presse-papiers !';
-                successMessage.style.display = 'block';
-                setTimeout(() => {
-                    successMessage.style.display = 'none';
-                }, 3000);
+        function updateSelection(results, index) {
+            results.forEach((result, i) => {
+                if (i === index) {
+                    result.classList.add('selected');
+                    result.style.background = '#e3f2fd';
+                } else {
+                    result.classList.remove('selected');
+                    result.style.background = '';
+                }
             });
         }
+
+        // Raccourci clavier pour focus sur la recherche
+        document.addEventListener('keydown', function(e) {
+            if (e.key === '/' && !document.activeElement.matches('input')) {
+                e.preventDefault();
+                document.getElementById('searchInput').focus();
+            }
+        });
     </script>
 </body>
 </html>

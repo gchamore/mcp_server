@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gmail MCP - Connexion</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 2rem;
+            left: 2rem;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border: none;
+            padding: 0.8rem 1.2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .back-btn:hover {
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .service-header {
+            margin-bottom: 2rem;
+        }
+
+        .service-logo {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: #ea4335;
+        }
+
+        .service-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+
+        .service-subtitle {
+            color: #7f8c8d;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+            font-weight: 400;
+        }
+
+        .features-list {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            text-align: left;
+        }
+
+        .features-title {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 0.5rem 0;
+            color: #495057;
+        }
+
+        .feature-icon {
+            color: #27ae60;
+            width: 20px;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+            border-left: 4px solid #e74c3c;
+            transition: all 0.3s ease;
+        }
+
+        .status-card.connected {
+            border-left-color: #27ae60;
+            background: #f0fff4;
+        }
+
+        .status-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #e74c3c;
+        }
+
+        .status-card.connected .status-icon {
+            color: #27ae60;
+        }
+
+        .connect-btn {
+            background: linear-gradient(45deg, #4285f4, #34a853);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            min-width: 200px;
+            justify-content: center;
+        }
+
+        .connect-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(66, 133, 244, 0.3);
+        }
+
+        .connect-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .user-info {
+            background: #f0fff4;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border: 1px solid #d4edda;
+            display: none;
+        }
+
+        .user-email {
+            font-weight: 600;
+            color: #27ae60;
+            font-size: 1.1rem;
+        }
+
+        .endpoint-info {
+            background: #e3f2fd;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border: 1px solid #bbdefb;
+            display: none;
+        }
+
+        .endpoint-url {
+            font-family: 'Monaco', 'Consolas', monospace;
+            background: #263238;
+            color: #4fc3f7;
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            word-break: break-all;
+            font-size: 0.9rem;
+        }
+
+        .copy-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin-left: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            background: #2980b9;
+        }
+
+        .loading {
+            display: none;
+            color: #3498db;
+        }
+
+        .loading.show {
+            display: inline-block;
+        }
+
+        .message {
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+
+        .success-message {
+            background: #efe;
+            color: #363;
+            border: 1px solid #cfc;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .loading {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-btn">
+        <i class="fas fa-arrow-left"></i>
+        Retour à l'accueil
+    </a>
+
+    <div class="container">
+        <div class="service-header">
+            <div class="service-logo">
+                <i class="fab fa-google"></i>
+            </div>
+            <h1 class="service-title">Gmail MCP</h1>
+            <p class="service-subtitle">Connectez votre Gmail à votre IA</p>
+        </div>
+
+        <div class="features-list">
+            <div class="features-title">🚀 Fonctionnalités disponibles</div>
+            <div class="feature-item">
+                <i class="fas fa-envelope-open feature-icon"></i>
+                <span>Lecture et recherche d'emails</span>
+            </div>
+            <div class="feature-item">
+                <i class="fas fa-paper-plane feature-icon"></i>
+                <span>Envoi de messages</span>
+            </div>
+            <div class="feature-item">
+                <i class="fas fa-search feature-icon"></i>
+                <span>Recherche avancée dans votre boîte mail</span>
+            </div>
+            <div class="feature-item">
+                <i class="fas fa-tags feature-icon"></i>
+                <span>Gestion des libellés et dossiers</span>
+            </div>
+            <div class="feature-item">
+                <i class="fas fa-shield-alt feature-icon"></i>
+                <span>Accès sécurisé via OAuth 2.0</span>
+            </div>
+        </div>
+
+        <div id="statusCard" class="status-card">
+            <div class="status-icon">
+                <i class="fas fa-times-circle"></i>
+            </div>
+            <h3 id="statusTitle">Non connecté</h3>
+            <p id="statusMessage">Cliquez sur "Se connecter" pour authentifier votre compte Gmail</p>
+        </div>
+
+        <div id="userInfo" class="user-info">
+            <h4>👤 Compte connecté</h4>
+            <div id="userEmail" class="user-email"></div>
+        </div>
+
+        <div id="endpointInfo" class="endpoint-info">
+            <h4>🚀 Endpoint MCP Gmail</h4>
+            <p>Utilisez cette URL dans votre IA :</p>
+            <div id="endpointUrl" class="endpoint-url"></div>
+            <button class="copy-btn" onclick="copyEndpoint()">
+                <i class="fas fa-copy"></i> Copier
+            </button>
+        </div>
+
+        <div id="errorMessage" class="message error-message"></div>
+        <div id="successMessage" class="message success-message"></div>
+
+        <div style="margin: 2rem 0;">
+            <button id="connectBtn" class="connect-btn" onclick="startOAuth()">
+                <i class="fab fa-google"></i>
+                <span id="connectText">Se connecter avec Gmail</span>
+                <i id="loadingIcon" class="fas fa-spinner fa-spin loading"></i>
+            </button>
+        </div>
+
+        <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #eee; color: #7f8c8d; font-size: 0.9rem;">
+            <p>🔒 Vos données restent privées et sécurisées</p>
+            <p>Nous utilisons OAuth 2.0 pour un accès sécurisé</p>
+        </div>
+    </div>
+
+    <script>
+        let checkStatusInterval;
+        let currentUserId = null;
+
+        // Vérifier les paramètres URL au chargement
+        window.addEventListener('load', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const success = urlParams.get('success');
+            const error = urlParams.get('error');
+            const userId = urlParams.get('userId');
+            const email = urlParams.get('email');
+            const service = urlParams.get('service');
+
+            if (success && userId) {
+                currentUserId = userId;
+                showSuccessMessage(`Gmail connecté avec succès !`);
+                updateConnectedState(userId, email);
+                // Nettoyer l'URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } else if (error) {
+                showErrorMessage('Erreur: ' + decodeURIComponent(error));
+                // Nettoyer l'URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            // Démarrer la vérification périodique
+            checkServerStatus();
+            checkStatusInterval = setInterval(checkServerStatus, 5000);
+        });
+
+        async function checkServerStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const status = await response.json();
+                
+                updateServerUI(status);
+                
+                if (currentUserId) {
+                    await checkUserConnection(currentUserId);
+                }
+            } catch (error) {
+                updateServerUI({ error: 'Impossible de contacter le serveur' });
+            }
+        }
+
+        function updateServerUI(status) {
+            const statusCard = document.getElementById('statusCard');
+            const statusTitle = document.getElementById('statusTitle');
+            const statusMessage = document.getElementById('statusMessage');
+
+            if (status.status === 'OK') {
+                if (!currentUserId) {
+                    statusTitle.textContent = 'Serveur prêt';
+                    statusMessage.textContent = 'Cliquez sur "Se connecter" pour authentifier votre Gmail';
+                }
+            } else {
+                statusCard.classList.remove('connected');
+                statusTitle.textContent = 'Serveur hors ligne';
+                statusMessage.textContent = status.error || 'Impossible de contacter le serveur';
+                statusCard.querySelector('.status-icon').innerHTML = '<i class="fas fa-times-circle"></i>';
+            }
+        }
+
+        async function checkUserConnection(userId) {
+            try {
+                const response = await fetch(`/api/users/${userId}/services`);
+                const data = await response.json();
+                
+                if (data.success && data.connectedServices.length > 0) {
+                    const gmailService = data.connectedServices.find(s => s.name === 'gmail');
+                    if (gmailService) {
+                        updateConnectedState(userId, gmailService.userEmail, data.mcpEndpoint);
+                    }
+                }
+            } catch (error) {
+                console.error('Erreur vérification connexion:', error);
+            }
+        }
+
+        function updateConnectedState(userId, email, endpoint) {
+            const statusCard = document.getElementById('statusCard');
+            const statusTitle = document.getElementById('statusTitle');
+            const statusMessage = document.getElementById('statusMessage');
+            const userInfo = document.getElementById('userInfo');
+            const userEmail = document.getElementById('userEmail');
+            const endpointInfo = document.getElementById('endpointInfo');
+            const endpointUrl = document.getElementById('endpointUrl');
+            const connectBtn = document.getElementById('connectBtn');
+            const connectText = document.getElementById('connectText');
+
+            // Mettre à jour le statut
+            statusCard.classList.add('connected');
+            statusCard.querySelector('.status-icon').innerHTML = '<i class="fas fa-check-circle"></i>';
+            statusTitle.textContent = 'Gmail connecté';
+            statusMessage.textContent = 'Votre compte Gmail est prêt à être utilisé par votre IA';
+
+            // Afficher les informations utilisateur
+            userEmail.textContent = email || 'Email non disponible';
+            userInfo.style.display = 'block';
+
+            // Afficher l'endpoint
+            const mcpEndpoint = endpoint || `${window.location.origin}/${userId}/mcp/sse`;
+            endpointUrl.textContent = mcpEndpoint;
+            endpointInfo.style.display = 'block';
+
+            // Mettre à jour le bouton
+            connectText.textContent = '✓ Connecté';
+            connectBtn.style.background = '#27ae60';
+            connectBtn.disabled = true;
+
+            currentUserId = userId;
+        }
+
+        async function startOAuth() {
+            const connectBtn = document.getElementById('connectBtn');
+            const connectText = document.getElementById('connectText');
+            const loadingIcon = document.getElementById('loadingIcon');
+
+            // État de chargement
+            connectBtn.disabled = true;
+            connectText.textContent = 'Connexion en cours...';
+            loadingIcon.classList.add('show');
+            hideMessages();
+
+            try {
+                const response = await fetch('/api/auth/start', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.authUrl) {
+                    // Ouvrir la popup OAuth
+                    const popup = window.open(data.authUrl, 'gmailOAuth', 'width=500,height=600,scrollbars=yes,resizable=yes');
+                    
+                    // Surveiller la fermeture de la popup
+                    const checkClosed = setInterval(function() {
+                        if (popup.closed) {
+                            clearInterval(checkClosed);
+                            setTimeout(checkServerStatus, 1000);
+                            resetButton();
+                        }
+                    }, 1000);
+                } else {
+                    throw new Error(data.error || 'Erreur lors du démarrage OAuth');
+                }
+            } catch (error) {
+                showErrorMessage('Erreur: ' + error.message);
+                resetButton();
+            }
+        }
+
+        function resetButton() {
+            const connectBtn = document.getElementById('connectBtn');
+            const connectText = document.getElementById('connectText');
+            const loadingIcon = document.getElementById('loadingIcon');
+
+            connectBtn.disabled = false;
+            connectText.textContent = 'Se connecter avec Gmail';
+            loadingIcon.classList.remove('show');
+        }
+
+        function copyEndpoint() {
+            const endpointUrl = document.getElementById('endpointUrl').textContent;
+            navigator.clipboard.writeText(endpointUrl).then(function() {
+                showSuccessMessage('Endpoint copié dans le presse-papiers !');
+            });
+        }
+
+        function showSuccessMessage(message) {
+            const successMessage = document.getElementById('successMessage');
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            setTimeout(() => {
+                successMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        function showErrorMessage(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        function hideMessages() {
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

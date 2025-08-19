@@ -187,39 +187,6 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
-// Route pour la page d'accueil (alias)
-app.get('/home', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
-});
-
-// Route pour servir les pages de services
-app.get('/pages/:serviceName.html', (req, res) => {
-  const serviceName = req.params.serviceName;
-  const servicePage = path.join(__dirname, '..', 'public', 'pages', `${serviceName}.html`);
-  
-  // Vérifier si le service existe
-  if (!serviceRegistry.hasService(serviceName)) {
-    return res.status(404).send('Service non trouvé');
-  }
-  
-  // Vérifier si la page existe
-  res.sendFile(servicePage, (err) => {
-    if (err) {
-      res.status(404).send('Page de service non trouvée');
-    }
-  });
-});
-
-// Route pour l'ancienne interface (compatibilité)
-app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index_dashboard.html'));
-});
-
-// Route pour l'interface détaillée
-app.get('/detailed', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index_detailed.html'));
-});
-
 // ✅ NOUVELLES ROUTES API POUR LA GESTION MULTI-SERVICES
 
 // API pour obtenir les services disponibles

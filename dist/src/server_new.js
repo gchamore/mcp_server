@@ -118,27 +118,6 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
-app.get('/home', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
-});
-app.get('/pages/:serviceName.html', (req, res) => {
-    const serviceName = req.params.serviceName;
-    const servicePage = path.join(__dirname, '..', 'public', 'pages', `${serviceName}.html`);
-    if (!serviceRegistry.hasService(serviceName)) {
-        return res.status(404).send('Service non trouvé');
-    }
-    res.sendFile(servicePage, (err) => {
-        if (err) {
-            res.status(404).send('Page de service non trouvée');
-        }
-    });
-});
-app.get('/dashboard', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'index_dashboard.html'));
-});
-app.get('/detailed', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'index_detailed.html'));
-});
 app.get('/api/services', (req, res) => {
     res.json({
         success: true,
