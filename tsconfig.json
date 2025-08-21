@@ -12,7 +12,10 @@
 		"sourceMap": false,
 		"removeComments": true,
 		"outDir": "./dist",
-		"rootDir": "./"
+		"rootDir": "./",
+		"isolatedModules": false,
+		"incremental": false,
+		"tsBuildInfoFile": null
 	},
 	"include": [
 		"src/**/*.ts"

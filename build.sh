@@ -3,8 +3,8 @@
 # Script de build optimisé pour Railway
 echo "🏗️  Démarrage du build optimisé..."
 
-# Augmenter la limite de mémoire pour Node.js
-export NODE_OPTIONS="--max-old-space-size=1024"
+# Augmenter significativement la limite de mémoire pour Node.js
+export NODE_OPTIONS="--max-old-space-size=4096"
 
 # Vérifier et installer les dépendances si nécessaire
 if [ ! -d "node_modules" ] || [ ! -f "node_modules/ioredis/package.json" ]; then
@@ -27,13 +27,14 @@ mkdir -p dist
 
 echo "📦 Compilation TypeScript avec options optimisées..."
 
-# Compiler avec options optimisées
-npx tsc \
+# Compiler avec options optimisées pour réduire l'utilisation mémoire
+NODE_OPTIONS="--max-old-space-size=4096" npx tsc \
     --incremental false \
     --declaration false \
     --sourceMap false \
     --removeComments true \
-    --skipLibCheck true
+    --skipLibCheck true \
+    --isolatedModules false
 
 if [ $? -eq 0 ]; then
     echo "✅ Build réussi !"
