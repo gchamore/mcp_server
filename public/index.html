@@ -1,355 +1,355 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCP Wesype - Recherchez vos services IA</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>MCP Wesype - Recherchez vos services IA</title>
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+		rel="stylesheet">
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #333;
-            padding: 2rem;
-        }
+		body {
+			font-family: 'Inter', sans-serif;
+			background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+			min-height: 100vh;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: #333;
+			padding: 2rem;
+		}
 
-        .main-container {
-            width: 100%;
-            max-width: 800px;
-            text-align: center;
-        }
+		.main-container {
+			width: 100%;
+			max-width: 800px;
+			text-align: center;
+		}
 
-        .brand-section {
-            margin-bottom: 4rem;
-        }
+		.brand-section {
+			margin-bottom: 4rem;
+		}
 
-        .brand-text {
-            font-size: 5rem;
-            font-weight: 800;
-            color: white;
-            text-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            margin-bottom: 1rem;
-            letter-spacing: -2px;
-        }
+		.brand-text {
+			font-size: 5rem;
+			font-weight: 800;
+			color: white;
+			text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+			margin-bottom: 1rem;
+			letter-spacing: -2px;
+		}
 
-        .brand-subtitle {
-            color: rgba(255,255,255,0.9);
-            font-size: 1.2rem;
-            font-weight: 300;
-            margin-bottom: 3rem;
-        }
+		.brand-subtitle {
+			color: rgba(255, 255, 255, 0.9);
+			font-size: 1.2rem;
+			font-weight: 300;
+			margin-bottom: 3rem;
+		}
 
-        .search-section {
-            margin-bottom: 4rem;
-        }
+		.search-section {
+			margin-bottom: 4rem;
+		}
 
-        .search-container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 25px;
-            padding: 1.5rem;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            position: relative;
-        }
+		.search-container {
+			background: rgba(255, 255, 255, 0.95);
+			backdrop-filter: blur(20px);
+			border-radius: 25px;
+			padding: 1.5rem;
+			box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+			border: 1px solid rgba(255, 255, 255, 0.2);
+			position: relative;
+		}
 
-        .search-box {
-            position: relative;
-        }
+		.search-box {
+			position: relative;
+		}
 
-        .search-input {
-            width: 100%;
-            padding: 1.5rem 1.5rem 1.5rem 4rem;
-            border: none;
-            border-radius: 20px;
-            font-size: 1.3rem;
-            background: white;
-            transition: all 0.3s ease;
-            outline: none;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        }
+		.search-input {
+			width: 100%;
+			padding: 1.5rem 1.5rem 1.5rem 4rem;
+			border: none;
+			border-radius: 20px;
+			font-size: 1.3rem;
+			background: white;
+			transition: all 0.3s ease;
+			outline: none;
+			box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+		}
 
-        .search-input:focus {
-            box-shadow: 0 8px 30px rgba(66, 133, 244, 0.2);
-            transform: translateY(-2px);
-        }
+		.search-input:focus {
+			box-shadow: 0 8px 30px rgba(66, 133, 244, 0.2);
+			transform: translateY(-2px);
+		}
 
-        .search-icon {
-            position: absolute;
-            left: 1.5rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #6c757d;
-            font-size: 1.4rem;
-        }
+		.search-icon {
+			position: absolute;
+			left: 1.5rem;
+			top: 50%;
+			transform: translateY(-50%);
+			color: #6c757d;
+			font-size: 1.4rem;
+		}
 
-        .search-results {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
-            margin-top: 0.5rem;
-            max-height: 400px;
-            overflow-y: auto;
-            z-index: 100;
-            display: none;
-        }
+		.search-results {
+			position: absolute;
+			top: 100%;
+			left: 0;
+			right: 0;
+			background: white;
+			border-radius: 15px;
+			box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+			margin-top: 0.5rem;
+			max-height: 400px;
+			overflow-y: auto;
+			z-index: 100;
+			display: none;
+		}
 
-        .result-item {
-            padding: 1.2rem 1.5rem;
-            border-bottom: 1px solid #f1f3f4;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
+		.result-item {
+			padding: 1.2rem 1.5rem;
+			border-bottom: 1px solid #f1f3f4;
+			cursor: pointer;
+			transition: all 0.2s ease;
+			display: flex;
+			align-items: center;
+			gap: 1rem;
+		}
 
-        .result-item:hover {
-            background: #f8f9fa;
-            transform: translateX(5px);
-        }
+		.result-item:hover {
+			background: #f8f9fa;
+			transform: translateX(5px);
+		}
 
-        .result-item:last-child {
-            border-bottom: none;
-            border-radius: 0 0 15px 15px;
-        }
+		.result-item:last-child {
+			border-bottom: none;
+			border-radius: 0 0 15px 15px;
+		}
 
-        .result-item:first-child {
-            border-radius: 15px 15px 0 0;
-        }
+		.result-item:first-child {
+			border-radius: 15px 15px 0 0;
+		}
 
-        .result-icon {
-            font-size: 1.5rem;
-            width: 40px;
-            text-align: center;
-        }
+		.result-icon {
+			font-size: 1.5rem;
+			width: 40px;
+			text-align: center;
+		}
 
-        .result-content {
-            flex: 1;
-            text-align: left;
-        }
+		.result-content {
+			flex: 1;
+			text-align: left;
+		}
 
-        .result-name {
-            font-weight: 600;
-            font-size: 1.1rem;
-            margin-bottom: 0.3rem;
-            color: #2c3e50;
-        }
+		.result-name {
+			font-weight: 600;
+			font-size: 1.1rem;
+			margin-bottom: 0.3rem;
+			color: #2c3e50;
+		}
 
-        .result-description {
-            color: #6c757d;
-            font-size: 0.9rem;
-            line-height: 1.4;
-        }
+		.result-description {
+			color: #6c757d;
+			font-size: 0.9rem;
+			line-height: 1.4;
+		}
 
-        .result-status {
-            padding: 0.3rem 0.8rem;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
+		.result-status {
+			padding: 0.3rem 0.8rem;
+			border-radius: 15px;
+			font-size: 0.8rem;
+			font-weight: 500;
+		}
 
-        .status-available {
-            background: #e8f5e8;
-            color: #27ae60;
-        }
+		.status-available {
+			background: #e8f5e8;
+			color: #27ae60;
+		}
 
-        .status-coming-soon {
-            background: #fff3cd;
-            color: #856404;
-        }
+		.status-coming-soon {
+			background: #fff3cd;
+			color: #856404;
+		}
 
-        .no-results {
-            padding: 2rem;
-            color: #6c757d;
-            font-style: italic;
-        }
+		.no-results {
+			padding: 2rem;
+			color: #6c757d;
+			font-style: italic;
+		}
 
-        .footer-info {
-            margin-top: 4rem;
-            color: rgba(255,255,255,0.6);
-            font-size: 0.9rem;
-        }
+		.footer-info {
+			margin-top: 4rem;
+			color: rgba(255, 255, 255, 0.6);
+			font-size: 0.9rem;
+		}
 
-        @media (max-width: 768px) {
-            .brand-text {
-                font-size: 3rem;
-            }
-            
-            .search-input {
-                font-size: 1.1rem;
-                padding: 1.2rem 1.2rem 1.2rem 3.5rem;
-            }
-        }
+		@media (max-width: 768px) {
+			.brand-text {
+				font-size: 3rem;
+			}
 
-        /* Animation pour l'apparition */
-        .fade-in {
-            animation: fadeIn 0.5s ease-out;
-        }
+			.search-input {
+				font-size: 1.1rem;
+				padding: 1.2rem 1.2rem 1.2rem 3.5rem;
+			}
+		}
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-    </style>
+		/* Animation pour l'apparition */
+		.fade-in {
+			animation: fadeIn 0.5s ease-out;
+		}
+
+		@keyframes fadeIn {
+			from {
+				opacity: 0;
+				transform: translateY(20px);
+			}
+
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+	</style>
 </head>
+
 <body>
-    <div class="main-container fade-in">
-        <div class="brand-section">
-            <h1 class="brand-text">MCP WESYPE</h1>
-            <p class="brand-subtitle">Recherchez et connectez vos outils à vos agents IA Dust</p>
-        </div>
+	<div class="main-container fade-in">
+		<div class="brand-section">
+			<h1 class="brand-text">MCP WESYPE</h1>
+			<p class="brand-subtitle">Recherchez et connectez vos outils à vos agents IA Dust</p>
+		</div>
 
-        <div class="search-section">
-            <div class="search-container">
-                <div class="search-box">
-                    <i class="fas fa-search search-icon"></i>
-                    <input 
-                        type="text" 
-                        class="search-input" 
-                        placeholder="Recherchez un service (Gmail, Axonaut, Outlook...)"
-                        id="searchInput"
-                        autocomplete="off"
-                    >
-                    <div class="search-results" id="searchResults">
-                        <!-- Les résultats apparaîtront ici -->
-                    </div>
-                </div>
-            </div>
-        </div>
+		<div class="search-section">
+			<div class="search-container">
+				<div class="search-box">
+					<i class="fas fa-search search-icon"></i>
+					<input type="text" class="search-input"
+						placeholder="Recherchez un service (Gmail, Axonaut, Outlook...)" id="searchInput"
+						autocomplete="off">
+					<div class="search-results" id="searchResults">
+						<!-- Les résultats apparaîtront ici -->
+					</div>
+				</div>
+			</div>
+		</div>
 
-        <div class="footer-info">
-            <p>Powered by Wesype</p>
-        </div>
-    </div>
+		<div class="footer-info">
+			<p>Powered by Wesype</p>
+		</div>
+	</div>
 
-    <script>
-        // Configuration des services
-        const services = [
-            {
-                id: 'gmail',
-                name: 'Gmail',
-                description: 'Lisez, envoyez et gérez vos emails Gmail avec votre IA',
-                icon: 'fab fa-google',
-                color: '#ea4335',
-                status: 'available',
-                keywords: ['gmail', 'google', 'email', 'mail', 'messagerie']
-            },
-            {
-                id: 'axonaut',
-                name: 'Axonaut CRM',
-                description: 'Gérez votre CRM et vos données commerciales',
-                icon: 'fas fa-chart-bar',
-                color: '#1e3c72',
-                status: 'available',
-                keywords: ['axonaut', 'crm', 'commercial', 'ventes', 'clients', 'contacts']
-            },
-            {
-                id: 'outlook',
-                name: 'Outlook',
-                description: 'Intégration Microsoft Outlook et Exchange',
-                icon: 'fab fa-microsoft',
-                color: '#0078d4',
-                status: 'coming-soon',
-                keywords: ['outlook', 'microsoft', 'exchange', 'email', 'mail', 'office']
-            },
-            {
-                id: 'notion',
-                name: 'Notion',
-                description: 'Créez et gérez vos espaces de travail Notion',
-                icon: 'fas fa-sticky-note',
-                color: '#000000',
-                status: 'coming-soon',
-                keywords: ['notion', 'notes', 'documentation', 'wiki', 'base de données']
-            }
-        ];
+	<script>
+		// Configuration des services
+		const services = [
+			{
+				id: 'gmail',
+				name: 'Gmail',
+				description: 'Lisez, envoyez et gérez vos emails Gmail avec votre IA',
+				icon: 'fab fa-google',
+				color: '#ea4335',
+				status: 'available',
+				keywords: ['gmail', 'google', 'email', 'mail', 'messagerie']
+			},
+			{
+				id: 'axonaut',
+				name: 'Axonaut CRM',
+				description: 'Gérez votre CRM et vos données commerciales',
+				icon: 'fas fa-chart-bar',
+				color: '#1e3c72',
+				status: 'available',
+				keywords: ['axonaut', 'crm', 'commercial', 'ventes', 'clients', 'contacts']
+			},
+			{
+				id: 'outlook',
+				name: 'Outlook',
+				description: 'Intégration Microsoft Outlook et Exchange',
+				icon: 'fab fa-microsoft',
+				color: '#0078d4',
+				status: 'coming-soon',
+				keywords: ['outlook', 'microsoft', 'exchange', 'email', 'mail', 'office']
+			},
+			{
+				id: 'notion',
+				name: 'Notion',
+				description: 'Créez et gérez vos espaces de travail Notion',
+				icon: 'fas fa-sticky-note',
+				color: '#000000',
+				status: 'coming-soon',
+				keywords: ['notion', 'notes', 'documentation', 'wiki', 'base de données']
+			}
+		];
 
-        let searchTimeout;
+		let searchTimeout;
 
-        // Initialisation
-        window.addEventListener('load', function() {
-            const searchInput = document.getElementById('searchInput');
-            
-            // Focus automatique sur la barre de recherche
-            searchInput.focus();
+		// Initialisation
+		window.addEventListener('load', function () {
+			const searchInput = document.getElementById('searchInput');
 
-            // Événement de recherche
-            searchInput.addEventListener('input', handleSearch);
-            searchInput.addEventListener('focus', showRecentOrAll);
-            
-            // Fermer les résultats en cliquant ailleurs
-            document.addEventListener('click', function(e) {
-                if (!e.target.closest('.search-container')) {
-                    hideResults();
-                }
-            });
+			// Focus automatique sur la barre de recherche
+			searchInput.focus();
 
-            // Navigation au clavier
-            searchInput.addEventListener('keydown', handleKeyNavigation);
-        });
+			// Événement de recherche
+			searchInput.addEventListener('input', handleSearch);
+			searchInput.addEventListener('focus', showRecentOrAll);
 
-        function handleSearch(e) {
-            const query = e.target.value.toLowerCase().trim();
-            
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                if (query.length === 0) {
-                    showRecentOrAll();
-                } else {
-                    performSearch(query);
-                }
-            }, 200);
-        }
+			// Fermer les résultats en cliquant ailleurs
+			document.addEventListener('click', function (e) {
+				if (!e.target.closest('.search-container')) {
+					hideResults();
+				}
+			});
 
-        function performSearch(query) {
-            const results = services.filter(service => {
-                return service.name.toLowerCase().includes(query) ||
-                       service.description.toLowerCase().includes(query) ||
-                       service.keywords.some(keyword => keyword.toLowerCase().includes(query));
-            });
+			// Navigation au clavier
+			searchInput.addEventListener('keydown', handleKeyNavigation);
+		});
 
-            displayResults(results, query);
-        }
+		function handleSearch(e) {
+			const query = e.target.value.toLowerCase().trim();
 
-        function showRecentOrAll() {
-            // Afficher tous les services disponibles
-            displayResults(services);
-        }
+			clearTimeout(searchTimeout);
+			searchTimeout = setTimeout(() => {
+				if (query.length === 0) {
+					showRecentOrAll();
+				} else {
+					performSearch(query);
+				}
+			}, 200);
+		}
 
-        function displayResults(results, query = '') {
-            const resultsContainer = document.getElementById('searchResults');
-            
-            if (results.length === 0) {
-                resultsContainer.innerHTML = `
+		function performSearch(query) {
+			const results = services.filter(service => {
+				return service.name.toLowerCase().includes(query) ||
+					service.description.toLowerCase().includes(query) ||
+					service.keywords.some(keyword => keyword.toLowerCase().includes(query));
+			});
+
+			displayResults(results, query);
+		}
+
+		function showRecentOrAll() {
+			// Afficher tous les services disponibles
+			displayResults(services);
+		}
+
+		function displayResults(results, query = '') {
+			const resultsContainer = document.getElementById('searchResults');
+
+			if (results.length === 0) {
+				resultsContainer.innerHTML = `
                     <div class="no-results">
                         <i class="fas fa-search" style="font-size: 2rem; margin-bottom: 1rem; color: #dee2e6;"></i>
                         <div>Aucun service trouvé pour "${query}"</div>
                         <div style="margin-top: 0.5rem; font-size: 0.8rem;">Essayez "Gmail", "Axonaut" ou "Outlook"</div>
                     </div>
                 `;
-            } else {
-                resultsContainer.innerHTML = results.map(service => `
+			} else {
+				resultsContainer.innerHTML = results.map(service => `
                     <div class="result-item" onclick="openService('${service.id}')" data-service="${service.id}">
                         <div class="result-icon" style="color: ${service.color};">
                             <i class="${service.icon}"></i>
@@ -363,82 +363,83 @@
                         </div>
                     </div>
                 `).join('');
-            }
-            
-            resultsContainer.style.display = 'block';
-        }
+			}
 
-        function hideResults() {
-            const resultsContainer = document.getElementById('searchResults');
-            resultsContainer.style.display = 'none';
-        }
+			resultsContainer.style.display = 'block';
+		}
 
-        function searchFor(serviceName) {
-            const searchInput = document.getElementById('searchInput');
-            searchInput.value = serviceName;
-            searchInput.focus();
-            performSearch(serviceName.toLowerCase());
-        }
+		function hideResults() {
+			const resultsContainer = document.getElementById('searchResults');
+			resultsContainer.style.display = 'none';
+		}
 
-        function openService(serviceId) {
-            const service = services.find(s => s.id === serviceId);
-            
-            if (!service) {
-                alert('Service non trouvé');
-                return;
-            }
-            
-            // Redirection vers la page du service
-            window.location.href = `/pages/${serviceId}.html`;
-        }
+		function searchFor(serviceName) {
+			const searchInput = document.getElementById('searchInput');
+			searchInput.value = serviceName;
+			searchInput.focus();
+			performSearch(serviceName.toLowerCase());
+		}
 
-        function handleKeyNavigation(e) {
-            const results = document.querySelectorAll('.result-item');
-            let currentIndex = -1;
-            
-            // Trouver l'élément actuellement sélectionné
-            results.forEach((result, index) => {
-                if (result.classList.contains('selected')) {
-                    currentIndex = index;
-                }
-            });
-            
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                currentIndex = Math.min(currentIndex + 1, results.length - 1);
-                updateSelection(results, currentIndex);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                currentIndex = Math.max(currentIndex - 1, 0);
-                updateSelection(results, currentIndex);
-            } else if (e.key === 'Enter' && currentIndex >= 0) {
-                e.preventDefault();
-                const selectedService = results[currentIndex].dataset.service;
-                openService(selectedService);
-            } else if (e.key === 'Escape') {
-                hideResults();
-            }
-        }
+		function openService(serviceId) {
+			const service = services.find(s => s.id === serviceId);
 
-        function updateSelection(results, index) {
-            results.forEach((result, i) => {
-                if (i === index) {
-                    result.classList.add('selected');
-                    result.style.background = '#e3f2fd';
-                } else {
-                    result.classList.remove('selected');
-                    result.style.background = '';
-                }
-            });
-        }
+			if (!service) {
+				alert('Service non trouvé');
+				return;
+			}
 
-        // Raccourci clavier pour focus sur la recherche
-        document.addEventListener('keydown', function(e) {
-            if (e.key === '/' && !document.activeElement.matches('input')) {
-                e.preventDefault();
-                document.getElementById('searchInput').focus();
-            }
-        });
-    </script>
+			// Redirection vers la page du service
+			window.location.href = `/pages/${serviceId}.html`;
+		}
+
+		function handleKeyNavigation(e) {
+			const results = document.querySelectorAll('.result-item');
+			let currentIndex = -1;
+
+			// Trouver l'élément actuellement sélectionné
+			results.forEach((result, index) => {
+				if (result.classList.contains('selected')) {
+					currentIndex = index;
+				}
+			});
+
+			if (e.key === 'ArrowDown') {
+				e.preventDefault();
+				currentIndex = Math.min(currentIndex + 1, results.length - 1);
+				updateSelection(results, currentIndex);
+			} else if (e.key === 'ArrowUp') {
+				e.preventDefault();
+				currentIndex = Math.max(currentIndex - 1, 0);
+				updateSelection(results, currentIndex);
+			} else if (e.key === 'Enter' && currentIndex >= 0) {
+				e.preventDefault();
+				const selectedService = results[currentIndex].dataset.service;
+				openService(selectedService);
+			} else if (e.key === 'Escape') {
+				hideResults();
+			}
+		}
+
+		function updateSelection(results, index) {
+			results.forEach((result, i) => {
+				if (i === index) {
+					result.classList.add('selected');
+					result.style.background = '#e3f2fd';
+				} else {
+					result.classList.remove('selected');
+					result.style.background = '';
+				}
+			});
+		}
+
+		// Raccourci clavier pour focus sur la recherche
+		document.addEventListener('keydown', function (e) {
+			if (e.key === '/' && !document.activeElement.matches('input')) {
+				e.preventDefault();
+				document.getElementById('searchInput').focus();
+			}
+		});
+	</script>
 </body>
+
 </html>

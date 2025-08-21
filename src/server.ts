@@ -67,12 +67,14 @@ serviceRegistry.registerService(axonautService);
 
 console.log('Architecture initialisée avec les services:', serviceRegistry.getServiceNames());
 
-// Nettoyage automatique des sessions toutes les heures
-setInterval(() => {
-	multiTenantManager.cleanupExpiredSessions();
-	gmailService.cleanupExpiredSessions();
-	axonautService.cleanupExpiredSessions();
-}, 60 * 60 * 1000);
+// ❌ SUPPRIMÉ : Nettoyage automatique des sessions (peut interrompre les connexions MCP)
+// setInterval(() => {
+//     multiTenantManager.cleanupExpiredSessions();
+//     gmailService.cleanupExpiredSessions();
+//     axonautService.cleanupExpiredSessions();
+// }, 60 * 60 * 1000);
+
+console.log('📌 Sessions permanentes activées - pas de suppression automatique');
 
 // APPLICATION EXPRESS UNIFIÉE
 const app = express();
@@ -82,9 +84,9 @@ app.set('trust proxy', 1);
 
 // Headers de sécurité légers (optionnel)
 app.use((req, res, next) => {
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    next();
+	res.setHeader('X-Content-Type-Options', 'nosniff');
+	res.setHeader('X-Frame-Options', 'DENY');
+	next();
 });
 
 // NOUVELLES ROUTES MULTI-SERVICES
@@ -550,10 +552,10 @@ app.use('*', (req, res) => {
 
 //  DÉMARRAGE SERVEUR
 app.listen(PORT, () => {
-	console.log(`🚀 Multi-Service MCP Server running on port ${PORT}`);
-	console.log(`🌐 Base URL: ${BASE_URL}`);
-	console.log(`📱 Interface: ${BASE_URL}`);
-	console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-	console.log(`📋 Services activés: ${serviceRegistry.getEnabledServices().map(s => s.displayName).join(', ')}`);
-	console.log(`📡 Endpoint MCP: ${BASE_URL}/:userId/mcp/sse`);
+	console.log(`Multi-Service MCP Server running on port ${PORT}`);
+	console.log(`Base URL: ${BASE_URL}`);
+	console.log(`Interface: ${BASE_URL}`);
+	console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+	console.log(`Services activés: ${serviceRegistry.getEnabledServices().map(s => s.displayName).join(', ')}`);
+	console.log(`Endpoint MCP: ${BASE_URL}/:userId/mcp/sse`);
 });

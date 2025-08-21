@@ -430,15 +430,42 @@ export class GmailService extends BaseService {
         });
     }
     cleanupExpiredSessions() {
+        console.log('🔒 Nettoyage Gmail désactivé - sessions préservées pour MCP');
+        const activeGmailSessions = this.gmailSessions.size;
+        console.log(`📧 Sessions Gmail actives: ${activeGmailSessions}`);
+        this.refreshExpiredTokens();
+    }
+    async refreshExpiredTokens() {
+        let refreshedCount = 0;
+        for (const [userId, session] of this.gmailSessions) {
+            try {
+                const refreshed = await this.refreshTokens(session);
+                if (refreshed) {
+                    refreshedCount++;
+                }
+            }
+            catch (error) {
+                console.warn(`⚠️ Impossible de refresh les tokens pour ${userId}:`, error);
+            }
+        }
+        if (refreshedCount > 0) {
+            console.log(`🔄 ${refreshedCount} tokens Gmail refreshés`);
+        }
+    }
+    forceCleanupOldSessions(daysOld = 30) {
         const now = new Date();
-        const EXPIRY_TIME = 24 * 60 * 60 * 1000;
+        const EXPIRY_TIME = daysOld * 24 * 60 * 60 * 1000;
+        let cleanedCount = 0;
         for (const [userId, session] of this.gmailSessions) {
             const timeSinceLastAccess = now.getTime() - session.lastAccessed.getTime();
             if (timeSinceLastAccess > EXPIRY_TIME) {
                 this.gmailSessions.delete(userId);
-                console.log(`🗑️ Session Gmail expirée supprimée: ${userId}`);
+                cleanedCount++;
+                console.log(`🗑️ Session Gmail très ancienne supprimée: ${userId} (${Math.round(timeSinceLastAccess / (24 * 60 * 60 * 1000))} jours)`);
             }
         }
+        console.log(`🧹 Nettoyage Gmail forcé: ${cleanedCount} sessions supprimées`);
+        return cleanedCount;
     }
     removeSession(userId) {
         const sessionExists = this.gmailSessions.has(userId);

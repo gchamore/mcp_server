@@ -35,11 +35,7 @@ const axonautService = new AxonautService();
 serviceRegistry.registerService(gmailService);
 serviceRegistry.registerService(axonautService);
 console.log('Architecture initialisée avec les services:', serviceRegistry.getServiceNames());
-setInterval(() => {
-    multiTenantManager.cleanupExpiredSessions();
-    gmailService.cleanupExpiredSessions();
-    axonautService.cleanupExpiredSessions();
-}, 60 * 60 * 1000);
+console.log('📌 Sessions permanentes activées - pas de suppression automatique');
 const app = express();
 app.set('trust proxy', 1);
 app.use((req, res, next) => {
@@ -407,10 +403,10 @@ app.use('*', (req, res) => {
     });
 });
 app.listen(PORT, () => {
-    console.log(`🚀 Multi-Service MCP Server running on port ${PORT}`);
-    console.log(`🌐 Base URL: ${BASE_URL}`);
-    console.log(`📱 Interface: ${BASE_URL}`);
-    console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`📋 Services activés: ${serviceRegistry.getEnabledServices().map(s => s.displayName).join(', ')}`);
-    console.log(`📡 Endpoint MCP: ${BASE_URL}/:userId/mcp/sse`);
+    console.log(`Multi-Service MCP Server running on port ${PORT}`);
+    console.log(`Base URL: ${BASE_URL}`);
+    console.log(`Interface: ${BASE_URL}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`Services activés: ${serviceRegistry.getEnabledServices().map(s => s.displayName).join(', ')}`);
+    console.log(`Endpoint MCP: ${BASE_URL}/:userId/mcp/sse`);
 });

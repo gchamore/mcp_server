@@ -136,15 +136,24 @@ export class MultiTenantManager {
         }
     }
     cleanupExpiredSessions() {
+        console.log('🔒 Nettoyage automatique désactivé - sessions préservées pour MCP');
+        const activeSessionsCount = this.userSessions.size;
+        console.log(`📊 Sessions actives: ${activeSessionsCount}`);
+    }
+    forceCleanupOldSessions(daysOld = 30) {
         const now = new Date();
-        const EXPIRY_TIME = 24 * 60 * 60 * 1000;
+        const EXPIRY_TIME = daysOld * 24 * 60 * 60 * 1000;
+        let cleanedCount = 0;
         for (const [userId, session] of this.userSessions) {
             const timeSinceLastAccess = now.getTime() - session.lastAccessed.getTime();
             if (timeSinceLastAccess > EXPIRY_TIME) {
                 this.userSessions.delete(userId);
-                console.log(`🗑️ Session expirée supprimée: ${userId}`);
+                cleanedCount++;
+                console.log(`🗑️ Session forcée supprimée: ${userId} (${Math.round(timeSinceLastAccess / (24 * 60 * 60 * 1000))} jours)`);
             }
         }
+        console.log(`🧹 Nettoyage forcé terminé: ${cleanedCount} sessions supprimées`);
+        return cleanedCount;
     }
     getStats() {
         const stats = {

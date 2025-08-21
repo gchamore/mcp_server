@@ -149,15 +149,15 @@ export class GmailService extends BaseService {
 
 			// Configurer temporairement le refresh token
 			session.oauth2Client.setCredentials({ refresh_token: refreshToken });
-			
+
 			const newTokens = await session.oauth2Client.refreshAccessToken();
 			session.oauth2Client.setCredentials(newTokens.credentials);
-			
+
 			// Chiffrer et stocker le nouveau access token
 			if (newTokens.credentials.access_token) {
 				session.encryptedAccessToken = encrypt(newTokens.credentials.access_token);
 			}
-			
+
 			session.lastAccessed = new Date();
 			console.log(`🔄 Tokens Gmail refreshés pour ${maskApiKey(session.userId)}`);
 			return true;
@@ -535,16 +535,55 @@ export class GmailService extends BaseService {
 
 	// Méthodes utilitaires pour la gestion des sessions
 	cleanupExpiredSessions() {
+		// ❌ DÉSACTIVÉ : Préservation des sessions Gmail pour les connexions MCP
+		console.log('🔒 Nettoyage Gmail désactivé - sessions préservées pour MCP');
+		
+		// Log du nombre de sessions Gmail actives
+		const activeGmailSessions = this.gmailSessions.size;
+		console.log(`📧 Sessions Gmail actives: ${activeGmailSessions}`);
+		
+		// Optionnel : Refresh des tokens expirés au lieu de supprimer les sessions
+		this.refreshExpiredTokens();
+	}
+
+	// Nouvelle méthode pour refresh les tokens expirés
+	private async refreshExpiredTokens() {
+		let refreshedCount = 0;
+		
+		for (const [userId, session] of this.gmailSessions) {
+			try {
+				// Tenter de refresh les tokens si nécessaire
+				const refreshed = await this.refreshTokens(session);
+				if (refreshed) {
+					refreshedCount++;
+				}
+			} catch (error) {
+				console.warn(`⚠️ Impossible de refresh les tokens pour ${userId}:`, error);
+			}
+		}
+		
+		if (refreshedCount > 0) {
+			console.log(`🔄 ${refreshedCount} tokens Gmail refreshés`);
+		}
+	}
+
+	// Nettoyage forcé pour les sessions très anciennes (utilisation manuelle)
+	forceCleanupOldSessions(daysOld: number = 30) {
 		const now = new Date();
-		const EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 heures
+		const EXPIRY_TIME = daysOld * 24 * 60 * 60 * 1000;
+		let cleanedCount = 0;
 
 		for (const [userId, session] of this.gmailSessions) {
 			const timeSinceLastAccess = now.getTime() - session.lastAccessed.getTime();
 			if (timeSinceLastAccess > EXPIRY_TIME) {
 				this.gmailSessions.delete(userId);
-				console.log(`🗑️ Session Gmail expirée supprimée: ${userId}`);
+				cleanedCount++;
+				console.log(`🗑️ Session Gmail très ancienne supprimée: ${userId} (${Math.round(timeSinceLastAccess / (24 * 60 * 60 * 1000))} jours)`);
 			}
 		}
+
+		console.log(`🧹 Nettoyage Gmail forcé: ${cleanedCount} sessions supprimées`);
+		return cleanedCount;
 	}
 
 	// Supprimer une session Gmail

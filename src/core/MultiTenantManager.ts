@@ -179,18 +179,45 @@ export class MultiTenantManager {
 		}
 	}
 
-	// Nettoyage des sessions expirées
+	// Nettoyage des sessions expirées (désactivé pour préserver les connexions MCP)
 	cleanupExpiredSessions() {
+		// ❌ DÉSACTIVÉ : Le nettoyage automatique peut interrompre les connexions MCP avec Dust
+		console.log('🔒 Nettoyage automatique désactivé - sessions préservées pour MCP');
+		
+		// Optionnel : Log du nombre de sessions actives
+		const activeSessionsCount = this.userSessions.size;
+		console.log(`📊 Sessions actives: ${activeSessionsCount}`);
+		
+		// Si on veut vraiment nettoyer manuellement (gardé commenté):
+		// const now = new Date();
+		// const EXPIRY_TIME = 7 * 24 * 60 * 60 * 1000; // 7 jours au lieu de 24h
+		// 
+		// for (const [userId, session] of this.userSessions) {
+		//     const timeSinceLastAccess = now.getTime() - session.lastAccessed.getTime();
+		//     if (timeSinceLastAccess > EXPIRY_TIME) {
+		//         this.userSessions.delete(userId);
+		//         console.log(`🗑️ Session très ancienne supprimée: ${userId} (${Math.round(timeSinceLastAccess / (24 * 60 * 60 * 1000))} jours)`);
+		//     }
+		// }
+	}
+
+	// Nouvelle méthode pour forcer le nettoyage manuel si nécessaire
+	forceCleanupOldSessions(daysOld: number = 30) {
 		const now = new Date();
-		const EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 heures
+		const EXPIRY_TIME = daysOld * 24 * 60 * 60 * 1000;
+		let cleanedCount = 0;
 
 		for (const [userId, session] of this.userSessions) {
 			const timeSinceLastAccess = now.getTime() - session.lastAccessed.getTime();
 			if (timeSinceLastAccess > EXPIRY_TIME) {
 				this.userSessions.delete(userId);
-				console.log(`🗑️ Session expirée supprimée: ${userId}`);
+				cleanedCount++;
+				console.log(`🗑️ Session forcée supprimée: ${userId} (${Math.round(timeSinceLastAccess / (24 * 60 * 60 * 1000))} jours)`);
 			}
 		}
+
+		console.log(`🧹 Nettoyage forcé terminé: ${cleanedCount} sessions supprimées`);
+		return cleanedCount;
 	}
 
 	// Statistiques

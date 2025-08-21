@@ -145,7 +145,7 @@ export class AxonautService extends BaseService {
 		return {
 			request: async (endpoint: string, options: any = {}) => {
 				const url = `${baseUrl}/api/v2${endpoint}`;
-				
+
 				// Déchiffrer la clé API juste pour cette requête
 				const apiKey = decrypt(encryptedApiKey);
 
@@ -183,12 +183,12 @@ export class AxonautService extends BaseService {
 			// Pour Axonaut, on teste si la clé API est toujours valide
 			const apiKey = this.getDecryptedApiKey(session);
 			const isValid = await this.testApiKey(apiKey, session.baseUrl);
-			
+
 			if (isValid) {
 				// ✅ Recréer le client avec la clé chiffrée
 				session.axonautClient = this.createAxonautClient(session.encryptedApiKey, session.baseUrl);
 			}
-			
+
 			return isValid;
 		} catch (error) {
 			console.error('❌ Erreur refresh Axonaut:', error);
@@ -508,15 +508,57 @@ export class AxonautService extends BaseService {
 
 	// Méthodes utilitaires
 	cleanupExpiredSessions() {
-		const now = new Date();
-		const EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 heures
+		// ❌ DÉSACTIVÉ : Préservation des sessions Axonaut pour les connexions MCP
+		console.log('🔒 Nettoyage Axonaut désactivé - sessions préservées pour MCP');
+		
+		// Log du nombre de sessions Axonaut actives
+		const activeAxonautSessions = this.axonautSessions.size;
+		console.log(`📊 Sessions Axonaut actives: ${activeAxonautSessions}`);
+		
+		// Optionnel : Vérification de la validité des clés API
+		this.validateActiveApiKeys();
+	}
 
+	// Nouvelle méthode pour valider les clés API actives
+	private async validateActiveApiKeys() {
+		let validatedCount = 0;
+		
 		for (const [userId, session] of this.axonautSessions) {
-			if (now.getTime() - session.lastAccessed.getTime() > EXPIRY_TIME) {
-				this.axonautSessions.delete(userId);
-				console.log(`🧹 Session Axonaut expirée supprimée: ${userId}`);
+			try {
+				// Tester la validité de la clé API
+				const isValid = await this.refreshTokens(session);
+				if (isValid) {
+					validatedCount++;
+				} else {
+					console.warn(`⚠️ Clé API Axonaut invalide pour ${userId} - session conservée`);
+				}
+			} catch (error) {
+				console.warn(`⚠️ Erreur validation clé API pour ${userId}:`, error);
 			}
 		}
+		
+		if (validatedCount > 0) {
+			console.log(`✅ ${validatedCount} clés API Axonaut validées`);
+		}
+	}
+
+	// Nettoyage forcé pour les sessions très anciennes (utilisation manuelle)
+	forceCleanupOldSessions(daysOld: number = 30) {
+		const now = new Date();
+		const EXPIRY_TIME = daysOld * 24 * 60 * 60 * 1000;
+		let cleanedCount = 0;
+
+		for (const [userId, session] of this.axonautSessions) {
+			const timeSinceLastAccess = now.getTime() - session.lastAccessed.getTime();
+			if (timeSinceLastAccess > EXPIRY_TIME) {
+				this.axonautSessions.delete(userId);
+				cleanedCount++;
+				console.log(`🗑️ Session Axonaut très ancienne supprimée: ${userId} (${Math.round(timeSinceLastAccess / (24 * 60 * 60 * 1000))} jours)`);
+			}
+		}
+
+		console.log(`🧹 Nettoyage Axonaut forcé: ${cleanedCount} sessions supprimées`);
+		return cleanedCount;
 	}
 
 	removeSession(userId: string): boolean {

@@ -102,10 +102,11 @@ export class AxonautService extends BaseService {
             return false;
         }
     }
-    createAxonautClient(apiKey, baseUrl) {
+    createAxonautClient(encryptedApiKey, baseUrl) {
         return {
-            async request(endpoint, options = {}) {
+            request: async (endpoint, options = {}) => {
                 const url = `${baseUrl}/api/v2${endpoint}`;
+                const apiKey = decrypt(encryptedApiKey);
                 const response = await fetch(url, {
                     ...options,
                     headers: {
@@ -136,7 +137,7 @@ export class AxonautService extends BaseService {
             const apiKey = this.getDecryptedApiKey(session);
             const isValid = await this.testApiKey(apiKey, session.baseUrl);
             if (isValid) {
-                session.axonautClient = this.createAxonautClient(apiKey, session.baseUrl);
+                session.axonautClient = this.createAxonautClient(session.encryptedApiKey, session.baseUrl);
             }
             return isValid;
         }
@@ -146,15 +147,7 @@ export class AxonautService extends BaseService {
         }
     }
     registerTools(server, userSession) {
-        let decryptedApiKey;
-        try {
-            decryptedApiKey = this.getDecryptedApiKey(userSession);
-            userSession.axonautClient = this.createAxonautClient(decryptedApiKey, userSession.baseUrl);
-        }
-        catch (error) {
-            console.error('❌ Impossible de déchiffrer la clé API pour les outils:', error);
-            return;
-        }
+        userSession.axonautClient = this.createAxonautClient(userSession.encryptedApiKey, userSession.baseUrl);
         server.tool("axonaut_list_companies", "Lister les entreprises Axonaut", {
             limit: z.number().optional().default(10).describe("Nombre d'entreprises à récupérer"),
             search: z.string().optional().describe("Recherche par nom")
@@ -397,14 +390,45 @@ export class AxonautService extends BaseService {
         });
     }
     cleanupExpiredSessions() {
-        const now = new Date();
-        const EXPIRY_TIME = 24 * 60 * 60 * 1000;
+        console.log('🔒 Nettoyage Axonaut désactivé - sessions préservées pour MCP');
+        const activeAxonautSessions = this.axonautSessions.size;
+        console.log(`📊 Sessions Axonaut actives: ${activeAxonautSessions}`);
+        this.validateActiveApiKeys();
+    }
+    async validateActiveApiKeys() {
+        let validatedCount = 0;
         for (const [userId, session] of this.axonautSessions) {
-            if (now.getTime() - session.lastAccessed.getTime() > EXPIRY_TIME) {
-                this.axonautSessions.delete(userId);
-                console.log(`🧹 Session Axonaut expirée supprimée: ${userId}`);
+            try {
+                const isValid = await this.refreshTokens(session);
+                if (isValid) {
+                    validatedCount++;
+                }
+                else {
+                    console.warn(`⚠️ Clé API Axonaut invalide pour ${userId} - session conservée`);
+                }
+            }
+            catch (error) {
+                console.warn(`⚠️ Erreur validation clé API pour ${userId}:`, error);
             }
         }
+        if (validatedCount > 0) {
+            console.log(`✅ ${validatedCount} clés API Axonaut validées`);
+        }
+    }
+    forceCleanupOldSessions(daysOld = 30) {
+        const now = new Date();
+        const EXPIRY_TIME = daysOld * 24 * 60 * 60 * 1000;
+        let cleanedCount = 0;
+        for (const [userId, session] of this.axonautSessions) {
+            const timeSinceLastAccess = now.getTime() - session.lastAccessed.getTime();
+            if (timeSinceLastAccess > EXPIRY_TIME) {
+                this.axonautSessions.delete(userId);
+                cleanedCount++;
+                console.log(`🗑️ Session Axonaut très ancienne supprimée: ${userId} (${Math.round(timeSinceLastAccess / (24 * 60 * 60 * 1000))} jours)`);
+            }
+        }
+        console.log(`🧹 Nettoyage Axonaut forcé: ${cleanedCount} sessions supprimées`);
+        return cleanedCount;
     }
     removeSession(userId) {
         const wasPresent = this.axonautSessions.has(userId);
