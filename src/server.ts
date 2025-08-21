@@ -71,6 +71,16 @@ setInterval(() => {
 // APPLICATION EXPRESS UNIFIÉE
 const app = express();
 
+// Juste trust proxy pour Railway (utile pour req.ip)
+app.set('trust proxy', 1);
+
+// Headers de sécurité légers (optionnel)
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    next();
+});
+
 // NOUVELLES ROUTES MULTI-SERVICES
 
 // Route MCP unifiée par utilisateur (remplace l'ancienne route Gmail)
