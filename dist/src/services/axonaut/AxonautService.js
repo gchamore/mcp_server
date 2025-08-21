@@ -1,6 +1,7 @@
 import { BaseService } from "../../core/BaseService.js";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
+import { encrypt, decrypt, maskApiKey } from "../../utils/encryption.js";
 export class AxonautService extends BaseService {
     serviceName = 'axonaut';
     displayName = 'Axonaut';
@@ -36,6 +37,7 @@ export class AxonautService extends BaseService {
                     error: 'Clé API Axonaut invalide ou URL incorrecte'
                 };
             }
+            const encryptedApiKey = encrypt(apiKey);
             const axonautClient = this.createAxonautClient(apiKey, baseUrl);
             const axonautSession = {
                 serviceName: 'axonaut',
@@ -44,12 +46,13 @@ export class AxonautService extends BaseService {
                 isAuthenticated: true,
                 createdAt: new Date(),
                 lastAccessed: new Date(),
-                apiKey,
+                encryptedApiKey,
                 baseUrl,
                 axonautClient
             };
             this.axonautSessions.set(userId, axonautSession);
             console.log(`✅ Session Axonaut créée pour ${userEmail || 'utilisateur'}: ${userId}`);
+            console.log(`🔐 Clé API chiffrée: ${maskApiKey(apiKey)}`);
             return {
                 success: true,
                 userId,
@@ -62,6 +65,15 @@ export class AxonautService extends BaseService {
                 success: false,
                 error: error instanceof Error ? error.message : 'Erreur inconnue'
             };
+        }
+    }
+    getDecryptedApiKey(session) {
+        try {
+            return decrypt(session.encryptedApiKey);
+        }
+        catch (error) {
+            console.error('❌ Erreur déchiffrement clé API Axonaut:', error);
+            throw new Error('Impossible de déchiffrer la clé API');
         }
     }
     async testApiKey(apiKey, baseUrl) {
@@ -92,8 +104,6 @@ export class AxonautService extends BaseService {
     }
     createAxonautClient(apiKey, baseUrl) {
         return {
-            apiKey,
-            baseUrl,
             async request(endpoint, options = {}) {
                 const url = `${baseUrl}/api/v2${endpoint}`;
                 const response = await fetch(url, {
@@ -123,7 +133,11 @@ export class AxonautService extends BaseService {
     }
     async refreshTokens(session) {
         try {
-            const isValid = await this.testApiKey(session.apiKey, session.baseUrl);
+            const apiKey = this.getDecryptedApiKey(session);
+            const isValid = await this.testApiKey(apiKey, session.baseUrl);
+            if (isValid) {
+                session.axonautClient = this.createAxonautClient(apiKey, session.baseUrl);
+            }
             return isValid;
         }
         catch (error) {
@@ -132,6 +146,15 @@ export class AxonautService extends BaseService {
         }
     }
     registerTools(server, userSession) {
+        let decryptedApiKey;
+        try {
+            decryptedApiKey = this.getDecryptedApiKey(userSession);
+            userSession.axonautClient = this.createAxonautClient(decryptedApiKey, userSession.baseUrl);
+        }
+        catch (error) {
+            console.error('❌ Impossible de déchiffrer la clé API pour les outils:', error);
+            return;
+        }
         server.tool("axonaut_list_companies", "Lister les entreprises Axonaut", {
             limit: z.number().optional().default(10).describe("Nombre d'entreprises à récupérer"),
             search: z.string().optional().describe("Recherche par nom")

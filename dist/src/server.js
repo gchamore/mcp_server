@@ -23,6 +23,10 @@ if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
     console.error('Configurez GOOGLE_CLIENT_ID et GOOGLE_CLIENT_SECRET dans Railway');
     process.exit(1);
 }
+if (!process.env.ENCRYPTION_KEY) {
+    console.warn('⚠️ ENCRYPTION_KEY manquante - génération d\'une clé temporaire');
+    console.warn('⚠️ Configurez ENCRYPTION_KEY dans Railway pour la production');
+}
 console.log('🏗️ Initialisation de l\'architecture multi-services...');
 const serviceRegistry = new ServiceRegistry();
 const multiTenantManager = new MultiTenantManager(serviceRegistry);
@@ -39,21 +43,8 @@ setInterval(() => {
 const app = express();
 app.set('trust proxy', 1);
 app.use((req, res, next) => {
-    if (process.env.NODE_ENV === 'production') {
-        const proto = req.header('x-forwarded-proto');
-        const host = req.header('host');
-        if (proto !== 'https') {
-            console.log(`🔒 Redirection HTTPS: ${proto}://${host}${req.url} -> https://${host}${req.url}`);
-            return res.redirect(301, `https://${host}${req.url}`);
-        }
-    }
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
-    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    if (req.secure || req.header('x-forwarded-proto') === 'https') {
-        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-    }
     next();
 });
 app.get('/:userId/mcp/sse', async (req, res) => {

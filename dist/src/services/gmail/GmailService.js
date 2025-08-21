@@ -2,6 +2,7 @@ import { google } from 'googleapis';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from "zod";
 import { BaseService } from "../../core/BaseService.js";
+import { encrypt, decrypt, maskApiKey } from "../../utils/encryption.js";
 export class GmailService extends BaseService {
     serviceName = 'gmail';
     displayName = 'Gmail';
@@ -71,26 +72,47 @@ export class GmailService extends BaseService {
             lastAccessed: new Date(),
             gmail,
             oauth2Client,
-            refreshToken: tokens.refresh_token,
-            accessToken: tokens.access_token
+            encryptedRefreshToken: tokens.refresh_token ? encrypt(tokens.refresh_token) : undefined,
+            encryptedAccessToken: tokens.access_token ? encrypt(tokens.access_token) : undefined
         };
         this.gmailSessions.set(userId, gmailSession);
         console.log(`✅ Session Gmail créée pour ${userEmail}: ${userId}`);
+        console.log(`🔐 Tokens chiffrés: refresh=${!!gmailSession.encryptedRefreshToken}, access=${!!gmailSession.encryptedAccessToken}`);
         return userId;
     }
-    getGmailSession(userId) {
-        const session = this.gmailSessions.get(userId);
-        if (session) {
-            session.lastAccessed = new Date();
+    getDecryptedRefreshToken(session) {
+        try {
+            return session.encryptedRefreshToken ? decrypt(session.encryptedRefreshToken) : null;
         }
-        return session || null;
+        catch (error) {
+            console.error('❌ Erreur déchiffrement refresh token:', error);
+            return null;
+        }
+    }
+    getDecryptedAccessToken(session) {
+        try {
+            return session.encryptedAccessToken ? decrypt(session.encryptedAccessToken) : null;
+        }
+        catch (error) {
+            console.error('❌ Erreur déchiffrement access token:', error);
+            return null;
+        }
     }
     async refreshTokens(session) {
         try {
+            const refreshToken = this.getDecryptedRefreshToken(session);
+            if (!refreshToken) {
+                console.error('❌ Refresh token manquant ou impossible à déchiffrer');
+                return false;
+            }
+            session.oauth2Client.setCredentials({ refresh_token: refreshToken });
             const newTokens = await session.oauth2Client.refreshAccessToken();
             session.oauth2Client.setCredentials(newTokens.credentials);
-            session.accessToken = newTokens.credentials.access_token || session.accessToken;
+            if (newTokens.credentials.access_token) {
+                session.encryptedAccessToken = encrypt(newTokens.credentials.access_token);
+            }
             session.lastAccessed = new Date();
+            console.log(`🔄 Tokens Gmail refreshés pour ${maskApiKey(session.userId)}`);
             return true;
         }
         catch (error) {
@@ -433,5 +455,12 @@ export class GmailService extends BaseService {
     }
     getSessionCount() {
         return this.gmailSessions.size;
+    }
+    getGmailSession(userId) {
+        const session = this.gmailSessions.get(userId);
+        if (session) {
+            session.lastAccessed = new Date();
+        }
+        return session || null;
     }
 }

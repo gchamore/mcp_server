@@ -36,6 +36,12 @@ if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
 	process.exit(1);
 }
 
+// Vérification de la clé de chiffrement
+if (!process.env.ENCRYPTION_KEY) {
+	console.warn('⚠️ ENCRYPTION_KEY manquante - génération d\'une clé temporaire');
+	console.warn('⚠️ Configurez ENCRYPTION_KEY dans Railway pour la production');
+}
+
 //  INITIALISATION DE L'ARCHITECTURE MODULAIRE
 console.log('🏗️ Initialisation de l\'architecture multi-services...');
 

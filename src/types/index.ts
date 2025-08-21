@@ -15,19 +15,22 @@ export interface BaseServiceSession {
 	accessToken?: string;
 }
 
-// Session Gmail spécifique
+// Session Gmail sécurisée
 export interface GmailSession extends BaseServiceSession {
 	serviceName: 'gmail';
-	gmail: any; // Google Gmail API instance
+	gmail: any;
 	oauth2Client: OAuth2Client;
+	// Tokens chiffrés
+	encryptedRefreshToken?: string;
+	encryptedAccessToken?: string;
 }
 
-// Session Axonaut spécifique
+// Session Axonaut sécurisée
 export interface AxonautSession extends BaseServiceSession {
 	serviceName: 'axonaut';
-	apiKey: string;
+	encryptedApiKey: string; // Clé API chiffrée
 	baseUrl: string;
-	axonautClient: any; // Instance client Axonaut
+	axonautClient: any;
 }
 
 // Session utilisateur multi-services

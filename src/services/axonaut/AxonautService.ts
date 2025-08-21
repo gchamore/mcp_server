@@ -11,6 +11,7 @@ import {
 	AxonautInvoice,
 	AxonautApiConfig
 } from "../../types/index.js";
+import { encrypt, decrypt, maskApiKey } from "../../utils/encryption.js";
 
 export class AxonautService extends BaseService {
 	public readonly serviceName = 'axonaut';
@@ -52,7 +53,7 @@ export class AxonautService extends BaseService {
 		try {
 			const userId = uuidv4();
 
-			// Tester la validité de la clé API
+			// Tester la validité de la clé API (avec la vraie clé)
 			const isValid = await this.testApiKey(apiKey, baseUrl);
 			if (!isValid) {
 				return {
@@ -61,10 +62,13 @@ export class AxonautService extends BaseService {
 				};
 			}
 
-			// Créer le client Axonaut (simple objet avec fetch)
+			// Chiffrer la clé API
+			const encryptedApiKey = encrypt(apiKey);
+
+			// Créer le client Axonaut avec la clé chiffrée
 			const axonautClient = this.createAxonautClient(apiKey, baseUrl);
 
-			// Créer la session Axonaut
+			// Créer la session Axonaut sécurisée
 			const axonautSession: AxonautSession = {
 				serviceName: 'axonaut',
 				userId,
@@ -72,13 +76,14 @@ export class AxonautService extends BaseService {
 				isAuthenticated: true,
 				createdAt: new Date(),
 				lastAccessed: new Date(),
-				apiKey,
+				encryptedApiKey, // Clé API chiffrée
 				baseUrl,
 				axonautClient
 			};
 
 			this.axonautSessions.set(userId, axonautSession);
 			console.log(`✅ Session Axonaut créée pour ${userEmail || 'utilisateur'}: ${userId}`);
+			console.log(`🔐 Clé API chiffrée: ${maskApiKey(apiKey)}`);
 
 			return {
 				success: true,
@@ -91,6 +96,16 @@ export class AxonautService extends BaseService {
 				success: false,
 				error: error instanceof Error ? error.message : 'Erreur inconnue'
 			};
+		}
+	}
+
+	// Méthode pour obtenir la clé API déchiffrée
+	private getDecryptedApiKey(session: AxonautSession): string {
+		try {
+			return decrypt(session.encryptedApiKey);
+		} catch (error) {
+			console.error('❌ Erreur déchiffrement clé API Axonaut:', error);
+			throw new Error('Impossible de déchiffrer la clé API');
 		}
 	}
 
@@ -128,15 +143,13 @@ export class AxonautService extends BaseService {
 
 	private createAxonautClient(apiKey: string, baseUrl: string) {
 		return {
-			apiKey,
-			baseUrl,
 			async request(endpoint: string, options: any = {}) {
 				const url = `${baseUrl}/api/v2${endpoint}`;
 
 				const response = await fetch(url, {
 					...options,
 					headers: {
-						'userApiKey': apiKey,
+						'userApiKey': apiKey, // Utilise la clé en clair pour la requête
 						'Accept': 'application/json',
 						'Content-Type': 'application/json',
 						...options.headers
@@ -163,10 +176,16 @@ export class AxonautService extends BaseService {
 	}
 
 	async refreshTokens(session: AxonautSession): Promise<boolean> {
-		// Pour Axonaut avec clé API, pas besoin de refresh
-		// On peut juste tester si la clé est toujours valide
 		try {
-			const isValid = await this.testApiKey(session.apiKey, session.baseUrl);
+			// Pour Axonaut, on teste si la clé API est toujours valide
+			const apiKey = this.getDecryptedApiKey(session);
+			const isValid = await this.testApiKey(apiKey, session.baseUrl);
+			
+			if (isValid) {
+				// Recréer le client avec la clé déchiffrée
+				session.axonautClient = this.createAxonautClient(apiKey, session.baseUrl);
+			}
+			
 			return isValid;
 		} catch (error) {
 			console.error('❌ Erreur refresh Axonaut:', error);
@@ -175,6 +194,17 @@ export class AxonautService extends BaseService {
 	}
 
 	registerTools(server: McpServer, userSession: AxonautSession): void {
+		// Obtenir la clé API déchiffrée pour créer le client
+		let decryptedApiKey: string;
+		try {
+			decryptedApiKey = this.getDecryptedApiKey(userSession);
+			// Recréer le client avec la clé déchiffrée
+			userSession.axonautClient = this.createAxonautClient(decryptedApiKey, userSession.baseUrl);
+		} catch (error) {
+			console.error('❌ Impossible de déchiffrer la clé API pour les outils:', error);
+			return;
+		}
+
 		// OUTIL 1: Lister les entreprises
 		server.tool(
 			"axonaut_list_companies",
