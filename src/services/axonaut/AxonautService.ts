@@ -85,6 +85,8 @@ export class AxonautService extends BaseService {
 			console.log(`✅ Session Axonaut créée pour ${userEmail || 'utilisateur'}: ${userId}`);
 			console.log(`🔐 Clé API chiffrée: ${maskApiKey(apiKey)}`);
 
+			// ✅ Plus d'auto-sauvegarde - Redis gère tout
+
 			return {
 				success: true,
 				userId,
@@ -576,5 +578,10 @@ export class AxonautService extends BaseService {
 
 	getSessionCount(): number {
 		return this.axonautSessions.size;
+	}
+
+	// Méthode pour obtenir les sessions brutes (pour la sauvegarde globale Redis)
+	getAxonautSessionsMap(): Map<string, AxonautSession> {
+		return this.axonautSessions;
 	}
 }

@@ -444,4 +444,7 @@ export class AxonautService extends BaseService {
     getSessionCount() {
         return this.axonautSessions.size;
     }
+    getAxonautSessionsMap() {
+        return this.axonautSessions;
+    }
 }

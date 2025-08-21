@@ -13,7 +13,10 @@ import { ServiceRegistry } from "./core/ServiceRegistry.js";
 import { MultiTenantManager } from "./core/MultiTenantManager.js";
 import { GmailService } from "./services/gmail/GmailService.js";
 import { AxonautService } from "./services/axonaut/AxonautService.js";
-import { UserSession } from "./types/index.js";
+import { UserSession, GmailSession, AxonautSession } from "./types/index.js";
+import { redisPersistence as sessionPersistence } from "./utils/redis-persistence.js";
+import { google } from 'googleapis';
+import { decrypt } from "./utils/encryption.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -75,6 +78,194 @@ console.log('Architecture initialisée avec les services:', serviceRegistry.getS
 // }, 60 * 60 * 1000);
 
 console.log('📌 Sessions permanentes activées - pas de suppression automatique');
+
+// 🔄 INITIALISATION DE LA PERSISTANCE REDIS
+console.log('💾 Initialisation du système de persistance Redis...');
+await sessionPersistence.initialize();
+
+// Vérifier la santé Redis pour Railway
+const redisHealth = await sessionPersistence.healthCheck();
+if (redisHealth) {
+	console.log('✅ Redis opérationnel - persistance activée pour Railway');
+} else {
+	console.warn('⚠️ Redis non disponible - sessions temporaires uniquement');
+}
+
+// Restaurer les sessions depuis Redis
+console.log('🔄 Restauration des sessions depuis Redis...');
+await restoreAllSessionsFromRedis();
+
+async function restoreAllSessionsFromRedis() {
+	try {
+		// Restaurer sessions utilisateur
+		const userSessions = await sessionPersistence.loadUserSessions();
+		for (const persistentSession of userSessions) {
+			const userSession: UserSession = {
+				userId: persistentSession.userId,
+				createdAt: new Date(persistentSession.createdAt),
+				lastAccessed: new Date(persistentSession.lastAccessed),
+				services: {}
+			};
+			multiTenantManager.getUserSessionsMap().set(persistentSession.userId, userSession);
+		}
+		console.log(`✅ ${userSessions.length} sessions utilisateur restaurées depuis Redis`);
+
+		// Restaurer sessions Gmail
+		const gmailSessions = await sessionPersistence.loadGmailSessions();
+		for (const persistentSession of gmailSessions) {
+			const oauth2Client = new google.auth.OAuth2(
+				GOOGLE_CLIENT_ID,
+				GOOGLE_CLIENT_SECRET,
+				`${BASE_URL}/oauth/callback`
+			);
+			const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+
+			const gmailSession: GmailSession = {
+				serviceName: 'gmail' as const,
+				userId: persistentSession.userId,
+				userEmail: persistentSession.userEmail,
+				isAuthenticated: persistentSession.isAuthenticated,
+				createdAt: new Date(persistentSession.createdAt),
+				lastAccessed: new Date(persistentSession.lastAccessed),
+				gmail,
+				oauth2Client,
+				encryptedRefreshToken: persistentSession.encryptedRefreshToken,
+				encryptedAccessToken: persistentSession.encryptedAccessToken
+			};
+
+			if (persistentSession.encryptedRefreshToken) {
+				try {
+					const refreshToken = decrypt(persistentSession.encryptedRefreshToken);
+					oauth2Client.setCredentials({ refresh_token: refreshToken });
+				} catch (error) {
+					console.warn(`⚠️ Impossible de déchiffrer le refresh token pour ${persistentSession.userId}`);
+				}
+			}
+
+			gmailService.getGmailSessionsMap().set(persistentSession.userId, gmailSession);
+		}
+		console.log(`✅ ${gmailSessions.length} sessions Gmail restaurées depuis Redis`);
+
+		// Restaurer sessions Axonaut
+		const axonautSessions = await sessionPersistence.loadAxonautSessions();
+		for (const persistentSession of axonautSessions) {
+			const axonautClient = {
+				request: async (endpoint: string, options: any = {}) => {
+					const url = `${persistentSession.baseUrl}/api/v2${endpoint}`;
+					const apiKey = decrypt(persistentSession.encryptedApiKey);
+
+					const response = await fetch(url, {
+						...options,
+						headers: {
+							'userApiKey': apiKey,
+							'Accept': 'application/json',
+							'Content-Type': 'application/json',
+							...options.headers
+						}
+					});
+
+					if (!response.ok) {
+						const errorText = await response.text();
+						throw new Error(`API Axonaut error: ${response.status} ${response.statusText}: ${errorText}`);
+					}
+
+					return response.json();
+				}
+			};
+
+			const axonautSession: AxonautSession = {
+				serviceName: 'axonaut' as const,
+				userId: persistentSession.userId,
+				userEmail: persistentSession.userEmail,
+				isAuthenticated: persistentSession.isAuthenticated,
+				createdAt: new Date(persistentSession.createdAt),
+				lastAccessed: new Date(persistentSession.lastAccessed),
+				encryptedApiKey: persistentSession.encryptedApiKey,
+				baseUrl: persistentSession.baseUrl,
+				axonautClient
+			};
+
+			axonautService.getAxonautSessionsMap().set(persistentSession.userId, axonautSession);
+		}
+		console.log(`✅ ${axonautSessions.length} sessions Axonaut restaurées depuis Redis`);
+
+	} catch (error) {
+		console.error('❌ Erreur restauration depuis Redis:', error);
+	}
+}
+
+// Reconnecter les sessions de services aux sessions utilisateur
+console.log('🔗 Reconnexion des sessions de services...');
+await reconnectServiceSessions();
+
+async function reconnectServiceSessions() {
+	try {
+		// Récupérer toutes les sessions Gmail et les rattacher aux bonnes sessions utilisateur
+		const gmailSessions = gmailService.getGmailSessionsMap();
+		for (const [gmailUserId, gmailSession] of gmailSessions) {
+			const userSession = multiTenantManager.getUserSession(gmailUserId);
+			if (userSession && !userSession.services.gmail) {
+				userSession.services.gmail = gmailSession;
+				console.log(`🔗 Session Gmail ${gmailUserId} reconnectée`);
+			}
+		}
+
+		// Récupérer toutes les sessions Axonaut et les rattacher aux bonnes sessions utilisateur
+		const axonautSessions = axonautService.getAxonautSessionsMap();
+		for (const [axonautUserId, axonautSession] of axonautSessions) {
+			const userSession = multiTenantManager.getUserSession(axonautUserId);
+			if (userSession && !userSession.services.axonaut) {
+				userSession.services.axonaut = axonautSession;
+				console.log(`🔗 Session Axonaut ${axonautUserId} reconnectée`);
+			}
+		}
+
+		console.log('✅ Reconnexion des sessions terminée');
+	} catch (error) {
+		console.error('❌ Erreur lors de la reconnexion des sessions:', error);
+	}
+}
+
+// Sauvegarde périodique des sessions (toutes les 5 minutes)
+const SAVE_INTERVAL = 5 * 60 * 1000; // 5 minutes
+setInterval(async () => {
+	try {
+		console.log('💾 Sauvegarde périodique des sessions...');
+		await sessionPersistence.saveAllSessions(
+			multiTenantManager.getUserSessionsMap(),
+			gmailService.getGmailSessionsMap(),
+			axonautService.getAxonautSessionsMap()
+		);
+	} catch (error) {
+		console.error('❌ Erreur sauvegarde périodique:', error);
+	}
+}, SAVE_INTERVAL);
+
+// Sauvegarde lors de l'arrêt du serveur
+const gracefulShutdown = async (signal: string) => {
+	console.log(`\n📡 Signal ${signal} reçu, arrêt en cours...`);
+	
+	try {
+		console.log('💾 Sauvegarde finale des sessions...');
+		await sessionPersistence.saveAllSessions(
+			multiTenantManager.getUserSessionsMap(),
+			gmailService.getGmailSessionsMap(),
+			axonautService.getAxonautSessionsMap()
+		);
+		
+		await sessionPersistence.disconnect();
+		console.log('✅ Sauvegarde terminée');
+	} catch (error) {
+		console.error('❌ Erreur lors de la sauvegarde finale:', error);
+	}
+	
+	process.exit(0);
+};
+
+// Écouter les signaux d'arrêt
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2')); // nodemon
 
 // APPLICATION EXPRESS UNIFIÉE
 const app = express();
@@ -523,14 +714,22 @@ app.get('/api/status', (req, res) => {
 });
 
 //  HEALTH CHECK POUR RAILWAY
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+	const redisHealth = await sessionPersistence.healthCheck();
+	const redisStats = await sessionPersistence.getStats();
+	
 	res.json({
 		status: 'OK',
 		timestamp: new Date().toISOString(),
 		baseUrl: BASE_URL,
 		environment: process.env.NODE_ENV || 'development',
 		version: '2.0.0',
-		architecture: 'multi-services'
+		architecture: 'multi-services',
+		redis: {
+			connected: redisHealth,
+			url_configured: !!process.env.REDIS_URL,
+			stats: redisStats
+		}
 	});
 });
 
@@ -552,10 +751,11 @@ app.use('*', (req, res) => {
 
 //  DÉMARRAGE SERVEUR
 app.listen(PORT, () => {
-	console.log(`Multi-Service MCP Server running on port ${PORT}`);
-	console.log(`Base URL: ${BASE_URL}`);
-	console.log(`Interface: ${BASE_URL}`);
-	console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-	console.log(`Services activés: ${serviceRegistry.getEnabledServices().map(s => s.displayName).join(', ')}`);
-	console.log(`Endpoint MCP: ${BASE_URL}/:userId/mcp/sse`);
+	console.log(`🚀 Multi-Service MCP Server running on port ${PORT}`);
+	console.log(`🌐 Base URL: ${BASE_URL}`);
+	console.log(`📱 Interface: ${BASE_URL}`);
+	console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+	console.log(`📋 Services activés: ${serviceRegistry.getEnabledServices().map(s => s.displayName).join(', ')}`);
+	console.log(`📡 Endpoint MCP: ${BASE_URL}/:userId/mcp/sse`);
+	console.log(`💾 Persistance Redis activée avec sauvegarde toutes les ${SAVE_INTERVAL / 60000} minutes`);
 });

@@ -180,4 +180,7 @@ export class MultiTenantManager {
     removeActiveMcpSession(sessionId) {
         this.activeMcpSessions.delete(sessionId);
     }
+    getUserSessionsMap() {
+        return this.userSessions;
+    }
 }

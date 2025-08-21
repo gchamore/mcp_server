@@ -6,6 +6,16 @@ echo "🏗️  Démarrage du build optimisé..."
 # Augmenter la limite de mémoire pour Node.js
 export NODE_OPTIONS="--max-old-space-size=1024"
 
+# Vérifier et installer les dépendances si nécessaire
+if [ ! -d "node_modules" ] || [ ! -f "node_modules/ioredis/package.json" ]; then
+    echo "📦 Installation des dépendances manquantes..."
+    npm install
+    if [ $? -ne 0 ]; then
+        echo "❌ Erreur lors de l'installation des dépendances"
+        exit 1
+    fi
+fi
+
 # Nettoyer le dossier dist s'il existe
 if [ -d "dist" ]; then
     echo "🧹 Nettoyage du dossier dist existant..."

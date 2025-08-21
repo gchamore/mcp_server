@@ -254,4 +254,9 @@ export class MultiTenantManager {
 	removeActiveMcpSession(sessionId: string) {
 		this.activeMcpSessions.delete(sessionId);
 	}
+
+	// Méthode pour obtenir les sessions brutes (pour la sauvegarde globale Redis)
+	getUserSessionsMap(): Map<string, UserSession> {
+		return this.userSessions;
+	}
 }

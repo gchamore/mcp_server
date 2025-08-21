@@ -490,4 +490,7 @@ export class GmailService extends BaseService {
         }
         return session || null;
     }
+    getGmailSessionsMap() {
+        return this.gmailSessions;
+    }
 }

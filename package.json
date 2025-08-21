@@ -12,7 +12,8 @@
     "serve": "node dist/src/server.js",
     "test": "node test-local.cjs",
     "test:railway": "node test-railway.cjs",
-    "validate": "node validate-deployment.cjs"
+    "validate": "node validate-deployment.cjs",
+    "install-deps": "npm install"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
@@ -20,12 +21,14 @@
     "express": "^4.18.2",
     "google-auth-library": "^9.4.1",
     "googleapis": "^128.0.0",
+    "ioredis": "^5.7.0",
     "uuid": "^11.1.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/dotenv": "^8.2.0",
     "@types/express": "^4.17.21",
+    "@types/ioredis": "^5.0.0",
     "@types/node": "^20.10.0",
     "@types/uuid": "^10.0.0",
     "ts-node": "^10.9.1",

@@ -613,4 +613,9 @@ export class GmailService extends BaseService {
 		}
 		return session || null;
 	}
+
+	// Méthode pour obtenir les sessions brutes (pour la sauvegarde globale Redis)
+	getGmailSessionsMap(): Map<string, GmailSession> {
+		return this.gmailSessions;
+	}
 }
