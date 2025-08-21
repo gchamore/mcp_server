@@ -521,13 +521,22 @@ app.get('/oauth/callback', async (req, res) => {
 			
 			// 💾 Sauvegarde immédiate dans Redis
 			try {
-				// Sauvegarder seulement la nouvelle session Gmail
+				// Sauvegarder la session Gmail + session utilisateur
 				const newGmailSession = gmailService.getGmailSession(authResult.userId);
 				if (newGmailSession) {
 					const tempGmailMap = new Map();
 					tempGmailMap.set(authResult.userId, newGmailSession);
 					await sessionPersistence.saveGmailSessions(tempGmailMap);
-					console.log(`💾 Session Gmail ${authResult.userId} sauvegardée immédiatement`);
+					
+					// Sauvegarder aussi la session utilisateur correspondante
+					const userSession = multiTenantManager.getUserSession(authResult.userId);
+					if (userSession) {
+						const tempUserMap = new Map();
+						tempUserMap.set(authResult.userId, userSession);
+						await sessionPersistence.saveUserSessions(tempUserMap);
+					}
+					
+					console.log(`💾 Session Gmail ${authResult.userId} + session utilisateur sauvegardées immédiatement`);
 				}
 			} catch (error) {
 				console.error('❌ Erreur sauvegarde immédiate Gmail:', error);

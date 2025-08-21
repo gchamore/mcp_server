@@ -357,7 +357,13 @@ app.get('/oauth/callback', async (req, res) => {
                     const tempGmailMap = new Map();
                     tempGmailMap.set(authResult.userId, newGmailSession);
                     await sessionPersistence.saveGmailSessions(tempGmailMap);
-                    console.log(`💾 Session Gmail ${authResult.userId} sauvegardée immédiatement`);
+                    const userSession = multiTenantManager.getUserSession(authResult.userId);
+                    if (userSession) {
+                        const tempUserMap = new Map();
+                        tempUserMap.set(authResult.userId, userSession);
+                        await sessionPersistence.saveUserSessions(tempUserMap);
+                    }
+                    console.log(`💾 Session Gmail ${authResult.userId} + session utilisateur sauvegardées immédiatement`);
                 }
             }
             catch (error) {
