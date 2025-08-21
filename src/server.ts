@@ -519,22 +519,33 @@ app.get('/oauth/callback', async (req, res) => {
 		if (authResult.success && authResult.userId) {
 			console.log(`[OAuth] Authentification réussie pour ${authResult.userEmail}: ${authResult.userId}`);
 			
+			// Créer/récupérer la session utilisateur
+			let userSession = multiTenantManager.getUserSession(authResult.userId);
+			if (!userSession) {
+				multiTenantManager.createUserSession(authResult.userId);
+				userSession = multiTenantManager.getUserSession(authResult.userId);
+			}
+
+			// Ajouter la session Gmail à la session utilisateur
+			const gmailSession = gmailService.getGmailSession(authResult.userId);
+			if (userSession && gmailSession) {
+				multiTenantManager.addServiceSession(authResult.userId, 'gmail', gmailSession);
+				console.log(`[Gmail] Session ajoutée à l'utilisateur ${authResult.userId}`);
+			}
+			
 			// 💾 Sauvegarde immédiate dans Redis
 			try {
 				// Sauvegarder la session Gmail + session utilisateur
 				const newGmailSession = gmailService.getGmailSession(authResult.userId);
-				if (newGmailSession) {
+				if (newGmailSession && userSession) {
 					const tempGmailMap = new Map();
 					tempGmailMap.set(authResult.userId, newGmailSession);
 					await sessionPersistence.saveGmailSessions(tempGmailMap);
 					
 					// Sauvegarder aussi la session utilisateur correspondante
-					const userSession = multiTenantManager.getUserSession(authResult.userId);
-					if (userSession) {
-						const tempUserMap = new Map();
-						tempUserMap.set(authResult.userId, userSession);
-						await sessionPersistence.saveUserSessions(tempUserMap);
-					}
+					const tempUserMap = new Map();
+					tempUserMap.set(authResult.userId, userSession);
+					await sessionPersistence.saveUserSessions(tempUserMap);
 					
 					console.log(`💾 Session Gmail ${authResult.userId} + session utilisateur sauvegardées immédiatement`);
 				}
