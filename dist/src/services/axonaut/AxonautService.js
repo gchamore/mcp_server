@@ -27,9 +27,9 @@ export class AxonautService extends BaseService {
             error: 'Axonaut utilise une authentification par clé API, pas OAuth'
         };
     }
-    async authenticateWithApiKey(apiKey, baseUrl, userEmail) {
+    async authenticateWithApiKey(apiKey, baseUrl, userEmail, userId) {
         try {
-            const userId = uuidv4();
+            const sessionUserId = userId || uuidv4();
             const isValid = await this.testApiKey(apiKey, baseUrl);
             if (!isValid) {
                 return {
@@ -41,7 +41,7 @@ export class AxonautService extends BaseService {
             const axonautClient = this.createAxonautClient(apiKey, baseUrl);
             const axonautSession = {
                 serviceName: 'axonaut',
-                userId,
+                userId: sessionUserId,
                 userEmail: userEmail || 'utilisateur@axonaut.com',
                 isAuthenticated: true,
                 createdAt: new Date(),
@@ -50,12 +50,12 @@ export class AxonautService extends BaseService {
                 baseUrl,
                 axonautClient
             };
-            this.axonautSessions.set(userId, axonautSession);
-            console.log(`✅ Session Axonaut créée pour ${userEmail || 'utilisateur'}: ${userId}`);
+            this.axonautSessions.set(sessionUserId, axonautSession);
+            console.log(`✅ Session Axonaut créée pour ${userEmail || 'utilisateur'}: ${sessionUserId}`);
             console.log(`🔐 Clé API chiffrée: ${maskApiKey(apiKey)}`);
             return {
                 success: true,
-                userId,
+                userId: sessionUserId,
                 userEmail: userEmail || 'utilisateur@axonaut.com'
             };
         }

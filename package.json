@@ -22,6 +22,7 @@
     "google-auth-library": "^9.4.1",
     "googleapis": "^128.0.0",
     "ioredis": "^5.7.0",
+    "node-fetch": "^3.3.2",
     "uuid": "^11.1.0",
     "zod": "^3.22.4"
   },

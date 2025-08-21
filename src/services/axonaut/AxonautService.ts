@@ -49,9 +49,10 @@ export class AxonautService extends BaseService {
 	}
 
 	// Méthode spécifique pour Axonaut : authentification par clé API
-	async authenticateWithApiKey(apiKey: string, baseUrl: string, userEmail?: string): Promise<AuthResult> {
+	async authenticateWithApiKey(apiKey: string, baseUrl: string, userEmail?: string, userId?: string): Promise<AuthResult> {
 		try {
-			const userId = uuidv4();
+			// Utiliser l'userId fourni ou en générer un nouveau
+			const sessionUserId = userId || uuidv4();
 
 			// Tester la validité de la clé API (avec la vraie clé)
 			const isValid = await this.testApiKey(apiKey, baseUrl);
@@ -71,7 +72,7 @@ export class AxonautService extends BaseService {
 			// Créer la session Axonaut sécurisée
 			const axonautSession: AxonautSession = {
 				serviceName: 'axonaut',
-				userId,
+				userId: sessionUserId,
 				userEmail: userEmail || 'utilisateur@axonaut.com',
 				isAuthenticated: true,
 				createdAt: new Date(),
@@ -81,15 +82,15 @@ export class AxonautService extends BaseService {
 				axonautClient
 			};
 
-			this.axonautSessions.set(userId, axonautSession);
-			console.log(`✅ Session Axonaut créée pour ${userEmail || 'utilisateur'}: ${userId}`);
+			this.axonautSessions.set(sessionUserId, axonautSession);
+			console.log(`✅ Session Axonaut créée pour ${userEmail || 'utilisateur'}: ${sessionUserId}`);
 			console.log(`🔐 Clé API chiffrée: ${maskApiKey(apiKey)}`);
 
 			// ✅ Plus d'auto-sauvegarde - Redis gère tout
 
 			return {
 				success: true,
-				userId,
+				userId: sessionUserId,
 				userEmail: userEmail || 'utilisateur@axonaut.com'
 			};
 		} catch (error) {

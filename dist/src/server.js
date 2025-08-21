@@ -390,7 +390,7 @@ app.post('/api/axonaut/auth', express.json(), async (req, res) => {
     }
     try {
         console.log(`[Axonaut] Tentative d'authentification pour l'utilisateur ${userId}`);
-        const authResult = await axonautService.authenticateWithApiKey(apiKey, baseUrl, userEmail);
+        const authResult = await axonautService.authenticateWithApiKey(apiKey, baseUrl, userEmail, userId);
         if (authResult.success && authResult.userId) {
             const axonautSession = axonautService.getAxonautSession(authResult.userId);
             if (!axonautSession) {
@@ -406,12 +406,12 @@ app.post('/api/axonaut/auth', express.json(), async (req, res) => {
                 console.log(`[Axonaut] Authentification réussie pour ${userId}`);
                 try {
                     const tempAxonautMap = new Map();
-                    tempAxonautMap.set(authResult.userId, axonautSession);
+                    tempAxonautMap.set(userId, axonautSession);
                     await sessionPersistence.saveAxonautSessions(tempAxonautMap);
                     const tempUserMap = new Map();
                     tempUserMap.set(userId, userSession);
                     await sessionPersistence.saveUserSessions(tempUserMap);
-                    console.log(`💾 Session Axonaut ${authResult.userId} sauvegardée immédiatement`);
+                    console.log(`💾 Session Axonaut ${userId} sauvegardée immédiatement`);
                 }
                 catch (error) {
                     console.error('❌ Erreur sauvegarde immédiate Axonaut:', error);
