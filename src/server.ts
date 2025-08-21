@@ -221,20 +221,22 @@ async function reconnectServiceSessions() {
 	}
 }
 
-// Sauvegarde périodique des sessions (toutes les 5 minutes)
+// Sauvegarde périodique des sessions (DÉSACTIVÉE - sauvegarde à la création)
 const SAVE_INTERVAL = 5 * 60 * 1000; // 5 minutes
-setInterval(async () => {
-	try {
-		console.log('💾 Sauvegarde périodique des sessions...');
-		await sessionPersistence.saveAllSessions(
-			multiTenantManager.getUserSessionsMap(),
-			gmailService.getGmailSessionsMap(),
-			axonautService.getAxonautSessionsMap()
-		);
-	} catch (error) {
-		console.error('❌ Erreur sauvegarde périodique:', error);
-	}
-}, SAVE_INTERVAL);
+// setInterval(async () => {
+// 	try {
+// 		console.log('💾 Sauvegarde périodique des sessions...');
+// 		await sessionPersistence.saveAllSessions(
+// 			multiTenantManager.getUserSessionsMap(),
+// 			gmailService.getGmailSessionsMap(),
+// 			axonautService.getAxonautSessionsMap()
+// 		);
+// 	} catch (error) {
+// 		console.error('❌ Erreur sauvegarde périodique:', error);
+// 	}
+// }, SAVE_INTERVAL);
+
+console.log('📝 Sauvegarde périodique désactivée - sauvegarde à la création uniquement');
 
 // Sauvegarde lors de l'arrêt du serveur
 const gracefulShutdown = async (signal: string) => {
@@ -519,12 +521,14 @@ app.get('/oauth/callback', async (req, res) => {
 			
 			// 💾 Sauvegarde immédiate dans Redis
 			try {
-				await sessionPersistence.saveAllSessions(
-					multiTenantManager.getUserSessionsMap(),
-					gmailService.getGmailSessionsMap(),
-					axonautService.getAxonautSessionsMap()
-				);
-				console.log(`💾 Session Gmail sauvegardée immédiatement dans Redis`);
+				// Sauvegarder seulement la nouvelle session Gmail
+				const newGmailSession = gmailService.getGmailSession(authResult.userId);
+				if (newGmailSession) {
+					const tempGmailMap = new Map();
+					tempGmailMap.set(authResult.userId, newGmailSession);
+					await sessionPersistence.saveGmailSessions(tempGmailMap);
+					console.log(`💾 Session Gmail ${authResult.userId} sauvegardée immédiatement`);
+				}
 			} catch (error) {
 				console.error('❌ Erreur sauvegarde immédiate Gmail:', error);
 			}
@@ -577,12 +581,16 @@ app.post('/api/axonaut/auth', express.json(), async (req, res) => {
 
 				// 💾 Sauvegarde immédiate dans Redis
 				try {
-					await sessionPersistence.saveAllSessions(
-						multiTenantManager.getUserSessionsMap(),
-						gmailService.getGmailSessionsMap(),
-						axonautService.getAxonautSessionsMap()
-					);
-					console.log(`💾 Session Axonaut sauvegardée immédiatement dans Redis`);
+					// Sauvegarder seulement la nouvelle session Axonaut + session utilisateur
+					const tempAxonautMap = new Map();
+					tempAxonautMap.set(authResult.userId, axonautSession);
+					await sessionPersistence.saveAxonautSessions(tempAxonautMap);
+					
+					const tempUserMap = new Map();
+					tempUserMap.set(userId, userSession);
+					await sessionPersistence.saveUserSessions(tempUserMap);
+					
+					console.log(`💾 Session Axonaut ${authResult.userId} sauvegardée immédiatement`);
 				} catch (error) {
 					console.error('❌ Erreur sauvegarde immédiate Axonaut:', error);
 				}
