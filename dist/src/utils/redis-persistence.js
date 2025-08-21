@@ -54,7 +54,7 @@ export class RedisPersistence {
         this.redis.on('error', (error) => {
             errorCount++;
             if (errorCount <= 3) {
-                console.error('❌ Erreur Redis:', error.message);
+                console.error('❌ Erreur Redis:', error instanceof Error ? error.message : String(error));
                 if (errorCount === 3) {
                     console.warn('🔇 Messages d\'erreur Redis supprimés (trop nombreux)');
                 }
@@ -66,6 +66,7 @@ export class RedisPersistence {
             this.isRedisAvailable = true;
         });
         this.redis.on('ready', () => {
+            console.log('✅ Redis prêt');
             this.isRedisAvailable = true;
         });
         this.redis.on('close', () => {
@@ -86,8 +87,21 @@ export class RedisPersistence {
                 return;
             }
         }
-        console.log('� Redis configuré, connexion en cours...');
-        console.log('📝 Les event listeners gèrent la connexion automatiquement');
+        try {
+            console.log('🔄 Connexion explicite à Redis...');
+            await this.redis.connect();
+            console.log('✅ Connexion Redis forcée réussie');
+            const pong = await this.redis.ping();
+            if (pong === 'PONG') {
+                this.isRedisAvailable = true;
+                console.log('✅ Redis opérationnel et prêt');
+            }
+        }
+        catch (error) {
+            console.error('❌ Échec connexion Redis:', error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error));
+            this.isRedisAvailable = false;
+            await this.tryPublicRedisUrl();
+        }
     }
     async tryPublicRedisUrl() {
         try {
@@ -129,14 +143,12 @@ export class RedisPersistence {
         this.isRedisAvailable = false;
     }
     async healthCheck() {
-        if (!this.isRedisAvailable) {
-            return false;
-        }
         try {
-            const result = await this.redis.ping();
-            const isHealthy = result === 'PONG';
-            this.isRedisAvailable = isHealthy;
-            return isHealthy;
+            if (!this.isRedisAvailable) {
+                const pong = await this.redis.ping();
+                this.isRedisAvailable = (pong === 'PONG');
+            }
+            return this.isRedisAvailable;
         }
         catch (error) {
             this.isRedisAvailable = false;
@@ -145,7 +157,7 @@ export class RedisPersistence {
     }
     async saveUserSessions(userSessions) {
         try {
-            if (!this.isRedisAvailable) {
+            if (!(await this.healthCheck())) {
                 return;
             }
             const pipeline = this.redis.pipeline();
@@ -168,12 +180,13 @@ export class RedisPersistence {
             console.log(`💾 ${userSessions.size} sessions utilisateur sauvegardées en Redis`);
         }
         catch (error) {
-            console.error('❌ Erreur sauvegarde sessions utilisateur:', error);
+            console.error('❌ Erreur sauvegarde sessions utilisateur:', error instanceof Error ? error.message : String(error));
+            this.isRedisAvailable = false;
         }
     }
     async saveGmailSessions(gmailSessions) {
         try {
-            if (!this.isRedisAvailable) {
+            if (!(await this.healthCheck())) {
                 return;
             }
             const pipeline = this.redis.pipeline();
@@ -194,12 +207,13 @@ export class RedisPersistence {
             console.log(`📧 ${gmailSessions.size} sessions Gmail sauvegardées en Redis`);
         }
         catch (error) {
-            console.error('❌ Erreur sauvegarde sessions Gmail:', error);
+            console.error('❌ Erreur sauvegarde sessions Gmail:', error instanceof Error ? error.message : String(error));
+            this.isRedisAvailable = false;
         }
     }
     async saveAxonautSessions(axonautSessions) {
         try {
-            if (!this.isRedisAvailable) {
+            if (!(await this.healthCheck())) {
                 return;
             }
             const pipeline = this.redis.pipeline();
@@ -220,12 +234,13 @@ export class RedisPersistence {
             console.log(`📊 ${axonautSessions.size} sessions Axonaut sauvegardées en Redis`);
         }
         catch (error) {
-            console.error('❌ Erreur sauvegarde sessions Axonaut:', error);
+            console.error('❌ Erreur sauvegarde sessions Axonaut:', error instanceof Error ? error.message : String(error));
+            this.isRedisAvailable = false;
         }
     }
     async loadUserSessions() {
         try {
-            if (!this.isRedisAvailable) {
+            if (!(await this.healthCheck())) {
                 return [];
             }
             const keys = await this.redis.keys('user:*');
@@ -248,13 +263,14 @@ export class RedisPersistence {
             return sessions;
         }
         catch (error) {
-            console.error('❌ Erreur chargement sessions utilisateur:', error);
+            console.error('❌ Erreur chargement sessions utilisateur:', error instanceof Error ? error.message : String(error));
+            this.isRedisAvailable = false;
             return [];
         }
     }
     async loadGmailSessions() {
         try {
-            if (!this.isRedisAvailable) {
+            if (!(await this.healthCheck())) {
                 return [];
             }
             const keys = await this.redis.keys('gmail:*');
@@ -277,13 +293,14 @@ export class RedisPersistence {
             return sessions;
         }
         catch (error) {
-            console.error('❌ Erreur chargement sessions Gmail:', error);
+            console.error('❌ Erreur chargement sessions Gmail:', error instanceof Error ? error.message : String(error));
+            this.isRedisAvailable = false;
             return [];
         }
     }
     async loadAxonautSessions() {
         try {
-            if (!this.isRedisAvailable) {
+            if (!(await this.healthCheck())) {
                 return [];
             }
             const keys = await this.redis.keys('axonaut:*');
@@ -306,12 +323,13 @@ export class RedisPersistence {
             return sessions;
         }
         catch (error) {
-            console.error('❌ Erreur chargement sessions Axonaut:', error);
+            console.error('❌ Erreur chargement sessions Axonaut:', error instanceof Error ? error.message : String(error));
+            this.isRedisAvailable = false;
             return [];
         }
     }
     async saveAllSessions(userSessions, gmailSessions, axonautSessions) {
-        if (!this.isRedisAvailable) {
+        if (!(await this.healthCheck())) {
             console.log('💾 Sauvegarde Redis ignorée (Redis non disponible)');
             return;
         }
@@ -325,15 +343,20 @@ export class RedisPersistence {
     }
     async deleteUserSession(userId) {
         try {
-            await this.redis.del(`user:${userId}`, `gmail:${userId}`, `axonaut:${userId}`);
-            console.log(`🗑️ Session ${userId} supprimée de Redis`);
+            if (await this.healthCheck()) {
+                await this.redis.del(`user:${userId}`, `gmail:${userId}`, `axonaut:${userId}`);
+                console.log(`🗑️ Session ${userId} supprimée de Redis`);
+            }
         }
         catch (error) {
-            console.error('❌ Erreur suppression session Redis:', error);
+            console.error('❌ Erreur suppression session Redis:', error instanceof Error ? error.message : String(error));
         }
     }
     async cleanupExpiredSessions(daysOld = 30) {
         try {
+            if (!(await this.healthCheck())) {
+                return;
+            }
             const cutoffDate = new Date();
             cutoffDate.setDate(cutoffDate.getDate() - daysOld);
             const userKeys = await this.redis.keys('user:*');
@@ -353,11 +376,14 @@ export class RedisPersistence {
             console.log(`🧹 ${deletedCount} sessions expirées supprimées (plus de ${daysOld} jours)`);
         }
         catch (error) {
-            console.error('❌ Erreur nettoyage sessions expirées:', error);
+            console.error('❌ Erreur nettoyage sessions expirées:', error instanceof Error ? error.message : String(error));
         }
     }
     async getStats() {
         try {
+            if (!(await this.healthCheck())) {
+                return { error: 'Redis non disponible' };
+            }
             const userKeys = await this.redis.keys('user:*');
             const gmailKeys = await this.redis.keys('gmail:*');
             const axonautKeys = await this.redis.keys('axonaut:*');
@@ -365,17 +391,23 @@ export class RedisPersistence {
                 userSessions: userKeys.length,
                 gmailSessions: gmailKeys.length,
                 axonautSessions: axonautKeys.length,
-                totalKeys: userKeys.length + gmailKeys.length + axonautKeys.length
+                totalKeys: userKeys.length + gmailKeys.length + axonautKeys.length,
+                isConnected: this.isRedisAvailable
             };
         }
         catch (error) {
-            console.error('❌ Erreur statistiques Redis:', error);
+            console.error('❌ Erreur statistiques Redis:', error instanceof Error ? error.message : String(error));
             return { error: 'Impossible de récupérer les statistiques' };
         }
     }
     async disconnect() {
-        await this.redis.disconnect();
-        console.log('🔌 Connexion Redis fermée');
+        try {
+            await this.redis.disconnect();
+            console.log('🔌 Connexion Redis fermée');
+        }
+        catch (error) {
+            console.log('🔌 Connexion Redis fermée (déjà fermée)');
+        }
     }
 }
 export const redisPersistence = new RedisPersistence();
