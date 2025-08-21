@@ -17,7 +17,7 @@ export function encrypt(text) {
         const iv = crypto.randomBytes(IV_LENGTH);
         const salt = crypto.randomBytes(SALT_LENGTH);
         const derivedKey = crypto.pbkdf2Sync(key, salt, 100000, 32, 'sha256');
-        const cipher = crypto.createCipher(ALGORITHM, derivedKey);
+        const cipher = crypto.createCipheriv(ALGORITHM, derivedKey, iv);
         cipher.setAAD(salt);
         let encrypted = cipher.update(text, 'utf8', 'hex');
         encrypted += cipher.final('hex');
@@ -46,7 +46,7 @@ export function decrypt(encryptedData) {
         const tag = Buffer.from(tagHex, 'hex');
         const key = getEncryptionKey();
         const derivedKey = crypto.pbkdf2Sync(key, salt, 100000, 32, 'sha256');
-        const decipher = crypto.createDecipher(ALGORITHM, derivedKey);
+        const decipher = crypto.createDecipheriv(ALGORITHM, derivedKey, iv);
         decipher.setAuthTag(tag);
         decipher.setAAD(salt);
         let decrypted = decipher.update(encrypted, 'hex', 'utf8');

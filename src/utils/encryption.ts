@@ -17,6 +17,7 @@ function getEncryptionKey(): Buffer {
 }
 
 // Chiffrer une chaîne
+// Chiffrer une chaîne
 export function encrypt(text: string): string {
 	try {
 		const key = getEncryptionKey();
@@ -26,7 +27,7 @@ export function encrypt(text: string): string {
 		// Dériver une clé avec le salt
 		const derivedKey = crypto.pbkdf2Sync(key, salt, 100000, 32, 'sha256');
 
-		const cipher = crypto.createCipher(ALGORITHM, derivedKey);
+		const cipher = crypto.createCipheriv(ALGORITHM, derivedKey, iv);
 		cipher.setAAD(salt); // Données authentifiées additionnelles
 
 		let encrypted = cipher.update(text, 'utf8', 'hex');
@@ -63,7 +64,7 @@ export function decrypt(encryptedData: string): string {
 		const key = getEncryptionKey();
 		const derivedKey = crypto.pbkdf2Sync(key, salt, 100000, 32, 'sha256');
 
-		const decipher = crypto.createDecipher(ALGORITHM, derivedKey);
+		const decipher = crypto.createDecipheriv(ALGORITHM, derivedKey, iv);
 		decipher.setAuthTag(tag);
 		decipher.setAAD(salt);
 
