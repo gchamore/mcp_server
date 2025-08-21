@@ -359,6 +359,13 @@ app.get('/oauth/callback', async (req, res) => {
         const authResult = await gmailService.handleCallback(code);
         if (authResult.success && authResult.userId) {
             console.log(`[OAuth] Authentification réussie pour ${authResult.userEmail}: ${authResult.userId}`);
+            try {
+                await sessionPersistence.saveAllSessions(multiTenantManager.getUserSessionsMap(), gmailService.getGmailSessionsMap(), axonautService.getAxonautSessionsMap());
+                console.log(`💾 Session Gmail sauvegardée immédiatement dans Redis`);
+            }
+            catch (error) {
+                console.error('❌ Erreur sauvegarde immédiate Gmail:', error);
+            }
             res.redirect(`/pages/gmail.html?success=true&userId=${authResult.userId}&email=${encodeURIComponent(authResult.userEmail || '')}&service=gmail`);
         }
         else {
@@ -394,6 +401,13 @@ app.post('/api/axonaut/auth', express.json(), async (req, res) => {
             if (userSession) {
                 multiTenantManager.addServiceSession(userId, 'axonaut', axonautSession);
                 console.log(`[Axonaut] Authentification réussie pour ${userId}`);
+                try {
+                    await sessionPersistence.saveAllSessions(multiTenantManager.getUserSessionsMap(), gmailService.getGmailSessionsMap(), axonautService.getAxonautSessionsMap());
+                    console.log(`💾 Session Axonaut sauvegardée immédiatement dans Redis`);
+                }
+                catch (error) {
+                    console.error('❌ Erreur sauvegarde immédiate Axonaut:', error);
+                }
                 res.json({
                     success: true,
                     message: 'Authentification Axonaut réussie',
