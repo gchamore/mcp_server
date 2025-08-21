@@ -51,15 +51,44 @@ export class RedisPersistence {
             });
         } else {
             console.log('🔗 Configuration Redis Railway détectée');
-            this.redis = new Redis(redisUrl, {
-                maxRetriesPerRequest: 3,
-                lazyConnect: true,
-                enableOfflineQueue: false,
-                // Configuration Railway optimisée
-                connectTimeout: 10000,
-                commandTimeout: 5000,
-                family: 4 // Force IPv4 pour Railway
-            });
+            
+            // Validation et correction de l'URL Redis
+            let cleanRedisUrl = redisUrl.trim();
+            
+            // Vérifier si l'URL est bien formée
+            if (!cleanRedisUrl.startsWith('redis://') && !cleanRedisUrl.startsWith('rediss://')) {
+                console.warn('⚠️ URL Redis malformée, tentative de correction...');
+                if (cleanRedisUrl.startsWith('//')) {
+                    cleanRedisUrl = 'redis:' + cleanRedisUrl;
+                } else if (!cleanRedisUrl.includes('://')) {
+                    cleanRedisUrl = 'redis://' + cleanRedisUrl;
+                }
+            }
+            
+            console.log('🔍 Redis URL configurée:', cleanRedisUrl.replace(/:[^:]*@/, ':***@')); // Masquer le mot de passe
+            
+            // Configuration spéciale pour Railway
+            if (cleanRedisUrl.includes('railway.internal')) {
+                console.log('🚀 Utilisation configuration Railway interne');
+                this.redis = new Redis(cleanRedisUrl, {
+                    maxRetriesPerRequest: 3,
+                    lazyConnect: true,
+                    enableOfflineQueue: true, // Activer la queue pour Railway interne
+                    connectTimeout: 15000,    // Plus de temps pour Railway
+                    commandTimeout: 10000,
+                    family: 4
+                });
+            } else {
+                console.log('🌐 Utilisation configuration Railway publique');
+                this.redis = new Redis(cleanRedisUrl, {
+                    maxRetriesPerRequest: 3,
+                    lazyConnect: true,
+                    enableOfflineQueue: false,
+                    connectTimeout: 10000,
+                    commandTimeout: 5000,
+                    family: 4
+                });
+            }
         }
 
         // Gestion des erreurs Redis (avec limitation des messages)
@@ -92,16 +121,84 @@ export class RedisPersistence {
     // Initialiser la connexion Redis
     async initialize(): Promise<void> {
         try {
+            // Validation supplémentaire de l'URL Redis
+            const redisUrl = process.env.REDIS_URL;
+            if (redisUrl) {
+                console.log('🔍 URL Redis detectée:', redisUrl.replace(/:[^:]*@/, ':***@'));
+                
+                // Vérifier la structure de l'URL
+                try {
+                    const url = new URL(redisUrl);
+                    console.log('✅ URL Redis valide:', url.protocol, url.hostname, url.port);
+                } catch (urlError) {
+                    console.warn('⚠️ URL Redis invalide:', urlError);
+                }
+            }
+            
             await this.redis.ping();
             console.log('📁 Redis initialisé et connecté');
             this.isRedisAvailable = true;
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
             console.warn('⚠️ Redis non disponible:', errorMessage);
-            console.warn('📝 Le serveur fonctionnera en mode sans persistance');
-            this.isRedisAvailable = false;
-            // Ne pas lancer d'erreur, permettre au serveur de continuer
+            
+            // Si on est sur Railway avec une URL interne qui ne marche pas
+            if (process.env.REDIS_URL && errorMessage.includes('redis.railway.internal')) {
+                console.log('🔧 Tentative de connexion avec URL Redis publique...');
+                await this.tryPublicRedisUrl();
+            } else {
+                console.warn('📝 Le serveur fonctionnera en mode sans persistance');
+                this.isRedisAvailable = false;
+            }
         }
+    }
+
+    // Essayer l'URL Redis publique de Railway
+    private async tryPublicRedisUrl(): Promise<void> {
+        try {
+            const redisUrl = process.env.REDIS_URL;
+            if (redisUrl && redisUrl.includes('redis.railway.internal')) {
+                console.log('🔧 Tentative avec configuration Redis alternative...');
+                
+                // Essayons plusieurs variantes d'URL
+                const urlVariants = [
+                    redisUrl.replace('redis.railway.internal', 'redis.railway.app'),
+                    redisUrl.replace('redis.railway.internal', 'redis-production.up.railway.app'),
+                    redisUrl.replace('redis://', 'rediss://'), // SSL
+                ];
+                
+                for (const testUrl of urlVariants) {
+                    console.log('🔄 Test avec:', testUrl.replace(/:[^:]*@/, ':***@'));
+                    
+                    try {
+                        const testRedis = new Redis(testUrl, {
+                            maxRetriesPerRequest: 1,
+                            lazyConnect: true,
+                            connectTimeout: 5000,
+                            commandTimeout: 3000
+                        });
+                        
+                        await testRedis.ping();
+                        console.log('✅ Connexion réussie, reconfiguration...');
+                        
+                        // Fermer l'ancienne connexion et utiliser la nouvelle
+                        await this.redis.disconnect();
+                        this.redis = testRedis;
+                        this.isRedisAvailable = true;
+                        
+                        return;
+                    } catch (error) {
+                        console.log('❌ Échec avec cette URL');
+                        continue;
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn('❌ Toutes les variantes Redis ont échoué');
+        }
+        
+        console.warn('📝 Le serveur fonctionnera en mode sans persistance');
+        this.isRedisAvailable = false;
     }
 
     // Test de santé Redis
