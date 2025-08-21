@@ -54,7 +54,7 @@ export class RedisPersistence {
         this.redis.on('error', (error) => {
             errorCount++;
             if (errorCount <= 3) {
-                console.error('❌ Erreur Redis:', error instanceof Error ? error.message : String(error));
+                console.error('❌ Erreur Redis:', error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error));
                 if (errorCount === 3) {
                     console.warn('🔇 Messages d\'erreur Redis supprimés (trop nombreux)');
                 }
@@ -98,7 +98,7 @@ export class RedisPersistence {
             }
         }
         catch (error) {
-            console.error('❌ Échec connexion Redis:', error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error));
+            console.error('❌ Échec connexion Redis:', error instanceof Error ? error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error) : String(error));
             this.isRedisAvailable = false;
             await this.tryPublicRedisUrl();
         }
@@ -180,7 +180,7 @@ export class RedisPersistence {
             console.log(`💾 ${userSessions.size} sessions utilisateur sauvegardées en Redis`);
         }
         catch (error) {
-            console.error('❌ Erreur sauvegarde sessions utilisateur:', error instanceof Error ? error.message : String(error));
+            console.error('❌ Erreur sauvegarde sessions utilisateur:', error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error));
             this.isRedisAvailable = false;
         }
     }
@@ -207,7 +207,7 @@ export class RedisPersistence {
             console.log(`📧 ${gmailSessions.size} sessions Gmail sauvegardées en Redis`);
         }
         catch (error) {
-            console.error('❌ Erreur sauvegarde sessions Gmail:', error instanceof Error ? error.message : String(error));
+            console.error('❌ Erreur sauvegarde sessions Gmail:', error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error));
             this.isRedisAvailable = false;
         }
     }
@@ -234,7 +234,7 @@ export class RedisPersistence {
             console.log(`📊 ${axonautSessions.size} sessions Axonaut sauvegardées en Redis`);
         }
         catch (error) {
-            console.error('❌ Erreur sauvegarde sessions Axonaut:', error instanceof Error ? error.message : String(error));
+            console.error('❌ Erreur sauvegarde sessions Axonaut:', error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error));
             this.isRedisAvailable = false;
         }
     }
@@ -263,7 +263,7 @@ export class RedisPersistence {
             return sessions;
         }
         catch (error) {
-            console.error('❌ Erreur chargement sessions utilisateur:', error instanceof Error ? error.message : String(error));
+            console.error('❌ Erreur chargement sessions utilisateur:', error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error));
             this.isRedisAvailable = false;
             return [];
         }
@@ -293,7 +293,7 @@ export class RedisPersistence {
             return sessions;
         }
         catch (error) {
-            console.error('❌ Erreur chargement sessions Gmail:', error instanceof Error ? error.message : String(error));
+            console.error('❌ Erreur chargement sessions Gmail:', error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error));
             this.isRedisAvailable = false;
             return [];
         }
@@ -323,7 +323,7 @@ export class RedisPersistence {
             return sessions;
         }
         catch (error) {
-            console.error('❌ Erreur chargement sessions Axonaut:', error instanceof Error ? error.message : String(error));
+            console.error('❌ Erreur chargement sessions Axonaut:', error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error));
             this.isRedisAvailable = false;
             return [];
         }
@@ -349,7 +349,7 @@ export class RedisPersistence {
             }
         }
         catch (error) {
-            console.error('❌ Erreur suppression session Redis:', error instanceof Error ? error.message : String(error));
+            console.error('❌ Erreur suppression session Redis:', error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error));
         }
     }
     async cleanupExpiredSessions(daysOld = 30) {
@@ -376,7 +376,7 @@ export class RedisPersistence {
             console.log(`🧹 ${deletedCount} sessions expirées supprimées (plus de ${daysOld} jours)`);
         }
         catch (error) {
-            console.error('❌ Erreur nettoyage sessions expirées:', error instanceof Error ? error.message : String(error));
+            console.error('❌ Erreur nettoyage sessions expirées:', error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error));
         }
     }
     async getStats() {
@@ -396,7 +396,7 @@ export class RedisPersistence {
             };
         }
         catch (error) {
-            console.error('❌ Erreur statistiques Redis:', error instanceof Error ? error.message : String(error));
+            console.error('❌ Erreur statistiques Redis:', error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error));
             return { error: 'Impossible de récupérer les statistiques' };
         }
     }
