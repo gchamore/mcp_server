@@ -83,7 +83,7 @@ export class RedisPersistence {
                 this.redis = new Redis(cleanRedisUrl, {
                     maxRetriesPerRequest: 3,
                     lazyConnect: true,
-                    enableOfflineQueue: false,
+                    enableOfflineQueue: true, // Permettre la queue en attendant la connexion
                     connectTimeout: 10000,
                     commandTimeout: 5000,
                     family: 4
@@ -120,37 +120,24 @@ export class RedisPersistence {
 
     // Initialiser la connexion Redis
     async initialize(): Promise<void> {
-        try {
-            // Validation supplémentaire de l'URL Redis
-            const redisUrl = process.env.REDIS_URL;
-            if (redisUrl) {
-                console.log('🔍 URL Redis detectée:', redisUrl.replace(/:[^:]*@/, ':***@'));
-                
-                // Vérifier la structure de l'URL
-                try {
-                    const url = new URL(redisUrl);
-                    console.log('✅ URL Redis valide:', url.protocol, url.hostname, url.port);
-                } catch (urlError) {
-                    console.warn('⚠️ URL Redis invalide:', urlError);
-                }
-            }
+        const redisUrl = process.env.REDIS_URL;
+        if (redisUrl) {
+            console.log('🔍 URL Redis detectée:', redisUrl.replace(/:[^:]*@/, ':***@'));
             
-            await this.redis.ping();
-            console.log('📁 Redis initialisé et connecté');
-            this.isRedisAvailable = true;
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-            console.warn('⚠️ Redis non disponible:', errorMessage);
-            
-            // Si on est sur Railway avec une URL interne qui ne marche pas
-            if (process.env.REDIS_URL && errorMessage.includes('redis.railway.internal')) {
-                console.log('🔧 Tentative de connexion avec URL Redis publique...');
-                await this.tryPublicRedisUrl();
-            } else {
-                console.warn('📝 Le serveur fonctionnera en mode sans persistance');
+            // Vérifier la structure de l'URL
+            try {
+                const url = new URL(redisUrl);
+                console.log('✅ URL Redis valide:', url.protocol, url.hostname, url.port);
+            } catch (urlError) {
+                console.warn('⚠️ URL Redis invalide:', urlError);
                 this.isRedisAvailable = false;
+                return;
             }
         }
+        
+        // Ne pas faire de ping ici - laisser les event listeners gérer la connexion
+        console.log('� Redis configuré, connexion en cours...');
+        console.log('📝 Les event listeners gèrent la connexion automatiquement');
     }
 
     // Essayer l'URL Redis publique de Railway

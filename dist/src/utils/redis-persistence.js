@@ -43,7 +43,7 @@ export class RedisPersistence {
                 this.redis = new Redis(cleanRedisUrl, {
                     maxRetriesPerRequest: 3,
                     lazyConnect: true,
-                    enableOfflineQueue: false,
+                    enableOfflineQueue: true,
                     connectTimeout: 10000,
                     commandTimeout: 5000,
                     family: 4
@@ -73,34 +73,21 @@ export class RedisPersistence {
         });
     }
     async initialize() {
-        try {
-            const redisUrl = process.env.REDIS_URL;
-            if (redisUrl) {
-                console.log('🔍 URL Redis detectée:', redisUrl.replace(/:[^:]*@/, ':***@'));
-                try {
-                    const url = new URL(redisUrl);
-                    console.log('✅ URL Redis valide:', url.protocol, url.hostname, url.port);
-                }
-                catch (urlError) {
-                    console.warn('⚠️ URL Redis invalide:', urlError);
-                }
+        const redisUrl = process.env.REDIS_URL;
+        if (redisUrl) {
+            console.log('🔍 URL Redis detectée:', redisUrl.replace(/:[^:]*@/, ':***@'));
+            try {
+                const url = new URL(redisUrl);
+                console.log('✅ URL Redis valide:', url.protocol, url.hostname, url.port);
             }
-            await this.redis.ping();
-            console.log('📁 Redis initialisé et connecté');
-            this.isRedisAvailable = true;
-        }
-        catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-            console.warn('⚠️ Redis non disponible:', errorMessage);
-            if (process.env.REDIS_URL && errorMessage.includes('redis.railway.internal')) {
-                console.log('🔧 Tentative de connexion avec URL Redis publique...');
-                await this.tryPublicRedisUrl();
-            }
-            else {
-                console.warn('📝 Le serveur fonctionnera en mode sans persistance');
+            catch (urlError) {
+                console.warn('⚠️ URL Redis invalide:', urlError);
                 this.isRedisAvailable = false;
+                return;
             }
         }
+        console.log('� Redis configuré, connexion en cours...');
+        console.log('📝 Les event listeners gèrent la connexion automatiquement');
     }
     async tryPublicRedisUrl() {
         try {

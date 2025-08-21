@@ -83,15 +83,10 @@ console.log('📌 Sessions permanentes activées - pas de suppression automatiqu
 console.log('💾 Initialisation du système de persistance Redis...');
 await sessionPersistence.initialize();
 
-// Vérifier la santé Redis pour Railway
-const redisHealth = await sessionPersistence.healthCheck();
-if (redisHealth) {
-	console.log('✅ Redis opérationnel - persistance activée pour Railway');
-} else {
-	console.warn('⚠️ Redis non disponible - sessions temporaires uniquement');
-}
+// Redis se connecte de manière asynchrone via les event listeners
+console.log('📝 Redis configuré - connexion automatique en arrière-plan');
 
-// Restaurer les sessions depuis Redis
+// Restaurer les sessions depuis Redis (si disponible)
 console.log('🔄 Restauration des sessions depuis Redis...');
 await restoreAllSessionsFromRedis();
 

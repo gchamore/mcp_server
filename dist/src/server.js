@@ -41,13 +41,7 @@ console.log('Architecture initialisée avec les services:', serviceRegistry.getS
 console.log('📌 Sessions permanentes activées - pas de suppression automatique');
 console.log('💾 Initialisation du système de persistance Redis...');
 await sessionPersistence.initialize();
-const redisHealth = await sessionPersistence.healthCheck();
-if (redisHealth) {
-    console.log('✅ Redis opérationnel - persistance activée pour Railway');
-}
-else {
-    console.warn('⚠️ Redis non disponible - sessions temporaires uniquement');
-}
+console.log('📝 Redis configuré - connexion automatique en arrière-plan');
 console.log('🔄 Restauration des sessions depuis Redis...');
 await restoreAllSessionsFromRedis();
 async function restoreAllSessionsFromRedis() {
