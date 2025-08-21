@@ -141,15 +141,18 @@ export class AxonautService extends BaseService {
 		}
 	}
 
-	private createAxonautClient(apiKey: string, baseUrl: string) {
+	private createAxonautClient(encryptedApiKey: string, baseUrl: string) {
 		return {
-			async request(endpoint: string, options: any = {}) {
+			request: async (endpoint: string, options: any = {}) => {
 				const url = `${baseUrl}/api/v2${endpoint}`;
+				
+				// Déchiffrer la clé API juste pour cette requête
+				const apiKey = decrypt(encryptedApiKey);
 
 				const response = await fetch(url, {
 					...options,
 					headers: {
-						'userApiKey': apiKey, // Utilise la clé en clair pour la requête
+						'userApiKey': apiKey, // ✅ Clé déchiffrée temporairement
 						'Accept': 'application/json',
 						'Content-Type': 'application/json',
 						...options.headers
@@ -182,8 +185,8 @@ export class AxonautService extends BaseService {
 			const isValid = await this.testApiKey(apiKey, session.baseUrl);
 			
 			if (isValid) {
-				// Recréer le client avec la clé déchiffrée
-				session.axonautClient = this.createAxonautClient(apiKey, session.baseUrl);
+				// ✅ Recréer le client avec la clé chiffrée
+				session.axonautClient = this.createAxonautClient(session.encryptedApiKey, session.baseUrl);
 			}
 			
 			return isValid;
@@ -194,16 +197,8 @@ export class AxonautService extends BaseService {
 	}
 
 	registerTools(server: McpServer, userSession: AxonautSession): void {
-		// Obtenir la clé API déchiffrée pour créer le client
-		let decryptedApiKey: string;
-		try {
-			decryptedApiKey = this.getDecryptedApiKey(userSession);
-			// Recréer le client avec la clé déchiffrée
-			userSession.axonautClient = this.createAxonautClient(decryptedApiKey, userSession.baseUrl);
-		} catch (error) {
-			console.error('❌ Impossible de déchiffrer la clé API pour les outils:', error);
-			return;
-		}
+		// ✅ Créer le client avec la clé chiffrée
+		userSession.axonautClient = this.createAxonautClient(userSession.encryptedApiKey, userSession.baseUrl);
 
 		// OUTIL 1: Lister les entreprises
 		server.tool(
