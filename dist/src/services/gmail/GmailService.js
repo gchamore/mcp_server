@@ -31,6 +31,7 @@ export class GmailService extends BaseService {
         const oauth2Client = new google.auth.OAuth2(this.oauthConfig.clientId, this.oauthConfig.clientSecret, this.oauthConfig.redirectUri);
         return oauth2Client.generateAuthUrl({
             access_type: 'offline',
+            prompt: 'consent',
             scope: this.requiredScopes,
         });
     }

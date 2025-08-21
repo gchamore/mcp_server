@@ -137,6 +137,22 @@ async function restoreAllSessionsFromRedis() {
 				}
 			}
 
+			// Aussi restaurer l'access token s'il existe
+			if (persistentSession.encryptedAccessToken) {
+				try {
+					const accessToken = decrypt(persistentSession.encryptedAccessToken);
+					// Fusionner avec les credentials existants
+					const existingCredentials = oauth2Client.credentials || {};
+					oauth2Client.setCredentials({ 
+						...existingCredentials,
+						access_token: accessToken 
+					});
+					console.log(`✅ Access token restauré pour ${persistentSession.userId}`);
+				} catch (error) {
+					console.warn(`⚠️ Impossible de déchiffrer l'access token pour ${persistentSession.userId}`);
+				}
+			}
+
 			gmailService.getGmailSessionsMap().set(persistentSession.userId, gmailSession);
 		}
 		console.log(`✅ ${gmailSessions.length} sessions Gmail restaurées depuis Redis`);

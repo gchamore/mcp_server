@@ -47,6 +47,7 @@ export class GmailService extends BaseService {
 
 		return oauth2Client.generateAuthUrl({
 			access_type: 'offline',
+			prompt: 'consent',
 			scope: this.requiredScopes,
 		});
 	}
