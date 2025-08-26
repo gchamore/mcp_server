@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Mon Compte - MCP Wesype</title>
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: 'Inter', sans-serif;
+			background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+			min-height: 100vh;
+			color: #333;
+			padding: 2rem;
+		}
+
+		.back-btn {
+			position: fixed;
+			top: 2rem;
+			left: 2rem;
+			background: rgba(255, 255, 255, 0.9);
+			color: #333;
+			border: none;
+			padding: 0.8rem 1.2rem;
+			border-radius: 50px;
+			cursor: pointer;
+			transition: all 0.3s ease;
+			font-weight: 500;
+			text-decoration: none;
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			backdrop-filter: blur(10px);
+		}
+
+		.back-btn:hover {
+			background: white;
+			transform: translateY(-2px);
+			box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+		}
+
+		.container {
+			max-width: 800px;
+			margin: 0 auto;
+			padding-top: 4rem;
+		}
+
+		.account-header {
+			background: rgba(255, 255, 255, 0.95);
+			backdrop-filter: blur(20px);
+			border-radius: 20px;
+			padding: 2rem;
+			margin-bottom: 2rem;
+			box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+			border: 1px solid rgba(255, 255, 255, 0.2);
+			text-align: center;
+		}
+
+		.user-avatar {
+			width: 80px;
+			height: 80px;
+			border-radius: 50%;
+			margin: 0 auto 1rem;
+			border: 4px solid #4CAF50;
+			object-fit: cover;
+		}
+
+		.user-name {
+			font-size: 1.8rem;
+			font-weight: 600;
+			margin-bottom: 0.5rem;
+			color: #2c3e50;
+		}
+
+		.user-email {
+			color: #6c757d;
+			font-size: 1.1rem;
+			margin-bottom: 1rem;
+		}
+
+		.member-since {
+			color: #6c757d;
+			font-size: 0.9rem;
+		}
+
+		.services-section {
+			background: rgba(255, 255, 255, 0.95);
+			backdrop-filter: blur(20px);
+			border-radius: 20px;
+			padding: 2rem;
+			margin-bottom: 2rem;
+			box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+			border: 1px solid rgba(255, 255, 255, 0.2);
+		}
+
+		.section-title {
+			font-size: 1.5rem;
+			font-weight: 600;
+			margin-bottom: 1rem;
+			color: #2c3e50;
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+		}
+
+		.services-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+			gap: 1rem;
+		}
+
+		.service-card {
+			background: #f8f9fa;
+			border-radius: 15px;
+			padding: 1.5rem;
+			border: 2px solid transparent;
+			transition: all 0.3s ease;
+		}
+
+		.service-card.connected {
+			border-color: #4CAF50;
+			background: #f1f8e9;
+		}
+
+		.service-card:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+		}
+
+		.service-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			margin-bottom: 1rem;
+		}
+
+		.service-name {
+			font-weight: 600;
+			color: #2c3e50;
+		}
+
+		.service-status {
+			padding: 0.3rem 0.8rem;
+			border-radius: 20px;
+			font-size: 0.8rem;
+			font-weight: 500;
+		}
+
+		.status-connected {
+			background: #d4edda;
+			color: #155724;
+		}
+
+		.status-disconnected {
+			background: #f8d7da;
+			color: #721c24;
+		}
+
+		.service-actions {
+			display: flex;
+			gap: 0.5rem;
+		}
+
+		.btn {
+			padding: 0.5rem 1rem;
+			border: none;
+			border-radius: 10px;
+			cursor: pointer;
+			font-weight: 500;
+			transition: all 0.3s ease;
+			text-decoration: none;
+			display: inline-flex;
+			align-items: center;
+			gap: 0.3rem;
+			font-size: 0.9rem;
+		}
+
+		.btn-primary {
+			background: #007bff;
+			color: white;
+		}
+
+		.btn-primary:hover {
+			background: #0056b3;
+		}
+
+		.btn-danger {
+			background: #dc3545;
+			color: white;
+		}
+
+		.btn-danger:hover {
+			background: #c82333;
+		}
+
+		.btn-secondary {
+			background: #6c757d;
+			color: white;
+		}
+
+		.btn-secondary:hover {
+			background: #545b62;
+		}
+
+		.danger-zone {
+			background: rgba(255, 255, 255, 0.95);
+			backdrop-filter: blur(20px);
+			border-radius: 20px;
+			padding: 2rem;
+			box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+			border: 2px solid #dc3545;
+		}
+
+		.danger-zone h3 {
+			color: #dc3545;
+			margin-bottom: 1rem;
+		}
+
+		.danger-description {
+			color: #6c757d;
+			margin-bottom: 1.5rem;
+			line-height: 1.6;
+		}
+
+		.loading {
+			display: none;
+			text-align: center;
+			padding: 2rem;
+			color: #6c757d;
+		}
+
+		.loading.show {
+			display: block;
+		}
+
+		.message {
+			padding: 1rem;
+			border-radius: 10px;
+			margin-bottom: 1rem;
+			display: none;
+		}
+
+		.success-message {
+			background: #d4edda;
+			color: #155724;
+			border: 1px solid #c3e6cb;
+		}
+
+		.error-message {
+			background: #f8d7da;
+			color: #721c24;
+			border: 1px solid #f5c6cb;
+		}
+
+		.message.show {
+			display: block;
+		}
+
+		.no-services {
+			text-align: center;
+			color: #6c757d;
+			padding: 2rem;
+		}
+
+		.add-service-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.5rem;
+			background: #28a745;
+			color: white;
+			padding: 0.8rem 1.5rem;
+			border-radius: 50px;
+			text-decoration: none;
+			font-weight: 500;
+			transition: all 0.3s ease;
+			margin-top: 1rem;
+		}
+
+		.add-service-btn:hover {
+			background: #218838;
+			transform: translateY(-2px);
+		}
+
+		@media (max-width: 768px) {
+			.container {
+				padding: 1rem;
+				padding-top: 4rem;
+			}
+
+			.services-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.service-actions {
+				flex-direction: column;
+			}
+		}
+	</style>
+</head>
+
+<body>
+	<a href="/" class="back-btn">
+		<i class="fas fa-arrow-left"></i>
+		Retour à l'accueil
+	</a>
+
+	<div class="container">
+		<div id="loading" class="loading">
+			<i class="fas fa-spinner fa-spin"></i>
+			Chargement de votre compte...
+		</div>
+
+		<div id="successMessage" class="message success-message"></div>
+		<div id="errorMessage" class="message error-message"></div>
+
+		<div id="accountContent" style="display: none;">
+			<div class="account-header">
+				<img id="userAvatar" class="user-avatar" src="" alt="Avatar utilisateur">
+				<h1 id="userName" class="user-name">Chargement...</h1>
+				<p id="userEmail" class="user-email">Chargement...</p>
+				<p id="memberSince" class="member-since">Membre depuis: Chargement...</p>
+			</div>
+
+			<div class="services-section">
+				<h2 class="section-title">
+					<i class="fas fa-link"></i>
+					Services connectés
+				</h2>
+				<div id="servicesGrid" class="services-grid">
+					<!-- Services seront chargés ici -->
+				</div>
+				<div id="noServices" class="no-services" style="display: none;">
+					<i class="fas fa-plug" style="font-size: 3rem; color: #dee2e6; margin-bottom: 1rem;"></i>
+					<p>Aucun service connecté pour le moment</p>
+					<a href="/" class="add-service-btn">
+						<i class="fas fa-plus"></i>
+						Ajouter un service
+					</a>
+				</div>
+			</div>
+
+			<div class="danger-zone">
+				<h3><i class="fas fa-exclamation-triangle"></i> Zone dangereuse</h3>
+				<p class="danger-description">
+					Cette action supprimera définitivement votre compte et révoquera toutes vos connexions de services.
+					Cette action ne peut pas être annulée.
+				</p>
+				<button id="revokeAllBtn" class="btn btn-danger">
+					<i class="fas fa-trash"></i>
+					Supprimer mon compte et toutes les connexions
+				</button>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		let currentUser = null;
+
+		// Charger les informations du compte au chargement de la page
+		window.addEventListener('load', function() {
+			loadAccountInfo();
+		});
+
+		async function loadAccountInfo() {
+			const userId = getUserIdFromUrl() || localStorage.getItem('mcpUserId');
+			
+			if (!userId) {
+				showError('Aucun utilisateur connecté. Redirection vers l\'accueil...');
+				setTimeout(() => window.location.href = '/', 2000);
+				return;
+			}
+
+			try {
+				showLoading(true);
+				
+				const response = await fetch(`/api/account/${userId}`);
+				const data = await response.json();
+
+				if (data.success) {
+					currentUser = data.user;
+					displayUserInfo(data.user);
+					displayConnectedServices(data.connectedServices);
+					showLoading(false);
+					document.getElementById('accountContent').style.display = 'block';
+				} else {
+					throw new Error(data.error || 'Erreur lors du chargement du compte');
+				}
+			} catch (error) {
+				console.error('Erreur:', error);
+				showError('Impossible de charger les informations du compte');
+				showLoading(false);
+			}
+		}
+
+		function getUserIdFromUrl() {
+			const urlParams = new URLSearchParams(window.location.search);
+			return urlParams.get('userId');
+		}
+
+		function displayUserInfo(user) {
+			document.getElementById('userName').textContent = user.name;
+			document.getElementById('userEmail').textContent = user.email;
+			
+			// Avatar par défaut si pas de photo
+			const avatar = document.getElementById('userAvatar');
+			if (user.picture) {
+				avatar.src = user.picture;
+			} else {
+				avatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=4CAF50&color=fff&size=80`;
+			}
+
+			// Date de création
+			const createdAt = new Date(user.createdAt);
+			document.getElementById('memberSince').textContent = 
+				`Membre depuis: ${createdAt.toLocaleDateString('fr-FR')}`;
+		}
+
+		function displayConnectedServices(services) {
+			const servicesGrid = document.getElementById('servicesGrid');
+			const noServices = document.getElementById('noServices');
+
+			if (!services || services.length === 0) {
+				servicesGrid.style.display = 'none';
+				noServices.style.display = 'block';
+				return;
+			}
+
+			servicesGrid.style.display = 'grid';
+			noServices.style.display = 'none';
+
+			// Configuration des services disponibles
+			const availableServices = {
+				gmail: {
+					name: 'Gmail',
+					icon: 'fab fa-google',
+					description: 'Gestion des emails',
+					url: '/pages/gmail.html'
+				},
+				axonaut: {
+					name: 'Axonaut',
+					icon: 'fas fa-building',
+					description: 'CRM et facturation',
+					url: '/pages/axonaut.html'
+				}
+			};
+
+			servicesGrid.innerHTML = '';
+
+			// Afficher tous les services disponibles
+			Object.keys(availableServices).forEach(serviceId => {
+				const service = availableServices[serviceId];
+				const isConnected = services.some(s => s.name === serviceId);
+				const connectedService = services.find(s => s.name === serviceId);
+
+				const serviceCard = document.createElement('div');
+				serviceCard.className = `service-card ${isConnected ? 'connected' : ''}`;
+				
+				serviceCard.innerHTML = `
+					<div class="service-header">
+						<div class="service-name">
+							<i class="${service.icon}"></i>
+							${service.name}
+						</div>
+						<span class="service-status ${isConnected ? 'status-connected' : 'status-disconnected'}">
+							${isConnected ? 'Connecté' : 'Déconnecté'}
+						</span>
+					</div>
+					<p style="color: #6c757d; margin-bottom: 1rem; font-size: 0.9rem;">
+						${service.description}
+					</p>
+					${isConnected && connectedService ? `
+						<p style="color: #6c757d; font-size: 0.8rem; margin-bottom: 1rem;">
+							Connecté le: ${new Date(connectedService.connectedAt).toLocaleDateString('fr-FR')}
+						</p>
+					` : ''}
+					<div class="service-actions">
+						${isConnected ? `
+							<button class="btn btn-primary" onclick="openService('${serviceId}')">
+								<i class="fas fa-external-link-alt"></i>
+								Gérer
+							</button>
+							<button class="btn btn-danger" onclick="disconnectService('${serviceId}')">
+								<i class="fas fa-unlink"></i>
+								Déconnecter
+							</button>
+						` : `
+							<a href="${service.url}" class="btn btn-primary">
+								<i class="fas fa-plug"></i>
+								Connecter
+							</a>
+						`}
+					</div>
+				`;
+
+				servicesGrid.appendChild(serviceCard);
+			});
+		}
+
+		function openService(serviceId) {
+			const serviceUrls = {
+				gmail: '/pages/gmail.html',
+				axonaut: '/pages/axonaut.html'
+			};
+			
+			if (serviceUrls[serviceId]) {
+				window.open(serviceUrls[serviceId], '_blank');
+			}
+		}
+
+		async function disconnectService(serviceId) {
+			if (!confirm(`Êtes-vous sûr de vouloir déconnecter ${serviceId} ?`)) {
+				return;
+			}
+
+			const userId = getUserIdFromUrl() || localStorage.getItem('mcpUserId');
+			
+			try {
+				const response = await fetch(`/api/account/${userId}/disconnect/${serviceId}`, {
+					method: 'POST'
+				});
+				
+				const data = await response.json();
+				
+				if (data.success) {
+					showSuccess(`Service ${serviceId} déconnecté avec succès`);
+					loadAccountInfo(); // Recharger les informations
+				} else {
+					throw new Error(data.error || 'Erreur lors de la déconnexion');
+				}
+			} catch (error) {
+				console.error('Erreur:', error);
+				showError('Erreur lors de la déconnexion du service');
+			}
+		}
+
+		// Gestion de la suppression complète du compte
+		document.getElementById('revokeAllBtn').addEventListener('click', async function() {
+			const confirmation = prompt(
+				'Cette action est irréversible. Tapez "SUPPRIMER" pour confirmer la suppression de votre compte:'
+			);
+			
+			if (confirmation !== 'SUPPRIMER') {
+				return;
+			}
+
+			const userId = getUserIdFromUrl() || localStorage.getItem('mcpUserId');
+			
+			try {
+				const response = await fetch(`/api/account/${userId}/delete`, {
+					method: 'DELETE'
+				});
+				
+				const data = await response.json();
+				
+				if (data.success) {
+					showSuccess('Compte supprimé avec succès. Redirection...');
+					localStorage.removeItem('mcpUserId');
+					setTimeout(() => window.location.href = '/', 2000);
+				} else {
+					throw new Error(data.error || 'Erreur lors de la suppression');
+				}
+			} catch (error) {
+				console.error('Erreur:', error);
+				showError('Erreur lors de la suppression du compte');
+			}
+		});
+
+		function showLoading(show) {
+			document.getElementById('loading').classList.toggle('show', show);
+		}
+
+		function showSuccess(message) {
+			const element = document.getElementById('successMessage');
+			element.textContent = message;
+			element.classList.add('show');
+			setTimeout(() => element.classList.remove('show'), 5000);
+		}
+
+		function showError(message) {
+			const element = document.getElementById('errorMessage');
+			element.textContent = message;
+			element.classList.add('show');
+			setTimeout(() => element.classList.remove('show'), 5000);
+		}
+	</script>
+</body>
+
+</html>

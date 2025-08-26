@@ -25,7 +25,7 @@ export class GmailService extends BaseService {
 		super({
 			clientId,
 			clientSecret,
-			redirectUri: `${baseUrl}/oauth/callback`,
+			redirectUri: `${baseUrl}/auth/google/callback/gmail`,
 			scopes: [
 				'https://www.googleapis.com/auth/gmail.readonly',
 				'https://www.googleapis.com/auth/gmail.send',
@@ -38,7 +38,7 @@ export class GmailService extends BaseService {
 		return this.validateOAuthConfig();
 	}
 
-	createAuthUrl(): string {
+	createAuthUrl(state: string = 'flow=gmail'): string {
 		const oauth2Client = new google.auth.OAuth2(
 			this.oauthConfig.clientId,
 			this.oauthConfig.clientSecret,
@@ -48,7 +48,9 @@ export class GmailService extends BaseService {
 		return oauth2Client.generateAuthUrl({
 			access_type: 'offline',
 			prompt: 'consent',
-			scope: this.requiredScopes,
+			include_granted_scopes: true,      // ← optionnel, mais propre
+			scope: this.requiredScopes,        // ← déjà bon
+			state                               // ← ⚡ distingue clairement le flux
 		});
 	}
 

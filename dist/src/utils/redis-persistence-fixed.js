@@ -89,66 +89,12 @@ export class RedisPersistence {
         if (!this.isRedisAvailable)
             return false;
         try {
-            await this.redis.ping();
-            return true;
+            const result = await this.redis.ping();
+            return result === 'PONG';
         }
         catch (error) {
-            console.error('❌ Échec test santé Redis:', error);
+            this.isRedisAvailable = false;
             return false;
-        }
-    }
-    get isAvailable() {
-        return this.isRedisAvailable;
-    }
-    async get(key) {
-        if (!this.isRedisAvailable)
-            return null;
-        try {
-            return await this.redis.get(key);
-        }
-        catch (error) {
-            console.error('❌ Erreur Redis GET:', error);
-            return null;
-        }
-    }
-    async set(key, value, ttl) {
-        if (!this.isRedisAvailable)
-            return false;
-        try {
-            if (ttl) {
-                await this.redis.setex(key, ttl, value);
-            }
-            else {
-                await this.redis.set(key, value);
-            }
-            return true;
-        }
-        catch (error) {
-            console.error('❌ Erreur Redis SET:', error);
-            return false;
-        }
-    }
-    async del(key) {
-        if (!this.isRedisAvailable)
-            return false;
-        try {
-            await this.redis.del(key);
-            return true;
-        }
-        catch (error) {
-            console.error('❌ Erreur Redis DEL:', error);
-            return false;
-        }
-    }
-    async keys(pattern) {
-        if (!this.isRedisAvailable)
-            return [];
-        try {
-            return await this.redis.keys(pattern);
-        }
-        catch (error) {
-            console.error('❌ Erreur Redis KEYS:', error);
-            return [];
         }
     }
     async saveAuthenticatedUsers(users) {

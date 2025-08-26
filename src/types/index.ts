@@ -33,9 +33,22 @@ export interface AxonautSession extends BaseServiceSession {
 	axonautClient: any;
 }
 
+// Utilisateur authentifié via Google OAuth
+export interface AuthenticatedUser {
+	userId: string;           // ID stable basé sur l'email Google
+	email: string;            // Email Google
+	name: string;             // Nom Google
+	picture?: string;         // Photo de profil Google
+	googleRefreshToken: string; // Token Google chiffré
+	createdAt: Date;
+	lastLoginAt: Date;
+	connectedServices: string[];
+}
+
 // Session utilisateur multi-services
 export interface UserSession {
 	userId: string;
+	authenticatedUser?: AuthenticatedUser; // Utilisateur authentifié
 	createdAt: Date;
 	lastAccessed: Date;
 	services: {

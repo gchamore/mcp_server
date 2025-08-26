@@ -7,11 +7,12 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { ServiceRegistry } from "./core/ServiceRegistry.js";
 import { MultiTenantManager } from "./core/MultiTenantManager.js";
+import { DatabaseUserManager } from "./core/DatabaseUserManager.js";
+import { DatabaseManager } from "./database/DatabaseManager.js";
+import { SessionManager } from "./core/SessionManager.js";
 import { GmailService } from "./services/gmail/GmailService.js";
 import { AxonautService } from "./services/axonaut/AxonautService.js";
 import { redisPersistence as sessionPersistence } from "./utils/redis-persistence.js";
-import { google } from 'googleapis';
-import { decrypt } from "./utils/encryption.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const PORT = process.env.PORT || 3000;
@@ -32,6 +33,10 @@ if (!process.env.ENCRYPTION_KEY) {
 }
 console.log('🏗️ Initialisation de l\'architecture multi-services...');
 const serviceRegistry = new ServiceRegistry();
+const database = new DatabaseManager();
+await database.initialize();
+const userManager = new DatabaseUserManager(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, `${BASE_URL}/auth/google/callback`, database);
+const sessionManager = new SessionManager();
 const multiTenantManager = new MultiTenantManager(serviceRegistry);
 const gmailService = new GmailService(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, BASE_URL);
 const axonautService = new AxonautService();
@@ -42,150 +47,47 @@ console.log('📌 Sessions permanentes activées - pas de suppression automatiqu
 console.log('💾 Initialisation du système de persistance Redis...');
 await sessionPersistence.initialize();
 console.log('📝 Redis configuré - connexion automatique en arrière-plan');
-console.log('🔄 Restauration des sessions depuis Redis...');
-await restoreAllSessionsFromRedis();
-async function restoreAllSessionsFromRedis() {
-    try {
-        const userSessions = await sessionPersistence.loadUserSessions();
-        for (const persistentSession of userSessions) {
-            const userSession = {
-                userId: persistentSession.userId,
-                createdAt: new Date(persistentSession.createdAt),
-                lastAccessed: new Date(persistentSession.lastAccessed),
-                services: {}
-            };
-            multiTenantManager.getUserSessionsMap().set(persistentSession.userId, userSession);
-        }
-        console.log(`✅ ${userSessions.length} sessions utilisateur restaurées depuis Redis`);
-        const gmailSessions = await sessionPersistence.loadGmailSessions();
-        for (const persistentSession of gmailSessions) {
-            const oauth2Client = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, `${BASE_URL}/oauth/callback`);
-            const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-            const gmailSession = {
-                serviceName: 'gmail',
-                userId: persistentSession.userId,
-                userEmail: persistentSession.userEmail,
-                isAuthenticated: persistentSession.isAuthenticated,
-                createdAt: new Date(persistentSession.createdAt),
-                lastAccessed: new Date(persistentSession.lastAccessed),
-                gmail,
-                oauth2Client,
-                encryptedRefreshToken: persistentSession.encryptedRefreshToken,
-                encryptedAccessToken: persistentSession.encryptedAccessToken
-            };
-            if (persistentSession.encryptedRefreshToken) {
-                try {
-                    const refreshToken = decrypt(persistentSession.encryptedRefreshToken);
-                    oauth2Client.setCredentials({ refresh_token: refreshToken });
-                }
-                catch (error) {
-                    console.warn(`⚠️ Impossible de déchiffrer le refresh token pour ${persistentSession.userId}`);
-                }
-            }
-            if (persistentSession.encryptedAccessToken) {
-                try {
-                    const accessToken = decrypt(persistentSession.encryptedAccessToken);
-                    const existingCredentials = oauth2Client.credentials || {};
-                    oauth2Client.setCredentials({
-                        ...existingCredentials,
-                        access_token: accessToken
-                    });
-                    console.log(`✅ Access token restauré pour ${persistentSession.userId}`);
-                }
-                catch (error) {
-                    console.warn(`⚠️ Impossible de déchiffrer l'access token pour ${persistentSession.userId}`);
-                }
-            }
-            gmailService.getGmailSessionsMap().set(persistentSession.userId, gmailSession);
-        }
-        console.log(`✅ ${gmailSessions.length} sessions Gmail restaurées depuis Redis`);
-        const axonautSessions = await sessionPersistence.loadAxonautSessions();
-        for (const persistentSession of axonautSessions) {
-            const axonautClient = {
-                request: async (endpoint, options = {}) => {
-                    const url = `${persistentSession.baseUrl}/api/v2${endpoint}`;
-                    const apiKey = decrypt(persistentSession.encryptedApiKey);
-                    const response = await fetch(url, {
-                        ...options,
-                        headers: {
-                            'userApiKey': apiKey,
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                            ...options.headers
-                        }
-                    });
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        throw new Error(`API Axonaut error: ${response.status} ${response.statusText}: ${errorText}`);
-                    }
-                    return response.json();
-                }
-            };
-            const axonautSession = {
-                serviceName: 'axonaut',
-                userId: persistentSession.userId,
-                userEmail: persistentSession.userEmail,
-                isAuthenticated: persistentSession.isAuthenticated,
-                createdAt: new Date(persistentSession.createdAt),
-                lastAccessed: new Date(persistentSession.lastAccessed),
-                encryptedApiKey: persistentSession.encryptedApiKey,
-                baseUrl: persistentSession.baseUrl,
-                axonautClient
-            };
-            axonautService.getAxonautSessionsMap().set(persistentSession.userId, axonautSession);
-        }
-        console.log(`✅ ${axonautSessions.length} sessions Axonaut restaurées depuis Redis`);
-    }
-    catch (error) {
-        console.error('❌ Erreur restauration depuis Redis:', error);
-    }
-}
-console.log('🔗 Reconnexion des sessions de services...');
-await reconnectServiceSessions();
-async function reconnectServiceSessions() {
-    try {
-        const gmailSessions = gmailService.getGmailSessionsMap();
-        for (const [gmailUserId, gmailSession] of gmailSessions) {
-            const userSession = multiTenantManager.getUserSession(gmailUserId);
-            if (userSession && !userSession.services.gmail) {
-                userSession.services.gmail = gmailSession;
-                console.log(`🔗 Session Gmail ${gmailUserId} reconnectée`);
-            }
-        }
-        const axonautSessions = axonautService.getAxonautSessionsMap();
-        for (const [axonautUserId, axonautSession] of axonautSessions) {
-            const userSession = multiTenantManager.getUserSession(axonautUserId);
-            if (userSession && !userSession.services.axonaut) {
-                userSession.services.axonaut = axonautSession;
-                console.log(`🔗 Session Axonaut ${axonautUserId} reconnectée`);
-            }
-        }
-        console.log('✅ Reconnexion des sessions terminée');
-    }
-    catch (error) {
-        console.error('❌ Erreur lors de la reconnexion des sessions:', error);
-    }
-}
-const SAVE_INTERVAL = 5 * 60 * 1000;
-console.log('📝 Sauvegarde périodique désactivée - sauvegarde à la création uniquement');
-const gracefulShutdown = async (signal) => {
-    console.log(`\n📡 Signal ${signal} reçu, arrêt en cours...`);
-    try {
-        console.log('💾 Sauvegarde finale des sessions...');
-        await sessionPersistence.saveAllSessions(multiTenantManager.getUserSessionsMap(), gmailService.getGmailSessionsMap(), axonautService.getAxonautSessionsMap());
-        await sessionPersistence.disconnect();
-        console.log('✅ Sauvegarde terminée');
-    }
-    catch (error) {
-        console.error('❌ Erreur lors de la sauvegarde finale:', error);
-    }
-    process.exit(0);
-};
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2'));
 const app = express();
 app.set('trust proxy', 1);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use((req, res, next) => {
+    req.cookies = {};
+    const cookieHeader = req.headers.cookie;
+    if (cookieHeader) {
+        cookieHeader.split(';').forEach(cookie => {
+            const [name, value] = cookie.trim().split('=');
+            if (name && value) {
+                req.cookies[name] = decodeURIComponent(value);
+            }
+        });
+    }
+    next();
+});
+app.use(async (req, res, next) => {
+    const sessionId = req.cookies['mcp-session'];
+    if (sessionId) {
+        const session = await sessionManager.getSession(sessionId);
+        if (session) {
+            req.userSession = session;
+        }
+    }
+    next();
+});
+const setSecureCookie = (res, name, value, maxAge) => {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieOptions = [
+        `${name}=${encodeURIComponent(value)}`,
+        `Max-Age=${maxAge || 7 * 24 * 60 * 60}`,
+        'Path=/',
+        'HttpOnly',
+        'SameSite=Strict'
+    ];
+    if (isProduction) {
+        cookieOptions.push('Secure');
+    }
+    res.setHeader('Set-Cookie', cookieOptions.join('; '));
+};
 app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
@@ -337,6 +239,387 @@ app.get('/api/users/:userId/services', (req, res) => {
         mcpEndpoint: `${BASE_URL}/${userId}/mcp/sse`
     });
 });
+app.get('/api/google/client-id', (req, res) => {
+    res.json({
+        clientId: GOOGLE_CLIENT_ID
+    });
+});
+app.get('/api/auth/google', async (req, res) => {
+    try {
+        const authUrl = userManager.getAuthUrl();
+        res.json({
+            success: true,
+            authUrl
+        });
+    }
+    catch (error) {
+        console.error('❌ Erreur génération URL auth Google:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erreur lors de la génération de l\'URL d\'authentification'
+        });
+    }
+});
+app.post('/api/auth/google/start', async (req, res) => {
+    try {
+        const { OAuth2Client } = await import('google-auth-library');
+        const oauth2Client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, `${BASE_URL}/auth/google/callback`);
+        const authUrl = oauth2Client.generateAuthUrl({
+            access_type: 'offline',
+            prompt: 'consent',
+            scope: [
+                'https://www.googleapis.com/auth/userinfo.email',
+                'https://www.googleapis.com/auth/userinfo.profile'
+            ],
+        });
+        res.json({
+            success: true,
+            authUrl
+        });
+    }
+    catch (error) {
+        console.error('❌ Erreur génération URL auth Google:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erreur lors de la génération de l\'URL d\'authentification'
+        });
+    }
+});
+app.get('/auth/google/callback', async (req, res) => {
+    try {
+        const { code, error } = req.query;
+        if (error) {
+            console.error('❌ Erreur OAuth Google:', error);
+            return res.redirect('/?error=access_denied');
+        }
+        if (!code) {
+            return res.redirect('/?error=no_code');
+        }
+        const userId = await userManager.authenticateWithGoogle(code);
+        const user = await userManager.getUser(userId);
+        if (!user) {
+            console.error('❌ Utilisateur non trouvé après authentification');
+            return res.redirect('/?error=user_not_found');
+        }
+        const sessionId = await sessionManager.createSession({
+            userId: user.user_id,
+            email: user.email,
+            name: user.name,
+            picture: user.picture
+        });
+        setSecureCookie(res, 'mcp-session', sessionId);
+        res.redirect('/pages/services.html?auth=success');
+    }
+    catch (error) {
+        console.error('❌ Erreur callback Google:', error);
+        res.redirect('/?error=callback_error');
+    }
+});
+app.get('/auth/google/callback/gmail', async (req, res) => {
+    try {
+        const { code, error, state } = req.query;
+        if (error) {
+            console.error('❌ Erreur OAuth Gmail:', error);
+            return res.redirect('/pages/gmail.html?error=access_denied');
+        }
+        if (!code) {
+            return res.redirect('/pages/gmail.html?error=no_code');
+        }
+        let userId = null;
+        if (state) {
+            const stateParams = new URLSearchParams(state);
+            userId = stateParams.get('userId');
+        }
+        if (!userId) {
+            console.error('❌ UserId manquant dans le state OAuth');
+            return res.redirect('/pages/gmail.html?error=invalid_state');
+        }
+        const user = await userManager.getUser(userId);
+        if (!user) {
+            console.error('❌ Utilisateur non trouvé:', userId);
+            return res.redirect('/?error=user_not_found');
+        }
+        const authResult = await gmailService.handleCallback(code);
+        if (authResult.success && authResult.userId) {
+            const gmailSession = gmailService.gmailSessions.get(authResult.userId);
+            if (gmailSession) {
+                await userManager.connectMCPService(userId, 'gmail', {
+                    externalUserId: authResult.userId,
+                    userEmail: authResult.userEmail,
+                    encryptedAccessToken: gmailSession.encryptedAccessToken,
+                    encryptedRefreshToken: gmailSession.encryptedRefreshToken
+                });
+                return res.redirect(`/pages/gmail.html?success=true&userId=${authResult.userId}&email=${encodeURIComponent(authResult.userEmail || '')}`);
+            }
+            else {
+                return res.redirect('/pages/gmail.html?error=session_not_found');
+            }
+        }
+        else {
+            return res.redirect('/pages/gmail.html?error=auth_failed');
+        }
+    }
+    catch (error) {
+        console.error('❌ Erreur callback Gmail:', error);
+        return res.redirect('/pages/gmail.html?error=server_error');
+    }
+});
+app.get('/auth/axonaut/callback', async (req, res) => {
+    try {
+        return res.redirect('/pages/axonaut.html?auth=success');
+    }
+    catch (error) {
+        console.error('❌ Erreur callback Axonaut:', error);
+        return res.redirect('/pages/axonaut.html?error=server_error');
+    }
+});
+app.get('/api/user/me', async (req, res) => {
+    if (!req.userSession) {
+        return res.status(401).json({
+            success: false,
+            error: 'Non authentifié'
+        });
+    }
+    res.json({
+        success: true,
+        user: {
+            userId: req.userSession.userId,
+            email: req.userSession.email,
+            name: req.userSession.name,
+            picture: req.userSession.picture
+        }
+    });
+});
+app.post('/api/auth/logout', async (req, res) => {
+    const sessionId = req.cookies['mcp-session'];
+    if (sessionId) {
+        await sessionManager.deleteSession(sessionId);
+    }
+    res.setHeader('Set-Cookie', 'mcp-session=; Max-Age=0; Path=/; HttpOnly');
+    res.json({
+        success: true,
+        message: 'Déconnexion réussie'
+    });
+});
+app.post('/auth/google/callback', async (req, res) => {
+    try {
+        const { code } = req.body;
+        if (!code) {
+            return res.status(400).json({
+                success: false,
+                error: 'Code Google manquant'
+            });
+        }
+        const userId = await userManager.authenticateWithGoogle(code);
+        res.json({
+            success: true,
+            userId,
+            redirectUrl: `/pages/services.html?userId=${userId}`
+        });
+    }
+    catch (error) {
+        console.error('❌ Erreur authentification Google:', error);
+        res.status(401).json({
+            success: false,
+            error: 'Authentification Google échouée'
+        });
+    }
+});
+app.post('/api/auth/google', async (req, res) => {
+    try {
+        const { googleCode } = req.body;
+        if (!googleCode) {
+            return res.status(400).json({
+                success: false,
+                error: 'Code Google manquant'
+            });
+        }
+        const userId = await userManager.authenticateWithGoogle(googleCode);
+        res.json({
+            success: true,
+            userId,
+            redirectUrl: `/pages/services.html?userId=${userId}`
+        });
+    }
+    catch (error) {
+        console.error('❌ Erreur authentification Google:', error);
+        res.status(401).json({
+            success: false,
+            error: 'Authentification Google échouée'
+        });
+    }
+});
+app.get('/api/account/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const user = await userManager.getUser(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'Utilisateur non trouvé'
+            });
+        }
+        const connectedServices = [];
+        const mcpConnections = await userManager.getUserMCPConnections(userId);
+        if (mcpConnections) {
+            const gmailConnection = mcpConnections.find(c => c.service_name === 'gmail' && c.is_connected);
+            if (gmailConnection) {
+                connectedServices.push({
+                    name: 'gmail',
+                    displayName: 'Gmail',
+                    connectedAt: gmailConnection.connected_at,
+                    lastUsed: gmailConnection.last_used
+                });
+            }
+            const axonautConnection = mcpConnections.find(c => c.service_name === 'axonaut' && c.is_connected);
+            if (axonautConnection) {
+                connectedServices.push({
+                    name: 'axonaut',
+                    displayName: 'Axonaut',
+                    connectedAt: axonautConnection.connected_at,
+                    lastUsed: axonautConnection.last_used
+                });
+            }
+            const notionConnection = mcpConnections.find(c => c.service_name === 'notion' && c.is_connected);
+            if (notionConnection) {
+                connectedServices.push({
+                    name: 'notion',
+                    displayName: 'Notion',
+                    connectedAt: notionConnection.connected_at,
+                    lastUsed: notionConnection.last_used
+                });
+            }
+        }
+        res.json({
+            success: true,
+            user: {
+                email: user.email,
+                name: user.name,
+                picture: user.picture,
+                createdAt: user.created_at,
+                lastLoginAt: user.last_login_at
+            },
+            connectedServices
+        });
+    }
+    catch (error) {
+        console.error('❌ Erreur récupération compte:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erreur serveur'
+        });
+    }
+});
+app.post('/api/account/:userId/disconnect/:serviceName', async (req, res) => {
+    try {
+        const { userId, serviceName } = req.params;
+        const user = await userManager.getUser(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'Utilisateur non trouvé'
+            });
+        }
+        const success = await userManager.disconnectMCPService(userId, serviceName);
+        const removed = multiTenantManager.removeServiceSession(userId, serviceName);
+        if (success && removed) {
+            if (serviceName === 'gmail') {
+                gmailService.removeSession(userId);
+            }
+            else if (serviceName === 'axonaut') {
+                axonautService.removeSession(userId);
+            }
+            res.json({
+                success: true,
+                message: `Service ${serviceName} déconnecté avec succès`
+            });
+        }
+        else {
+            res.status(404).json({
+                success: false,
+                error: 'Service non trouvé ou déjà déconnecté'
+            });
+        }
+    }
+    catch (error) {
+        console.error('❌ Erreur déconnexion service:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erreur lors de la déconnexion'
+        });
+    }
+});
+app.delete('/api/account/:userId/delete', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const user = await userManager.getUser(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'Utilisateur non trouvé'
+            });
+        }
+        const userSession = multiTenantManager.getUserSession(userId);
+        if (userSession) {
+            if (userSession.services.gmail) {
+                gmailService.removeSession(userId);
+            }
+            if (userSession.services.axonaut) {
+                axonautService.removeSession(userId);
+            }
+        }
+        multiTenantManager.getUserSessionsMap().delete(userId);
+        await sessionPersistence.deleteUserSession(userId);
+        await userManager.deleteUser(userId);
+        res.json({
+            success: true,
+            message: 'Compte supprimé avec succès'
+        });
+    }
+    catch (error) {
+        console.error('❌ Erreur suppression compte:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erreur lors de la suppression du compte'
+        });
+    }
+});
+app.get('/api/admin/stats', async (req, res) => {
+    try {
+        const stats = await userManager.getUsageStats();
+        res.json(stats);
+    }
+    catch (error) {
+        console.error('❌ Erreur récupération statistiques admin:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erreur serveur'
+        });
+    }
+});
+app.get('/api/admin/users', async (req, res) => {
+    try {
+        const allUsers = await database.getAllUsers();
+        const usersWithConnections = await Promise.all(allUsers.map(async (user) => {
+            const mcpConnections = await userManager.getUserMCPConnections(user.user_id);
+            return {
+                ...user,
+                mcpConnections
+            };
+        }));
+        res.json(usersWithConnections);
+    }
+    catch (error) {
+        console.error('❌ Erreur récupération utilisateurs admin:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erreur serveur'
+        });
+    }
+});
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/pages/admin.html'));
+});
 app.post('/api/auth/start', async (req, res) => {
     try {
         const authUrl = gmailService.createAuthUrl();
@@ -351,6 +634,44 @@ app.post('/api/auth/start', async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Erreur lors de la génération de l\'URL d\'authentification'
+        });
+    }
+});
+app.post('/api/oauth/gmail', async (req, res) => {
+    console.log('🚀 [API-OAUTH-GMAIL] Route appelée');
+    console.log('🍪 [API-OAUTH-GMAIL] Cookies:', req.cookies);
+    try {
+        const sessionId = req.cookies['mcp-session'];
+        if (!sessionId) {
+            console.error('❌ [API-OAUTH-GMAIL] Pas de session');
+            return res.status(401).json({
+                success: false,
+                error: 'Session utilisateur requise'
+            });
+        }
+        const session = await sessionManager.getSession(sessionId);
+        if (!session) {
+            console.error('❌ [API-OAUTH-GMAIL] Session invalide');
+            return res.status(401).json({
+                success: false,
+                error: 'Session utilisateur invalide'
+            });
+        }
+        console.log('👤 [API-OAUTH-GMAIL] Session utilisateur valide:', session.email);
+        const state = `flow=gmail&userId=${session.userId}`;
+        const authUrl = gmailService.createAuthUrl(state);
+        console.log('🔗 [API-OAUTH-GMAIL] URL générée avec userId dans state:', authUrl);
+        res.json({
+            success: true,
+            authUrl: authUrl,
+            service: 'gmail'
+        });
+    }
+    catch (error) {
+        console.error('❌ [API-OAUTH-GMAIL] Erreur création URL:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erreur lors de la génération de l\'URL d\'authentification Gmail'
         });
     }
 });
@@ -601,5 +922,5 @@ app.listen(PORT, () => {
     console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`📋 Services activés: ${serviceRegistry.getEnabledServices().map(s => s.displayName).join(', ')}`);
     console.log(`📡 Endpoint MCP: ${BASE_URL}/:userId/mcp/sse`);
-    console.log(`💾 Persistance Redis activée avec sauvegarde toutes les ${SAVE_INTERVAL / 60000} minutes`);
+    console.log(`💾 Persistance Redis activée avec utilisateurs persistants`);
 });

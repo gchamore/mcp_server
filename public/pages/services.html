@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Services MCP - MCP Wesype</title>
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: 'Inter', sans-serif;
+			background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+			min-height: 100vh;
+			color: #333;
+			padding: 2rem;
+		}
+
+		.header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 3rem;
+			max-width: 1200px;
+			margin-left: auto;
+			margin-right: auto;
+		}
+
+		.logo-section {
+			display: flex;
+			align-items: center;
+			gap: 1rem;
+		}
+
+		.logo-text {
+			font-size: 2rem;
+			font-weight: 800;
+			color: white;
+			text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+		}
+
+		.user-section {
+			display: flex;
+			align-items: center;
+			gap: 1rem;
+		}
+
+		.user-info {
+			background: rgba(255, 255, 255, 0.9);
+			padding: 0.5rem 1rem;
+			border-radius: 25px;
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			color: #2c3e50;
+			font-weight: 500;
+		}
+
+		.user-avatar {
+			width: 32px;
+			height: 32px;
+			border-radius: 50%;
+		}
+
+		.logout-btn {
+			background: rgba(255, 255, 255, 0.2);
+			color: white;
+			border: none;
+			padding: 0.5rem 1rem;
+			border-radius: 20px;
+			cursor: pointer;
+			transition: all 0.3s ease;
+		}
+
+		.logout-btn:hover {
+			background: rgba(255, 255, 255, 0.3);
+		}
+
+		.main-container {
+			max-width: 1200px;
+			margin: 0 auto;
+			text-align: center;
+		}
+
+		.brand-section {
+			text-align: center;
+			margin-bottom: 3rem;
+		}
+
+		.brand-text {
+			font-size: 3rem;
+			font-weight: 800;
+			color: white;
+			text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+			margin-bottom: 1rem;
+			letter-spacing: -1px;
+		}
+
+		.brand-subtitle {
+			color: rgba(255, 255, 255, 0.9);
+			font-size: 1.2rem;
+			font-weight: 300;
+			margin-bottom: 3rem;
+		}
+
+		.search-section {
+			margin-bottom: 4rem;
+		}
+
+		.search-container {
+			background: rgba(255, 255, 255, 0.95);
+			backdrop-filter: blur(20px);
+			border-radius: 25px;
+			padding: 1.5rem;
+			box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+			border: 1px solid rgba(255, 255, 255, 0.2);
+			position: relative;
+			max-width: 700px;
+			margin: 0 auto;
+		}
+
+		.search-box {
+			position: relative;
+		}
+
+		.search-input {
+			width: 100%;
+			padding: 1.5rem 1.5rem 1.5rem 4rem;
+			border: none;
+			border-radius: 20px;
+			font-size: 1.3rem;
+			background: white;
+			transition: all 0.3s ease;
+			outline: none;
+			box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+		}
+
+		.search-input:focus {
+			box-shadow: 0 8px 30px rgba(66, 133, 244, 0.2);
+			transform: translateY(-2px);
+		}
+
+		.search-icon {
+			position: absolute;
+			left: 1.5rem;
+			top: 50%;
+			transform: translateY(-50%);
+			color: #6c757d;
+			font-size: 1.4rem;
+		}
+
+		.search-results {
+			position: absolute;
+			top: 100%;
+			left: 0;
+			right: 0;
+			background: white;
+			border-radius: 15px;
+			box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+			margin-top: 0.5rem;
+			max-height: 400px;
+			overflow-y: auto;
+			z-index: 100;
+			display: none;
+		}
+
+		.result-item {
+			padding: 1.2rem 1.5rem;
+			border-bottom: 1px solid #f1f3f4;
+			cursor: pointer;
+			transition: all 0.2s ease;
+			display: flex;
+			align-items: center;
+			gap: 1rem;
+		}
+
+		.result-item:hover {
+			background: #f8f9fa;
+			transform: translateX(5px);
+		}
+
+		.result-item:last-child {
+			border-bottom: none;
+			border-radius: 0 0 15px 15px;
+		}
+
+		.result-item:first-child {
+			border-radius: 15px 15px 0 0;
+		}
+
+		.result-icon {
+			font-size: 1.8rem;
+			width: 40px;
+			text-align: center;
+		}
+
+		.result-content {
+			flex: 1;
+		}
+
+		.result-name {
+			font-weight: 600;
+			font-size: 1.1rem;
+			color: #2c3e50;
+			margin-bottom: 0.3rem;
+		}
+
+		.result-description {
+			color: #6c757d;
+			font-size: 0.9rem;
+		}
+
+		.result-status {
+			padding: 0.3rem 0.8rem;
+			border-radius: 15px;
+			font-size: 0.8rem;
+			font-weight: 500;
+		}
+
+		.status-available {
+			background: #e8f5e8;
+			color: #2e7d32;
+		}
+
+		.status-coming-soon {
+			background: #fff3e0;
+			color: #f57c00;
+		}
+
+		.no-results {
+			padding: 2rem;
+			text-align: center;
+			color: #6c757d;
+		}
+
+		.footer-info {
+			color: rgba(255, 255, 255, 0.8);
+			font-size: 0.9rem;
+			font-weight: 300;
+			margin-top: 2rem;
+		}
+
+		.footer-info i {
+			margin-right: 0.5rem;
+		}
+
+		.account-link {
+			margin-top: 1rem;
+		}
+
+		.account-link a {
+			color: rgba(255, 255, 255, 0.8);
+			text-decoration: none;
+			transition: color 0.3s ease;
+		}
+
+		.account-link a:hover {
+			color: white;
+		}
+
+		/* Animation pour l'apparition */
+		.fade-in {
+			animation: fadeIn 0.5s ease-out;
+		}
+
+		@keyframes fadeIn {
+			from {
+				opacity: 0;
+				transform: translateY(20px);
+			}
+
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+
+		@media (max-width: 768px) {
+			.header {
+				flex-direction: column;
+				gap: 1rem;
+				text-align: center;
+			}
+
+			.brand-text {
+				font-size: 2.5rem;
+			}
+
+			.search-container {
+				margin: 0 1rem;
+			}
+
+			.user-section {
+				justify-content: center;
+			}
+		}
+	</style>
+</head>
+
+<body>
+	<div class="header">
+		<div class="logo-section">
+			<h1 class="logo-text" style="cursor: pointer;" onclick="goHome()">
+				<i class="fas fa-robot"></i>
+				MCP Wesype
+			</h1>
+		</div>
+		<div class="user-section">
+			<div id="userInfo" class="user-info">
+				<i class="fas fa-user"></i>
+				<span id="userName">Chargement...</span>
+			</div>
+			<button id="logoutBtn" class="logout-btn">
+				<i class="fas fa-sign-out-alt"></i>
+				Déconnexion
+			</button>
+		</div>
+	</div>
+
+	<div class="main-container fade-in">
+		<div class="brand-section">
+			<h1 class="brand-text">Recherchez vos services MCP</h1>
+			<p class="brand-subtitle">Recherchez et connectez vos outils à vos agents IA</p>
+		</div>
+
+		<div class="search-section">
+			<div class="search-container">
+				<div class="search-box">
+					<i class="fas fa-search search-icon"></i>
+					<input type="text" class="search-input"
+						placeholder="Recherchez un service (Gmail, Axonaut, Outlook...)" id="searchInput"
+						autocomplete="off">
+					<div class="search-results" id="searchResults">
+						<!-- Les résultats apparaîtront ici -->
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="footer-info">
+			<p><i class="fas fa-info-circle"></i> Connectez-vous à vos services pour accéder à vos données via l'IA</p>
+			<p class="account-link">
+				<i class="fas fa-user"></i>
+				<a href="/pages/account.html" id="accountLink">Mon compte</a>
+			</p>
+		</div>
+	</div>
+
+	<script>
+		// Configuration des services
+		const services = [
+			{
+				id: 'gmail',
+				name: 'Gmail',
+				description: 'Gérez vos emails Gmail avec l\'IA',
+				icon: 'fas fa-envelope',
+				iconColor: '#ea4335',
+				status: 'available',
+				url: '/pages/gmail.html'
+			},
+			{
+				id: 'axonaut',
+				name: 'Axonaut',
+				description: 'Connectez votre CRM Axonaut',
+				icon: 'fas fa-chart-line',
+				iconColor: '#4285f4',
+				status: 'available',
+				url: '/pages/axonaut.html'
+			},
+			{
+				id: 'outlook',
+				name: 'Outlook',
+				description: 'Intégration Microsoft Outlook',
+				icon: 'fas fa-envelope-open',
+				iconColor: '#0078d4',
+				status: 'coming-soon',
+				url: '/pages/outlook.html'
+			},
+			{
+				id: 'notion',
+				name: 'Notion',
+				description: 'Synchronisez votre workspace Notion',
+				icon: 'fas fa-sticky-note',
+				iconColor: '#000000',
+				status: 'coming-soon',
+				url: '/pages/notion.html'
+			}
+		];
+
+		let searchTimeout;
+		let selectedIndex = -1;
+		let currentUserId = null;
+
+		// Éléments DOM
+		const searchInput = document.getElementById('searchInput');
+		const searchResults = document.getElementById('searchResults');
+		const userInfo = document.getElementById('userInfo');
+		const userName = document.getElementById('userName');
+		const logoutBtn = document.getElementById('logoutBtn');
+		const accountLink = document.getElementById('accountLink');
+
+		// Initialisation
+		window.addEventListener('load', function () {
+			checkAuthStatus();
+			searchInput.addEventListener('input', handleSearch);
+			searchInput.addEventListener('keydown', handleKeyNavigation);
+			searchInput.addEventListener('focus', showRecentOrAll);
+			searchInput.addEventListener('blur', hideResults);
+			logoutBtn.addEventListener('click', logout);
+		});
+
+		// Vérifier le statut d'authentification
+		async function checkAuthStatus() {
+			try {
+				const response = await fetch('/api/user/me');
+				if (response.ok) {
+					const userData = await response.json();
+					if (userData.success) {
+						currentUserId = userData.user.userId;
+						userName.textContent = userData.user.name || userData.user.email;
+						// Mettre à jour le lien du compte
+						accountLink.href = `/pages/account.html?userId=${userData.user.userId}`;
+						return;
+					}
+				}
+				
+				// Pas connecté, rediriger vers la page d'accueil
+				window.location.href = '/';
+			} catch (error) {
+				console.error('Erreur lors de la vérification de l\'utilisateur:', error);
+				window.location.href = '/';
+			}
+		}
+
+		// Déconnexion
+		async function logout() {
+			try {
+				await fetch('/api/auth/logout', { method: 'POST' });
+			} catch (error) {
+				console.error('Erreur lors de la déconnexion:', error);
+			}
+			window.location.href = '/';
+		}
+
+		// Retour à l'accueil (sans déconnexion)
+		function goHome() {
+			window.location.href = '/pages/services.html';
+		}
+
+		function handleSearch(e) {
+			clearTimeout(searchTimeout);
+			const query = e.target.value.trim();
+
+			if (query.length === 0) {
+				showRecentOrAll();
+				return;
+			}
+
+			searchTimeout = setTimeout(() => {
+				performSearch(query);
+			}, 200);
+		}
+
+		function performSearch(query) {
+			const filteredServices = services.filter(service =>
+				service.name.toLowerCase().includes(query.toLowerCase()) ||
+				service.description.toLowerCase().includes(query.toLowerCase())
+			);
+
+			displayResults(filteredServices, query);
+		}
+
+		function showRecentOrAll() {
+			displayResults(services);
+		}
+
+		function displayResults(results, query = '') {
+			if (results.length === 0) {
+				searchResults.innerHTML = `
+					<div class="no-results">
+						<i class="fas fa-search" style="font-size: 2rem; color: #ccc; margin-bottom: 1rem;"></i>
+						<p>Aucun service trouvé pour "${query}"</p>
+						<p style="margin-top: 0.5rem; font-size: 0.9rem; color: #999;">
+							Essayez avec "Gmail", "Axonaut", "Notion" ou "Outlook"
+						</p>
+					</div>
+				`;
+			} else {
+				searchResults.innerHTML = results.map((service, index) => `
+					<div class="result-item" data-index="${index}" data-service="${service.id}">
+						<div class="result-icon" style="color: ${service.iconColor}">
+							<i class="${service.icon}"></i>
+						</div>
+						<div class="result-content">
+							<div class="result-name">${service.name}</div>
+							<div class="result-description">${service.description}</div>
+						</div>
+						<div class="result-status ${service.status === 'available' ? 'status-available' : 'status-coming-soon'}">
+							${service.status === 'available' ? 'Disponible' : 'Bientôt'}
+						</div>
+					</div>
+				`).join('');
+
+				// Ajouter les événements de clic
+				results.forEach((service, index) => {
+					const item = searchResults.querySelector(`[data-index="${index}"]`);
+					item.addEventListener('mousedown', (e) => {
+						e.preventDefault(); // Empêcher le blur du searchInput
+						openService(service.id);
+					});
+				});
+			}
+
+			searchResults.style.display = 'block';
+			selectedIndex = -1;
+		}
+
+		function hideResults() {
+			setTimeout(() => {
+				searchResults.style.display = 'none';
+			}, 150);
+		}
+
+		function searchFor(serviceName) {
+			searchInput.value = serviceName;
+			performSearch(serviceName);
+			searchInput.focus();
+		}
+
+		function openService(serviceId) {
+			const service = services.find(s => s.id === serviceId);
+			if (service) {
+				if (currentUserId) {
+					// Ajouter l'ID utilisateur à l'URL si connecté
+					const url = new URL(service.url, window.location.origin);
+					url.searchParams.set('userId', currentUserId);
+					window.location.href = url.toString();
+				} else {
+					window.location.href = service.url;
+				}
+			}
+		}
+
+		function handleKeyNavigation(e) {
+			const results = searchResults.querySelectorAll('.result-item');
+			
+			if (e.key === 'ArrowDown') {
+				e.preventDefault();
+				selectedIndex = Math.min(selectedIndex + 1, results.length - 1);
+				updateSelection(results, selectedIndex);
+			} else if (e.key === 'ArrowUp') {
+				e.preventDefault();
+				selectedIndex = Math.max(selectedIndex - 1, -1);
+				updateSelection(results, selectedIndex);
+			} else if (e.key === 'Enter') {
+				e.preventDefault();
+				if (selectedIndex >= 0 && results[selectedIndex]) {
+					const serviceId = results[selectedIndex].dataset.service;
+					openService(serviceId);
+				}
+			} else if (e.key === 'Escape') {
+				hideResults();
+				searchInput.blur();
+			}
+		}
+
+		function updateSelection(results, index) {
+			results.forEach((item, i) => {
+				if (i === index) {
+					item.style.background = '#e3f2fd';
+					item.style.transform = 'translateX(5px)';
+				} else {
+					item.style.background = '';
+					item.style.transform = '';
+				}
+			});
+		}
+
+		// Raccourci clavier pour focus sur la recherche
+		document.addEventListener('keydown', function (e) {
+			if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+				e.preventDefault();
+				searchInput.focus();
+			}
+		});
+	</script>
+</body>
+
+</html>

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administration MCP Wesype</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-card h3 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .users-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .section-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .refresh-btn:hover {
+            background: #5a67d8;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .users-table th,
+        .users-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .users-table th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-details h4 {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .user-details p {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .service-badges {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .service-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .service-badge.gmail {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .service-badge.axonaut {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .service-badge.notion {
+            background: #f3e8ff;
+            color: #7c3aed;
+        }
+
+        .status-active {
+            color: #059669;
+            font-weight: 500;
+        }
+
+        .status-inactive {
+            color: #dc2626;
+            font-weight: 500;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #64748b;
+        }
+
+        .loading i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .users-table {
+                font-size: 0.875rem;
+            }
+
+            .users-table th,
+            .users-table td {
+                padding: 0.75rem 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-shield-alt"></i> Administration MCP Wesype</h1>
+        <p>Gestion des utilisateurs et connexions MCP</p>
+    </div>
+
+    <div class="container">
+        <!-- Statistiques -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Utilisateurs totaux</h3>
+                <div class="value" id="totalUsers">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Utilisateurs actifs</h3>
+                <div class="value" id="activeUsers">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Connexions MCP</h3>
+                <div class="value" id="totalConnections">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Services populaires</h3>
+                <div class="value" id="popularService">-</div>
+            </div>
+        </div>
+
+        <!-- Section utilisateurs -->
+        <div class="users-section">
+            <div class="section-header">
+                <h2><i class="fas fa-users"></i> Utilisateurs enregistrés</h2>
+                <button class="refresh-btn" onclick="loadData()">
+                    <i class="fas fa-sync-alt"></i>
+                    Actualiser
+                </button>
+            </div>
+
+            <div id="errorMessage" class="error" style="display: none;"></div>
+            <div id="loadingMessage" class="loading">
+                <i class="fas fa-spinner"></i>
+                Chargement des données...
+            </div>
+
+            <table class="users-table" id="usersTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Utilisateur</th>
+                        <th>Statut</th>
+                        <th>Services connectés</th>
+                        <th>Dernière connexion</th>
+                        <th>Inscription</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Charger les données au démarrage
+        document.addEventListener('DOMContentLoaded', loadData);
+
+        async function loadData() {
+            try {
+                showLoading(true);
+                hideError();
+
+                // Charger les statistiques
+                const statsResponse = await fetch('/api/admin/stats');
+                if (!statsResponse.ok) {
+                    throw new Error('Erreur chargement statistiques');
+                }
+                const stats = await statsResponse.json();
+                updateStats(stats);
+
+                // Charger les utilisateurs
+                const usersResponse = await fetch('/api/admin/users');
+                if (!usersResponse.ok) {
+                    throw new Error('Erreur chargement utilisateurs');
+                }
+                const users = await usersResponse.json();
+                updateUsersTable(users);
+
+                showLoading(false);
+
+            } catch (error) {
+                console.error('Erreur chargement données:', error);
+                showError('Erreur lors du chargement des données: ' + error.message);
+                showLoading(false);
+            }
+        }
+
+        function updateStats(stats) {
+            document.getElementById('totalUsers').textContent = stats.totalUsers || 0;
+            document.getElementById('activeUsers').textContent = stats.activeUsers || 0;
+            document.getElementById('totalConnections').textContent = stats.totalConnections || 0;
+            
+            // Service le plus populaire
+            if (stats.serviceBreakdown && stats.serviceBreakdown.length > 0) {
+                const topService = stats.serviceBreakdown[0];
+                document.getElementById('popularService').textContent = `${topService.service_name} (${topService.count})`;
+            } else {
+                document.getElementById('popularService').textContent = 'Aucun';
+            }
+        }
+
+        function updateUsersTable(users) {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                
+                // Services connectés
+                const serviceBadges = user.mcpConnections
+                    .filter(conn => conn.is_connected)
+                    .map(conn => `<span class="service-badge ${conn.service_name}">${conn.service_name}</span>`)
+                    .join('');
+
+                row.innerHTML = `
+                    <td>
+                        <div class="user-info">
+                            <img src="${user.picture || '/default-avatar.png'}" alt="Avatar" class="user-avatar">
+                            <div class="user-details">
+                                <h4>${user.name}</h4>
+                                <p>${user.email}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="${user.is_active ? 'status-active' : 'status-inactive'}">
+                            ${user.is_active ? 'Actif' : 'Inactif'}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="service-badges">
+                            ${serviceBadges || '<span style="color: #64748b;">Aucun service</span>'}
+                        </div>
+                    </td>
+                    <td>${formatDate(user.last_login_at)}</td>
+                    <td>${formatDate(user.created_at)}</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('usersTable').style.display = 'table';
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'Jamais';
+            
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffTime = Math.abs(now - date);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 1) {
+                return 'Aujourd\'hui';
+            } else if (diffDays <= 7) {
+                return `Il y a ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+            } else {
+                return date.toLocaleDateString('fr-FR');
+            }
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingMessage').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

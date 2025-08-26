@@ -8,9 +8,22 @@ import { dirname } from 'path';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 
+// Déclarations de types étendus pour Express
+declare global {
+    namespace Express {
+        interface Request {
+            cookies: { [key: string]: string };
+            userSession?: import('./core/SessionManager.js').UserSession;
+        }
+    }
+}
+
 // Import des nouvelles classes
 import { ServiceRegistry } from "./core/ServiceRegistry.js";
 import { MultiTenantManager } from "./core/MultiTenantManager.js";
+import { DatabaseUserManager } from "./core/DatabaseUserManager.js";
+import { DatabaseManager } from "./database/DatabaseManager.js";
+import { SessionManager } from "./core/SessionManager.js";
 import { GmailService } from "./services/gmail/GmailService.js";
 import { AxonautService } from "./services/axonaut/AxonautService.js";
 import { UserSession, GmailSession, AxonautSession } from "./types/index.js";
@@ -51,20 +64,35 @@ console.log('🏗️ Initialisation de l\'architecture multi-services...');
 // 1. Créer le registre des services
 const serviceRegistry = new ServiceRegistry();
 
-// 2. Créer le gestionnaire multi-tenant
+// 2. Initialiser PostgreSQL
+const database = new DatabaseManager();
+await database.initialize();
+
+// 3. Créer le gestionnaire utilisateur avec PostgreSQL
+const userManager = new DatabaseUserManager(
+	GOOGLE_CLIENT_ID,
+	GOOGLE_CLIENT_SECRET,
+	`${BASE_URL}/auth/google/callback`,
+	database
+);
+
+// 3. Créer le gestionnaire de sessions sécurisées
+const sessionManager = new SessionManager();
+
+// 4. Créer le gestionnaire multi-tenant
 const multiTenantManager = new MultiTenantManager(serviceRegistry);
 
-// 3. Initialiser le service Gmail
+// 5. Initialiser le service Gmail
 const gmailService = new GmailService(
 	GOOGLE_CLIENT_ID,
 	GOOGLE_CLIENT_SECRET,
 	BASE_URL
 );
 
-// 4. Initialiser le service Axonaut
+// 6. Initialiser le service Axonaut
 const axonautService = new AxonautService();
 
-// 5. Enregistrer les services
+// 6. Enregistrer les services
 serviceRegistry.registerService(gmailService);
 serviceRegistry.registerService(axonautService);
 
@@ -86,205 +114,62 @@ await sessionPersistence.initialize();
 // Redis se connecte de manière asynchrone via les event listeners
 console.log('📝 Redis configuré - connexion automatique en arrière-plan');
 
-// Restaurer les sessions depuis Redis (si disponible)
-console.log('🔄 Restauration des sessions depuis Redis...');
-await restoreAllSessionsFromRedis();
-
-async function restoreAllSessionsFromRedis() {
-	try {
-		// Restaurer sessions utilisateur
-		const userSessions = await sessionPersistence.loadUserSessions();
-		for (const persistentSession of userSessions) {
-			const userSession: UserSession = {
-				userId: persistentSession.userId,
-				createdAt: new Date(persistentSession.createdAt),
-				lastAccessed: new Date(persistentSession.lastAccessed),
-				services: {}
-			};
-			multiTenantManager.getUserSessionsMap().set(persistentSession.userId, userSession);
-		}
-		console.log(`✅ ${userSessions.length} sessions utilisateur restaurées depuis Redis`);
-
-		// Restaurer sessions Gmail
-		const gmailSessions = await sessionPersistence.loadGmailSessions();
-		for (const persistentSession of gmailSessions) {
-			const oauth2Client = new google.auth.OAuth2(
-				GOOGLE_CLIENT_ID,
-				GOOGLE_CLIENT_SECRET,
-				`${BASE_URL}/oauth/callback`
-			);
-			const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-
-			const gmailSession: GmailSession = {
-				serviceName: 'gmail' as const,
-				userId: persistentSession.userId,
-				userEmail: persistentSession.userEmail,
-				isAuthenticated: persistentSession.isAuthenticated,
-				createdAt: new Date(persistentSession.createdAt),
-				lastAccessed: new Date(persistentSession.lastAccessed),
-				gmail,
-				oauth2Client,
-				encryptedRefreshToken: persistentSession.encryptedRefreshToken,
-				encryptedAccessToken: persistentSession.encryptedAccessToken
-			};
-
-			if (persistentSession.encryptedRefreshToken) {
-				try {
-					const refreshToken = decrypt(persistentSession.encryptedRefreshToken);
-					oauth2Client.setCredentials({ refresh_token: refreshToken });
-				} catch (error) {
-					console.warn(`⚠️ Impossible de déchiffrer le refresh token pour ${persistentSession.userId}`);
-				}
-			}
-
-			// Aussi restaurer l'access token s'il existe
-			if (persistentSession.encryptedAccessToken) {
-				try {
-					const accessToken = decrypt(persistentSession.encryptedAccessToken);
-					// Fusionner avec les credentials existants
-					const existingCredentials = oauth2Client.credentials || {};
-					oauth2Client.setCredentials({ 
-						...existingCredentials,
-						access_token: accessToken 
-					});
-					console.log(`✅ Access token restauré pour ${persistentSession.userId}`);
-				} catch (error) {
-					console.warn(`⚠️ Impossible de déchiffrer l'access token pour ${persistentSession.userId}`);
-				}
-			}
-
-			gmailService.getGmailSessionsMap().set(persistentSession.userId, gmailSession);
-		}
-		console.log(`✅ ${gmailSessions.length} sessions Gmail restaurées depuis Redis`);
-
-		// Restaurer sessions Axonaut
-		const axonautSessions = await sessionPersistence.loadAxonautSessions();
-		for (const persistentSession of axonautSessions) {
-			const axonautClient = {
-				request: async (endpoint: string, options: any = {}) => {
-					const url = `${persistentSession.baseUrl}/api/v2${endpoint}`;
-					const apiKey = decrypt(persistentSession.encryptedApiKey);
-
-					const response = await fetch(url, {
-						...options,
-						headers: {
-							'userApiKey': apiKey,
-							'Accept': 'application/json',
-							'Content-Type': 'application/json',
-							...options.headers
-						}
-					});
-
-					if (!response.ok) {
-						const errorText = await response.text();
-						throw new Error(`API Axonaut error: ${response.status} ${response.statusText}: ${errorText}`);
-					}
-
-					return response.json();
-				}
-			};
-
-			const axonautSession: AxonautSession = {
-				serviceName: 'axonaut' as const,
-				userId: persistentSession.userId,
-				userEmail: persistentSession.userEmail,
-				isAuthenticated: persistentSession.isAuthenticated,
-				createdAt: new Date(persistentSession.createdAt),
-				lastAccessed: new Date(persistentSession.lastAccessed),
-				encryptedApiKey: persistentSession.encryptedApiKey,
-				baseUrl: persistentSession.baseUrl,
-				axonautClient
-			};
-
-			axonautService.getAxonautSessionsMap().set(persistentSession.userId, axonautSession);
-		}
-		console.log(`✅ ${axonautSessions.length} sessions Axonaut restaurées depuis Redis`);
-
-	} catch (error) {
-		console.error('❌ Erreur restauration depuis Redis:', error);
-	}
-}
-
-// Reconnecter les sessions de services aux sessions utilisateur
-console.log('🔗 Reconnexion des sessions de services...');
-await reconnectServiceSessions();
-
-async function reconnectServiceSessions() {
-	try {
-		// Récupérer toutes les sessions Gmail et les rattacher aux bonnes sessions utilisateur
-		const gmailSessions = gmailService.getGmailSessionsMap();
-		for (const [gmailUserId, gmailSession] of gmailSessions) {
-			const userSession = multiTenantManager.getUserSession(gmailUserId);
-			if (userSession && !userSession.services.gmail) {
-				userSession.services.gmail = gmailSession;
-				console.log(`🔗 Session Gmail ${gmailUserId} reconnectée`);
-			}
-		}
-
-		// Récupérer toutes les sessions Axonaut et les rattacher aux bonnes sessions utilisateur
-		const axonautSessions = axonautService.getAxonautSessionsMap();
-		for (const [axonautUserId, axonautSession] of axonautSessions) {
-			const userSession = multiTenantManager.getUserSession(axonautUserId);
-			if (userSession && !userSession.services.axonaut) {
-				userSession.services.axonaut = axonautSession;
-				console.log(`🔗 Session Axonaut ${axonautUserId} reconnectée`);
-			}
-		}
-
-		console.log('✅ Reconnexion des sessions terminée');
-	} catch (error) {
-		console.error('❌ Erreur lors de la reconnexion des sessions:', error);
-	}
-}
-
-// Sauvegarde périodique des sessions (DÉSACTIVÉE - sauvegarde à la création)
-const SAVE_INTERVAL = 5 * 60 * 1000; // 5 minutes
-// setInterval(async () => {
-// 	try {
-// 		console.log('💾 Sauvegarde périodique des sessions...');
-// 		await sessionPersistence.saveAllSessions(
-// 			multiTenantManager.getUserSessionsMap(),
-// 			gmailService.getGmailSessionsMap(),
-// 			axonautService.getAxonautSessionsMap()
-// 		);
-// 	} catch (error) {
-// 		console.error('❌ Erreur sauvegarde périodique:', error);
-// 	}
-// }, SAVE_INTERVAL);
-
-console.log('📝 Sauvegarde périodique désactivée - sauvegarde à la création uniquement');
-
-// Sauvegarde lors de l'arrêt du serveur
-const gracefulShutdown = async (signal: string) => {
-	console.log(`\n📡 Signal ${signal} reçu, arrêt en cours...`);
-	
-	try {
-		console.log('💾 Sauvegarde finale des sessions...');
-		await sessionPersistence.saveAllSessions(
-			multiTenantManager.getUserSessionsMap(),
-			gmailService.getGmailSessionsMap(),
-			axonautService.getAxonautSessionsMap()
-		);
-		
-		await sessionPersistence.disconnect();
-		console.log('✅ Sauvegarde terminée');
-	} catch (error) {
-		console.error('❌ Erreur lors de la sauvegarde finale:', error);
-	}
-	
-	process.exit(0);
-};
-
-// Écouter les signaux d'arrêt
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2')); // nodemon
-
 // APPLICATION EXPRESS UNIFIÉE
 const app = express();
 
 // Juste trust proxy pour Railway (utile pour req.ip)
 app.set('trust proxy', 1);
+
+// Configuration des cookies et sessions
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Middleware pour parser les cookies
+app.use((req, res, next) => {
+	// Parser simple des cookies
+	req.cookies = {};
+	const cookieHeader = req.headers.cookie;
+	if (cookieHeader) {
+		cookieHeader.split(';').forEach(cookie => {
+			const [name, value] = cookie.trim().split('=');
+			if (name && value) {
+				req.cookies[name] = decodeURIComponent(value);
+			}
+		});
+	}
+	next();
+});
+
+
+// Middleware de session sécurisée
+app.use(async (req, res, next) => {
+	const sessionId = req.cookies['mcp-session'];
+	if (sessionId) {
+		const session = await sessionManager.getSession(sessionId);
+		if (session) {
+			req.userSession = session;
+		}
+	}
+	next();
+});
+
+// Helper pour définir des cookies sécurisés
+const setSecureCookie = (res: express.Response, name: string, value: string, maxAge?: number) => {
+	const isProduction = process.env.NODE_ENV === 'production';
+	const cookieOptions = [
+		`${name}=${encodeURIComponent(value)}`,
+		`Max-Age=${maxAge || 7 * 24 * 60 * 60}`, // 7 jours par défaut
+		'Path=/',
+		'HttpOnly',
+		'SameSite=Strict'
+	];
+	
+	if (isProduction) {
+		cookieOptions.push('Secure');
+	}
+	
+	res.setHeader('Set-Cookie', cookieOptions.join('; '));
+};
 
 // Headers de sécurité légers (optionnel)
 app.use((req, res, next) => {
@@ -500,6 +385,482 @@ app.get('/api/users/:userId/services', (req, res) => {
 	});
 });
 
+// Route pour obtenir le client ID Google (nécessaire côté client)
+app.get('/api/google/client-id', (req, res) => {
+	res.json({
+		clientId: GOOGLE_CLIENT_ID
+	});
+});
+
+// Route pour initier l'authentification Google (GET pour la page d'accueil)
+app.get('/api/auth/google', async (req, res) => {
+	try {
+		const authUrl = userManager.getAuthUrl();
+		res.json({
+			success: true,
+			authUrl
+		});
+	} catch (error) {
+		console.error('❌ Erreur génération URL auth Google:', error);
+		res.status(500).json({
+			success: false,
+			error: 'Erreur lors de la génération de l\'URL d\'authentification'
+		});
+	}
+});
+
+// Route pour initier l'authentification Google (POST pour compatibilité)
+app.post('/api/auth/google/start', async (req, res) => {
+	try {
+		const { OAuth2Client } = await import('google-auth-library');
+		const oauth2Client = new OAuth2Client(
+			GOOGLE_CLIENT_ID,
+			GOOGLE_CLIENT_SECRET,
+			`${BASE_URL}/auth/google/callback`
+		);
+
+		const authUrl = oauth2Client.generateAuthUrl({
+			access_type: 'offline',
+			prompt: 'consent',
+			scope: [
+				'https://www.googleapis.com/auth/userinfo.email',
+				'https://www.googleapis.com/auth/userinfo.profile'
+			],
+		});
+
+		res.json({
+			success: true,
+			authUrl
+		});
+	} catch (error) {
+		console.error('❌ Erreur génération URL auth Google:', error);
+		res.status(500).json({
+			success: false,
+			error: 'Erreur lors de la génération de l\'URL d\'authentification'
+		});
+	}
+});
+
+// Route de callback pour l'authentification Google (pour les comptes utilisateur)
+app.get('/auth/google/callback', async (req, res) => {
+	try {
+		const { code, error } = req.query;
+
+		if (error) {
+			console.error('❌ Erreur OAuth Google:', error);
+			return res.redirect('/?error=access_denied');
+		}
+
+		if (!code) {
+			return res.redirect('/?error=no_code');
+		}
+
+		// Authentifier l'utilisateur avec Google
+		const userId = await userManager.authenticateWithGoogle(code as string);
+		const user = await userManager.getUser(userId);
+        
+		if (!user) {
+			console.error('❌ Utilisateur non trouvé après authentification');
+			return res.redirect('/?error=user_not_found');
+		}
+
+		// Créer une session sécurisée
+		const sessionId = await sessionManager.createSession({
+			userId: user.user_id,
+			email: user.email,
+			name: user.name,
+			picture: user.picture
+		});
+
+		// Définir le cookie de session sécurisé
+		setSecureCookie(res, 'mcp-session', sessionId);
+        
+		// Rediriger vers la page des services
+		res.redirect('/pages/services.html?auth=success');
+	} catch (error) {
+		console.error('❌ Erreur callback Google:', error);
+		res.redirect('/?error=callback_error');
+	}
+});
+
+// === CALLBACKS OAUTH POUR SERVICES MCP ===
+
+// Callback pour connexion Gmail MCP
+app.get('/auth/google/callback/gmail', async (req, res) => {
+	try {
+		const { code, error, state } = req.query;
+
+		if (error) {
+			console.error('❌ Erreur OAuth Gmail:', error);
+			return res.redirect('/pages/gmail.html?error=access_denied');
+		}
+
+		if (!code) {
+			return res.redirect('/pages/gmail.html?error=no_code');
+		}
+
+		// Récupérer l'userId depuis le state OAuth
+		let userId: string | null = null;
+		if (state) {
+			const stateParams = new URLSearchParams(state as string);
+			userId = stateParams.get('userId');
+		}
+
+		if (!userId) {
+			console.error('❌ UserId manquant dans le state OAuth');
+			return res.redirect('/pages/gmail.html?error=invalid_state');
+		}
+
+		// Récupérer l'utilisateur depuis la base de données
+		const user = await userManager.getUser(userId);
+		if (!user) {
+			console.error('❌ Utilisateur non trouvé:', userId);
+			return res.redirect('/?error=user_not_found');
+		}
+
+		// Authentifier Gmail avec le code OAuth
+		const authResult = await gmailService.handleCallback(code as string);
+
+		if (authResult.success && authResult.userId) {
+			const gmailSession = (gmailService as any).gmailSessions.get(authResult.userId);
+			if (gmailSession) {
+				// Enregistrer la connexion MCP en base avec les informations Gmail
+				await userManager.connectMCPService(userId, 'gmail', {
+					externalUserId: authResult.userId,
+					userEmail: authResult.userEmail,
+					encryptedAccessToken: gmailSession.encryptedAccessToken,
+					encryptedRefreshToken: gmailSession.encryptedRefreshToken
+				});
+
+				return res.redirect(`/pages/gmail.html?success=true&userId=${authResult.userId}&email=${encodeURIComponent(authResult.userEmail || '')}`);
+			} else {
+				return res.redirect('/pages/gmail.html?error=session_not_found');
+			}
+		} else {
+			return res.redirect('/pages/gmail.html?error=auth_failed');
+		}
+
+	} catch (error) {
+		console.error('❌ Erreur callback Gmail:', error);
+		return res.redirect('/pages/gmail.html?error=server_error');
+	}
+});
+
+// Callback pour connexion Axonaut (si OAuth dans le futur)
+app.get('/auth/axonaut/callback', async (req, res) => {
+	try {
+		// Pour l'instant Axonaut utilise API key, mais on peut prévoir OAuth
+		return res.redirect('/pages/axonaut.html?auth=success');
+	} catch (error) {
+		console.error('❌ Erreur callback Axonaut:', error);
+		return res.redirect('/pages/axonaut.html?error=server_error');
+	}
+});
+
+// Route pour récupérer les informations de l'utilisateur connecté
+app.get('/api/user/me', async (req, res) => {
+	if (!req.userSession) {
+		return res.status(401).json({
+			success: false,
+			error: 'Non authentifié'
+		});
+	}
+
+	res.json({
+		success: true,
+		user: {
+			userId: req.userSession.userId,
+			email: req.userSession.email,
+			name: req.userSession.name,
+			picture: req.userSession.picture
+		}
+	});
+});
+
+// Route pour déconnexion
+app.post('/api/auth/logout', async (req, res) => {
+	const sessionId = req.cookies['mcp-session'];
+	if (sessionId) {
+		await sessionManager.deleteSession(sessionId);
+	}
+	
+	// Supprimer le cookie
+	res.setHeader('Set-Cookie', 'mcp-session=; Max-Age=0; Path=/; HttpOnly');
+	
+	res.json({
+		success: true,
+		message: 'Déconnexion réussie'
+	});
+});
+
+// ROUTES D'AUTHENTIFICATION GOOGLE UTILISATEUR
+app.post('/auth/google/callback', async (req, res) => {
+	try {
+		const { code } = req.body;
+		
+		if (!code) {
+			return res.status(400).json({
+				success: false,
+				error: 'Code Google manquant'
+			});
+		}
+		
+		// Authentifier l'utilisateur avec Google
+		const userId = await userManager.authenticateWithGoogle(code);
+		
+		res.json({
+			success: true,
+			userId,
+			redirectUrl: `/pages/services.html?userId=${userId}`
+		});
+	} catch (error) {
+		console.error('❌ Erreur authentification Google:', error);
+		res.status(401).json({
+			success: false,
+			error: 'Authentification Google échouée'
+		});
+	}
+});
+
+app.post('/api/auth/google', async (req, res) => {
+	try {
+		const { googleCode } = req.body;
+		
+		if (!googleCode) {
+			return res.status(400).json({
+				success: false,
+				error: 'Code Google manquant'
+			});
+		}
+		
+		// Authentifier l'utilisateur avec Google
+		const userId = await userManager.authenticateWithGoogle(googleCode);
+		
+		res.json({
+			success: true,
+			userId,
+			redirectUrl: `/pages/services.html?userId=${userId}`
+		});
+	} catch (error) {
+		console.error('❌ Erreur authentification Google:', error);
+		res.status(401).json({
+			success: false,
+			error: 'Authentification Google échouée'
+		});
+	}
+});
+
+// Route pour obtenir les informations du compte
+app.get('/api/account/:userId', async (req, res) => {
+	try {
+		const { userId } = req.params;
+		
+		const user = await userManager.getUser(userId);
+		if (!user) {
+			return res.status(404).json({
+				success: false,
+				error: 'Utilisateur non trouvé'
+			});
+		}
+		
+		// Obtenir les services connectés depuis le PersistentUserManager
+		const connectedServices = [];
+		const mcpConnections = await userManager.getUserMCPConnections(userId);
+		
+		if (mcpConnections) {
+			// Rechercher Gmail
+			const gmailConnection = mcpConnections.find(c => c.service_name === 'gmail' && c.is_connected);
+			if (gmailConnection) {
+				connectedServices.push({
+					name: 'gmail',
+					displayName: 'Gmail',
+					connectedAt: gmailConnection.connected_at,
+					lastUsed: gmailConnection.last_used
+				});
+			}
+			
+			// Rechercher Axonaut
+			const axonautConnection = mcpConnections.find(c => c.service_name === 'axonaut' && c.is_connected);
+			if (axonautConnection) {
+				connectedServices.push({
+					name: 'axonaut',
+					displayName: 'Axonaut',
+					connectedAt: axonautConnection.connected_at,
+					lastUsed: axonautConnection.last_used
+				});
+			}
+			
+			// Rechercher Notion
+			const notionConnection = mcpConnections.find(c => c.service_name === 'notion' && c.is_connected);
+			if (notionConnection) {
+				connectedServices.push({
+					name: 'notion',
+					displayName: 'Notion',
+					connectedAt: notionConnection.connected_at,
+					lastUsed: notionConnection.last_used
+				});
+			}
+		}
+		
+		res.json({
+			success: true,
+			user: {
+				email: user.email,
+				name: user.name,
+				picture: user.picture,
+				createdAt: user.created_at,
+				lastLoginAt: user.last_login_at
+			},
+			connectedServices
+		});
+	} catch (error) {
+		console.error('❌ Erreur récupération compte:', error);
+		res.status(500).json({
+			success: false,
+			error: 'Erreur serveur'
+		});
+	}
+});
+
+// Route pour déconnecter un service spécifique
+app.post('/api/account/:userId/disconnect/:serviceName', async (req, res) => {
+	try {
+		const { userId, serviceName } = req.params;
+		
+		// Vérifier que l'utilisateur existe
+		const user = await userManager.getUser(userId);
+		if (!user) {
+			return res.status(404).json({
+				success: false,
+				error: 'Utilisateur non trouvé'
+			});
+		}
+		
+		// Déconnecter le service MCP
+		const success = await userManager.disconnectMCPService(userId, serviceName as 'gmail' | 'axonaut' | 'notion');
+		const removed = multiTenantManager.removeServiceSession(userId, serviceName);
+		
+		if (success && removed) {
+			// Supprimer aussi du gestionnaire de services
+			if (serviceName === 'gmail') {
+				gmailService.removeSession(userId);
+			} else if (serviceName === 'axonaut') {
+				axonautService.removeSession(userId);
+			}
+			
+			res.json({
+				success: true,
+				message: `Service ${serviceName} déconnecté avec succès`
+			});
+		} else {
+			res.status(404).json({
+				success: false,
+				error: 'Service non trouvé ou déjà déconnecté'
+			});
+		}
+	} catch (error) {
+		console.error('❌ Erreur déconnexion service:', error);
+		res.status(500).json({
+			success: false,
+			error: 'Erreur lors de la déconnexion'
+		});
+	}
+});
+
+// Route pour supprimer complètement un compte utilisateur
+app.delete('/api/account/:userId/delete', async (req, res) => {
+	try {
+		const { userId } = req.params;
+		
+		// Vérifier que l'utilisateur existe
+		const user = await userManager.getUser(userId);
+		if (!user) {
+			return res.status(404).json({
+				success: false,
+				error: 'Utilisateur non trouvé'
+			});
+		}
+		
+		// Supprimer toutes les sessions de services
+		const userSession = multiTenantManager.getUserSession(userId);
+		if (userSession) {
+			if (userSession.services.gmail) {
+				gmailService.removeSession(userId);
+			}
+			if (userSession.services.axonaut) {
+				axonautService.removeSession(userId);
+			}
+		}
+		
+		// Supprimer la session utilisateur
+		multiTenantManager.getUserSessionsMap().delete(userId);
+		
+		// Supprimer de Redis
+		await sessionPersistence.deleteUserSession(userId);
+		
+		// Supprimer l'utilisateur du gestionnaire persistant
+		await userManager.deleteUser(userId);
+		
+		res.json({
+			success: true,
+			message: 'Compte supprimé avec succès'
+		});
+	} catch (error) {
+		console.error('❌ Erreur suppression compte:', error);
+		res.status(500).json({
+			success: false,
+			error: 'Erreur lors de la suppression du compte'
+		});
+	}
+});
+
+// === ROUTES D'ADMINISTRATION ===
+
+// Route pour les statistiques d'administration
+app.get('/api/admin/stats', async (req, res) => {
+	try {
+		const stats = await userManager.getUsageStats();
+		res.json(stats);
+	} catch (error) {
+		console.error('❌ Erreur récupération statistiques admin:', error);
+		res.status(500).json({
+			success: false,
+			error: 'Erreur serveur'
+		});
+	}
+});
+
+// Route pour lister tous les utilisateurs avec leurs connexions
+app.get('/api/admin/users', async (req, res) => {
+	try {
+		const allUsers = await database.getAllUsers();
+		
+		// Enrichir avec les connexions MCP pour chaque utilisateur
+		const usersWithConnections = await Promise.all(
+			allUsers.map(async (user: any) => {
+				const mcpConnections = await userManager.getUserMCPConnections(user.user_id);
+				return {
+					...user,
+					mcpConnections
+				};
+			})
+		);
+
+		res.json(usersWithConnections);
+	} catch (error) {
+		console.error('❌ Erreur récupération utilisateurs admin:', error);
+		res.status(500).json({
+			success: false,
+			error: 'Erreur serveur'
+		});
+	}
+});
+
+// Page d'administration
+app.get('/admin', (req, res) => {
+	res.sendFile(path.join(__dirname, '../public/pages/admin.html'));
+});
+
 // ROUTES OAUTH (CONSERVÉES POUR LA COMPATIBILITÉ)
 app.post('/api/auth/start', async (req, res) => {
 	try {
@@ -515,6 +876,52 @@ app.post('/api/auth/start', async (req, res) => {
 		res.status(500).json({
 			success: false,
 			error: 'Erreur lors de la génération de l\'URL d\'authentification'
+		});
+	}
+});
+
+// Route spécifique pour l'authentification Gmail MCP
+app.post('/api/oauth/gmail', async (req, res) => {
+	console.log('🚀 [API-OAUTH-GMAIL] Route appelée');
+	console.log('🍪 [API-OAUTH-GMAIL] Cookies:', req.cookies);
+	
+	try {
+		// Vérifier la session utilisateur
+		const sessionId = req.cookies['mcp-session'];
+		if (!sessionId) {
+			console.error('❌ [API-OAUTH-GMAIL] Pas de session');
+			return res.status(401).json({
+				success: false,
+				error: 'Session utilisateur requise'
+			});
+		}
+
+		const session = await sessionManager.getSession(sessionId);
+		if (!session) {
+			console.error('❌ [API-OAUTH-GMAIL] Session invalide');
+			return res.status(401).json({
+				success: false,
+				error: 'Session utilisateur invalide'
+			});
+		}
+
+		console.log('👤 [API-OAUTH-GMAIL] Session utilisateur valide:', session.email);
+		
+		// Passer l'userId dans l'état OAuth pour le récupérer au callback
+		const state = `flow=gmail&userId=${session.userId}`;
+		const authUrl = gmailService.createAuthUrl(state);
+		console.log('🔗 [API-OAUTH-GMAIL] URL générée avec userId dans state:', authUrl);
+		
+		res.json({
+			success: true,
+			authUrl: authUrl,
+			service: 'gmail'
+		});
+	} catch (error) {
+		console.error('❌ [API-OAUTH-GMAIL] Erreur création URL:', error);
+		res.status(500).json({
+			success: false,
+			error: 'Erreur lors de la génération de l\'URL d\'authentification Gmail'
 		});
 	}
 });
@@ -821,5 +1228,5 @@ app.listen(PORT, () => {
 	console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
 	console.log(`📋 Services activés: ${serviceRegistry.getEnabledServices().map(s => s.displayName).join(', ')}`);
 	console.log(`📡 Endpoint MCP: ${BASE_URL}/:userId/mcp/sse`);
-	console.log(`💾 Persistance Redis activée avec sauvegarde toutes les ${SAVE_INTERVAL / 60000} minutes`);
+	console.log(`💾 Persistance Redis activée avec utilisateurs persistants`);
 });
