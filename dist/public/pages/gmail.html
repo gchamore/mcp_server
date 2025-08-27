@@ -478,23 +478,23 @@
 			endpointInfo.classList.add('show');
 			toolsSection.classList.add('show');
 
-			// Transformer le bouton en bouton de déconnexion
-			connectBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Se déconnecter';
+			// Transformer le bouton en bouton de suppression
+			connectBtn.innerHTML = '<i class="fas fa-trash"></i> Supprimer le MCP';
 			connectBtn.className = 'connect-btn disconnect';
-			connectBtn.onclick = () => disconnectGmail();
+			connectBtn.onclick = () => deleteGmailMCP();
 
 			currentUserId = userId;
 			isConnected = true;
 		}
 
 		function updateConnectedStateFromExisting(userId, gmailData) {
-			updateConnectedState(userId, 'Utilisateur connecté', gmailData.mcpEndpoint);
+			updateConnectedState(userId, gmailData.userEmail || 'Utilisateur connecté', gmailData.mcpEndpoint);
 			showMessage('Connexion Gmail restaurée !', 'success');
 		}
 
 		async function handleConnection() {
 			if (isConnected) {
-				await disconnectGmail();
+				await deleteGmailMCP();
 			} else {
 				await startOAuth();
 			}
@@ -519,28 +519,40 @@
 			}
 		}
 
-		async function disconnectGmail() {
+		async function deleteGmailMCP() {
 			if (!currentUserId) {
 				showMessage('Aucun utilisateur connecté', 'error');
 				return;
 			}
 
-			setLoadingState('Déconnexion...');
+			console.log('Tentative de suppression du MCP Gmail pour userId:', currentUserId);
+			setLoadingState('Suppression du MCP...');
 			hideMessage();
 
 			try {
-				const response = await fetch(`/api/user/${currentUserId}/disconnect/gmail`, {
-					method: 'POST'
+				const response = await fetch(`/api/user/${currentUserId}/delete-mcp/gmail`, {
+					method: 'DELETE'
 				});
+				
+				console.log('Réponse HTTP:', response.status, response.statusText);
+				
+				if (!response.ok) {
+					throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
+				}
+				
 				const data = await response.json();
+				console.log('Données reçues:', data);
 
 				if (data.success) {
-					showMessage('Déconnexion réussie !', 'success');
+					showMessage('MCP Gmail supprimé avec succès !', 'success');
 					resetToInitialState();
+					// Vérifier à nouveau les connexions après suppression
+					setTimeout(() => checkExistingConnections(), 1000);
 				} else {
-					throw new Error(data.error || 'Erreur lors de la déconnexion');
+					throw new Error(data.error || 'Erreur lors de la suppression du MCP');
 				}
 			} catch (error) {
+				console.error('Erreur lors de la suppression:', error);
 				showMessage('Erreur: ' + error.message, 'error');
 				resetButton();
 			}
@@ -548,12 +560,26 @@
 
 		function setLoadingState(text) {
 			const connectBtn = document.getElementById('connectBtn');
-			const connectText = document.getElementById('connectText');
-			const loadingIcon = document.getElementById('loadingIcon');
+
+			if (!connectBtn) return;
 
 			connectBtn.disabled = true;
-			connectText.textContent = text;
-			loadingIcon.classList.add('show');
+
+			// Pour le bouton de suppression, on remplace complètement le contenu
+			if (isConnected) {
+				connectBtn.innerHTML = `<i class="fas fa-spinner loading show"></i> ${text}`;
+			} else {
+				// Pour le bouton de connexion normal, on utilise les éléments séparés
+				const connectText = document.getElementById('connectText');
+				const loadingIcon = document.getElementById('loadingIcon');
+
+				if (connectText) {
+					connectText.textContent = text;
+				}
+				if (loadingIcon) {
+					loadingIcon.classList.add('show');
+				}
+			}
 		}
 
 		function resetButton() {
@@ -562,11 +588,23 @@
 			const loadingIcon = document.getElementById('loadingIcon');
 
 			connectBtn.disabled = false;
-			connectText.textContent = 'Se connecter avec Gmail';
-			connectBtn.className = 'connect-btn';
-			connectBtn.innerHTML = '<i class="fab fa-google"></i> Se connecter avec Gmail';
+			
+			// Si l'élément connectText existe, on le remet à jour
+			if (connectText) {
+				connectText.textContent = 'Se connecter avec Gmail';
+				connectBtn.className = 'connect-btn';
+				connectBtn.innerHTML = '<i class="fab fa-google"></i> Se connecter avec Gmail';
+			} else {
+				// Sinon, on recrée la structure complète
+				connectBtn.className = 'connect-btn';
+				connectBtn.innerHTML = '<i class="fab fa-google"></i> <span id="connectText">Se connecter avec Gmail</span> <i id="loadingIcon" class="fas fa-spinner loading"></i>';
+			}
+			
 			connectBtn.onclick = () => handleConnection();
-			loadingIcon.classList.remove('show');
+			
+			if (loadingIcon) {
+				loadingIcon.classList.remove('show');
+			}
 		}
 
 		function resetToInitialState() {

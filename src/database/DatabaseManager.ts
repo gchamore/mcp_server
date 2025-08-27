@@ -261,7 +261,20 @@ export class DatabaseManager {
         return (result.rowCount || 0) > 0;
     }
 
-    // Récupérer les connexions MCP d'un utilisateur
+    // Supprimer complètement un service MCP de la base de données
+    async deleteMCPService(user_id: string, service_name: string): Promise<boolean> {
+        console.log(`[DELETE MCP DB] Tentative suppression - UserId: ${user_id}, Service: ${service_name}`);
+
+        const query = `
+            DELETE FROM mcp_connections
+            WHERE user_id = $1 AND service_name = $2`;
+
+        const result = await this.pool.query(query, [user_id, service_name]);
+
+        console.log(`[DELETE MCP DB] Résultat requête - RowCount: ${result.rowCount}`);
+
+        return (result.rowCount || 0) > 0;
+    }    // Récupérer les connexions MCP d'un utilisateur
     async getUserMCPConnections(user_id: string): Promise<MCPConnection[]> {
         const query = `
             SELECT * FROM mcp_connections 

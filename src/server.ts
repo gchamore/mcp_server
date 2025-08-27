@@ -358,6 +358,10 @@ app.get('/api/user/:userId/connections', async (req, res) => {
 			return res.status(400).json({ error: 'UserId manquant' });
 		}
 
+		// Récupérer l'utilisateur pour obtenir son email
+		const user = await userManager.getUser(userId);
+		console.log(`[CONNECTIONS API] Utilisateur trouvé:`, user ? `Email: ${user.email}` : 'Utilisateur non trouvé');
+
 		// Récupérer les connexions MCP de l'utilisateur
 		const connections = await database.getUserMCPConnections(userId);
 
@@ -375,7 +379,8 @@ app.get('/api/user/:userId/connections', async (req, res) => {
 						isConnected: true,
 						connectedAt: gmailConnection.connected_at,
 						lastUsed: gmailConnection.last_used,
-						mcpEndpoint: mcpEndpoint
+						mcpEndpoint: mcpEndpoint,
+						userEmail: user?.email || 'Email non disponible'
 					}
 				}
 			});
@@ -435,6 +440,53 @@ app.post('/api/user/:userId/disconnect/:serviceName', async (req, res) => {
 
 	} catch (error) {
 		console.error('Erreur lors de la déconnexion:', error);
+		res.status(500).json({ error: 'Erreur serveur' });
+	}
+});
+
+// Supprimer complètement un service MCP
+app.delete('/api/user/:userId/delete-mcp/:serviceName', async (req, res) => {
+	try {
+		const userId = req.params.userId;
+		const serviceName = req.params.serviceName;
+
+		console.log(`[DELETE MCP] Tentative de suppression - UserId: ${userId}, Service: ${serviceName}`);
+
+		if (!userId || !serviceName) {
+			return res.status(400).json({ error: 'Paramètres manquants' });
+		}
+
+		// Vérifier que le service est valide
+		if (!['gmail', 'axonaut', 'notion'].includes(serviceName)) {
+			return res.status(400).json({ error: 'Service non valide' });
+		}
+
+		// Supprimer complètement le service
+		const success = await database.deleteMCPService(userId, serviceName as 'gmail' | 'axonaut' | 'notion');
+
+		console.log(`[DELETE MCP] Résultat suppression - Success: ${success}`);
+
+		if (success) {
+			// Supprimer aussi la session du service en mémoire si elle existe
+			if (serviceName === 'gmail') {
+				gmailService.removeSession(userId);
+			} else if (serviceName === 'axonaut') {
+				axonautService.removeSession(userId);
+			}
+
+			res.json({
+				success: true,
+				message: `MCP ${serviceName} supprimé avec succès`
+			});
+		} else {
+			res.status(404).json({
+				success: false,
+				error: 'Service non trouvé ou déjà supprimé'
+			});
+		}
+
+	} catch (error) {
+		console.error('Erreur lors de la suppression du MCP:', error);
 		res.status(500).json({ error: 'Erreur serveur' });
 	}
 });
@@ -670,7 +722,7 @@ app.get('/auth/google/callback/gmail', async (req, res) => {
 					encryptedRefreshToken: gmailSession.encryptedRefreshToken
 				});
 
-				return res.redirect(`/pages/gmail.html?success=true&userId=${authResult.userId}&email=${encodeURIComponent(authResult.userEmail || '')}`);
+				return res.redirect(`/pages/gmail.html?success=true&userId=${userId}&email=${encodeURIComponent(authResult.userEmail || '')}`);
 			} else {
 				return res.redirect('/pages/gmail.html?error=session_not_found');
 			}
