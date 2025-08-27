@@ -30,25 +30,11 @@ CREATE TABLE IF NOT EXISTS mcp_connections (
     UNIQUE(user_id, service_name)
 );
 
--- Table des sessions (optionnel, on peut garder Redis)
-CREATE TABLE IF NOT EXISTS user_sessions (
-    id SERIAL PRIMARY KEY,
-    session_id VARCHAR(128) UNIQUE NOT NULL,
-    user_id VARCHAR(32) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    last_accessed TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    ip_address INET,
-    user_agent TEXT
-);
-
 -- Index pour performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_user_id ON users(user_id);
 CREATE INDEX IF NOT EXISTS idx_mcp_connections_user_id ON mcp_connections(user_id);
 CREATE INDEX IF NOT EXISTS idx_mcp_connections_service ON mcp_connections(service_name);
-CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON user_sessions(user_id);
-CREATE INDEX IF NOT EXISTS idx_sessions_expires ON user_sessions(expires_at);
 
 -- Trigger pour updated_at automatique
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -69,11 +55,3 @@ DROP TRIGGER IF EXISTS update_mcp_connections_updated_at ON mcp_connections;
 CREATE TRIGGER update_mcp_connections_updated_at 
     BEFORE UPDATE ON mcp_connections 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- Nettoyage automatique des sessions expirées (optionnel)
-CREATE OR REPLACE FUNCTION cleanup_expired_sessions()
-RETURNS void AS $$
-BEGIN
-    DELETE FROM user_sessions WHERE expires_at < NOW();
-END;
-$$ LANGUAGE plpgsql;

@@ -348,6 +348,144 @@ app.get('/detailed', (req, res) => {
 	res.sendFile(path.join(__dirname, '..', 'public', 'index_detailed.html'));
 });
 
+// API ROUTES
+// Vérifier les connexions MCP existantes pour un utilisateur
+app.get('/api/user/:userId/connections', async (req, res) => {
+	try {
+		const userId = req.params.userId;
+
+		if (!userId) {
+			return res.status(400).json({ error: 'UserId manquant' });
+		}
+
+		// Récupérer les connexions MCP de l'utilisateur
+		const connections = await database.getUserMCPConnections(userId);
+
+		// Vérifier spécifiquement la connexion Gmail
+		const gmailConnection = connections.find(conn => conn.service_name === 'gmail');
+
+		if (gmailConnection && gmailConnection.is_connected) {
+			// Générer l'URL MCP pour Gmail
+			const mcpEndpoint = `${BASE_URL}/${userId}/mcp/sse`;
+
+			return res.json({
+				success: true,
+				connections: {
+					gmail: {
+						isConnected: true,
+						connectedAt: gmailConnection.connected_at,
+						lastUsed: gmailConnection.last_used,
+						mcpEndpoint: mcpEndpoint
+					}
+				}
+			});
+		} else {
+			return res.json({
+				success: true,
+				connections: {
+					gmail: {
+						isConnected: false
+					}
+				}
+			});
+		}
+
+	} catch (error) {
+		console.error('Erreur lors de la vérification des connexions:', error);
+		res.status(500).json({ error: 'Erreur serveur' });
+	}
+});
+
+// Déconnecter un service MCP
+app.post('/api/user/:userId/disconnect/:serviceName', async (req, res) => {
+	try {
+		const userId = req.params.userId;
+		const serviceName = req.params.serviceName;
+
+		if (!userId || !serviceName) {
+			return res.status(400).json({ error: 'Paramètres manquants' });
+		}
+
+		// Vérifier que le service est valide
+		if (!['gmail', 'axonaut', 'notion'].includes(serviceName)) {
+			return res.status(400).json({ error: 'Service non valide' });
+		}
+
+		// Déconnecter le service
+		const success = await database.disconnectMCPService(userId, serviceName as 'gmail' | 'axonaut' | 'notion');
+
+		if (success) {
+			// Supprimer aussi la session du service en mémoire si elle existe
+			if (serviceName === 'gmail') {
+				gmailService.removeSession(userId);
+			} else if (serviceName === 'axonaut') {
+				axonautService.removeSession(userId);
+			}
+
+			res.json({
+				success: true,
+				message: `Service ${serviceName} déconnecté avec succès`
+			});
+		} else {
+			res.status(404).json({
+				success: false,
+				error: 'Service non trouvé ou déjà déconnecté'
+			});
+		}
+
+	} catch (error) {
+		console.error('Erreur lors de la déconnexion:', error);
+		res.status(500).json({ error: 'Erreur serveur' });
+	}
+});
+
+// Récupérer la session actuelle
+app.get('/api/session/current', async (req, res) => {
+	try {
+		// Essayer de récupérer l'userId depuis différents endroits
+
+		// 1. Depuis les paramètres de requête
+		let userId = req.query.userId as string;
+
+		// 2. Depuis l'authentification Google (si disponible)
+		if (!userId) {
+			const authHeader = req.headers.authorization;
+			if (authHeader && authHeader.startsWith('Bearer ')) {
+				// TODO: Implémenter la validation du token Google si nécessaire
+			}
+		}
+
+		// 3. Depuis les sessions Redis (si disponible)
+		if (!userId) {
+			// Essayer de récupérer depuis Redis si configuré
+			try {
+				const redisPersistence = (global as any).redisPersistence;
+				if (redisPersistence && redisPersistence.isAvailable) {
+					// TODO: Implémenter la récupération depuis Redis si nécessaire
+				}
+			} catch (e) {
+				// Ignorer les erreurs Redis
+			}
+		}
+
+		if (userId) {
+			res.json({
+				success: true,
+				userId: userId
+			});
+		} else {
+			res.json({
+				success: false,
+				error: 'Aucune session active trouvée'
+			});
+		}
+
+	} catch (error) {
+		console.error('Erreur lors de la récupération de session:', error);
+		res.status(500).json({ error: 'Erreur serveur' });
+	}
+});
+
 // NOUVELLES ROUTES API POUR LA GESTION MULTI-SERVICES
 
 // API pour obtenir les services disponibles
@@ -1097,8 +1235,18 @@ app.post('/api/disconnect/:userId/:serviceName', async (req, res) => {
 			console.log(`[Disconnect] Session Axonaut trouvée directement dans AxonautService: ${!!axonautSession}`);
 		}
 
-		if (!hasSession) {
-			console.log(`[Disconnect] Aucune session ${serviceName} active pour l'utilisateur ${userId}`);
+		// Vérifier aussi s'il y a une connexion en base de données
+		let hasDatabaseConnection = false;
+		try {
+			const connections = await database.getUserMCPConnections(userId);
+			hasDatabaseConnection = connections.some(conn => conn.service_name === serviceName && conn.is_connected);
+			console.log(`[Disconnect] Connexion ${serviceName} trouvée en base de données: ${hasDatabaseConnection}`);
+		} catch (dbError) {
+			console.warn(`[Disconnect] Erreur vérification base de données:`, dbError);
+		}
+
+		if (!hasSession && !hasDatabaseConnection) {
+			console.log(`[Disconnect] Aucune session ${serviceName} active ni connexion en base pour l'utilisateur ${userId}`);
 			return res.status(404).json({
 				success: false,
 				error: `Aucune session active ${serviceName} trouvée pour l'utilisateur ${userId}`
@@ -1108,6 +1256,7 @@ app.post('/api/disconnect/:userId/:serviceName', async (req, res) => {
 		// Supprimer la session du service
 		let removed = false;
 		let serviceSpecificRemoved = false;
+		let databaseDisconnected = false;
 
 		try {
 			// Supprimer la session du MultiTenantManager
@@ -1123,8 +1272,14 @@ app.post('/api/disconnect/:userId/:serviceName', async (req, res) => {
 				console.log(`[Disconnect] Session Axonaut supprimée du service: ${serviceSpecificRemoved}`);
 			}
 
-			// Considérer la suppression réussie si au moins une des deux a fonctionné
-			const overallSuccess = removed || serviceSpecificRemoved;
+			// Supprimer aussi la connexion de la base de données si elle existe
+			if (hasDatabaseConnection) {
+				databaseDisconnected = await database.disconnectMCPService(userId, serviceName);
+				console.log(`[Disconnect] Connexion ${serviceName} supprimée de la base de données: ${databaseDisconnected}`);
+			}
+
+			// Considérer la suppression réussie si au moins une des trois a fonctionné
+			const overallSuccess = removed || serviceSpecificRemoved || databaseDisconnected;
 
 			if (overallSuccess) {
 				console.log(`[Disconnect] Déconnexion ${serviceName} réussie pour l'utilisateur ${userId}`);
@@ -1135,7 +1290,8 @@ app.post('/api/disconnect/:userId/:serviceName', async (req, res) => {
 					service: serviceName,
 					details: {
 						multiTenantManager: removed,
-						serviceSpecific: serviceSpecificRemoved
+						serviceSpecific: serviceSpecificRemoved,
+						database: databaseDisconnected
 					}
 				});
 			} else {

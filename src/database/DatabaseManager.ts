@@ -34,17 +34,6 @@ export interface MCPConnection {
     updated_at: Date;
 }
 
-export interface UserSession {
-    id: number;
-    session_id: string;
-    user_id: string;
-    expires_at: Date;
-    created_at: Date;
-    last_accessed: Date;
-    ip_address?: string;
-    user_agent?: string;
-}
-
 export class DatabaseManager {
     private pool: Pool;
     private isInitialized = false;
@@ -282,67 +271,6 @@ export class DatabaseManager {
             WHERE user_id = $1 AND service_name = $2`;
 
         await this.pool.query(query, [user_id, service_name]);
-    }
-
-    // === GESTION DES SESSIONS (Optionnel - on peut garder Redis) ===
-
-    // Créer une session
-    async createSession(sessionData: {
-        session_id: string;
-        user_id: string;
-        expires_at: Date;
-        ip_address?: string;
-        user_agent?: string;
-    }): Promise<UserSession> {
-        const query = `
-            INSERT INTO user_sessions (session_id, user_id, expires_at, ip_address, user_agent)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING *`;
-
-        const values = [
-            sessionData.session_id,
-            sessionData.user_id,
-            sessionData.expires_at,
-            sessionData.ip_address || null,
-            sessionData.user_agent || null
-        ];
-
-        const result = await this.pool.query(query, values);
-        return result.rows[0];
-    }
-
-    // Récupérer une session
-    async getSession(session_id: string): Promise<UserSession | null> {
-        const query = `
-            SELECT * FROM user_sessions 
-            WHERE session_id = $1 AND expires_at > NOW()`;
-
-        const result = await this.pool.query(query, [session_id]);
-        
-        if (result.rows.length > 0) {
-            // Mettre à jour last_accessed
-            await this.pool.query(
-                'UPDATE user_sessions SET last_accessed = NOW() WHERE session_id = $1',
-                [session_id]
-            );
-            return result.rows[0];
-        }
-        
-        return null;
-    }
-
-    // Supprimer une session
-    async deleteSession(session_id: string): Promise<boolean> {
-        const query = 'DELETE FROM user_sessions WHERE session_id = $1';
-        const result = await this.pool.query(query, [session_id]);
-        return (result.rowCount || 0) > 0;
-    }
-
-    // Nettoyer les sessions expirées
-    async cleanupExpiredSessions(): Promise<number> {
-        const query = 'DELETE FROM user_sessions WHERE expires_at < NOW()';
-        const result = await this.pool.query(query);
-        return result.rowCount || 0;
     }
 
     // === STATISTIQUES ===

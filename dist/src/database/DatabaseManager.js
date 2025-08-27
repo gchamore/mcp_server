@@ -183,42 +183,6 @@ export class DatabaseManager {
             WHERE user_id = $1 AND service_name = $2`;
         await this.pool.query(query, [user_id, service_name]);
     }
-    async createSession(sessionData) {
-        const query = `
-            INSERT INTO user_sessions (session_id, user_id, expires_at, ip_address, user_agent)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING *`;
-        const values = [
-            sessionData.session_id,
-            sessionData.user_id,
-            sessionData.expires_at,
-            sessionData.ip_address || null,
-            sessionData.user_agent || null
-        ];
-        const result = await this.pool.query(query, values);
-        return result.rows[0];
-    }
-    async getSession(session_id) {
-        const query = `
-            SELECT * FROM user_sessions 
-            WHERE session_id = $1 AND expires_at > NOW()`;
-        const result = await this.pool.query(query, [session_id]);
-        if (result.rows.length > 0) {
-            await this.pool.query('UPDATE user_sessions SET last_accessed = NOW() WHERE session_id = $1', [session_id]);
-            return result.rows[0];
-        }
-        return null;
-    }
-    async deleteSession(session_id) {
-        const query = 'DELETE FROM user_sessions WHERE session_id = $1';
-        const result = await this.pool.query(query, [session_id]);
-        return (result.rowCount || 0) > 0;
-    }
-    async cleanupExpiredSessions() {
-        const query = 'DELETE FROM user_sessions WHERE expires_at < NOW()';
-        const result = await this.pool.query(query);
-        return result.rowCount || 0;
-    }
     async getStats() {
         const queries = [
             'SELECT COUNT(*) as count FROM users',

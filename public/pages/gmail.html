@@ -1,13 +1,24 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Gmail MCP - Connexion</title>
 	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 	<style>
+		:root {
+			--primary-blue: #4285f4;
+			--primary-green: #34a853;
+			--gmail-red: #ea4335;
+			--success-green: #27ae60;
+			--error-red: #e74c3c;
+			--text-primary: #2c3e50;
+			--text-secondary: #7f8c8d;
+			--bg-light: #f8f9fa;
+			--border-light: #e9ecef;
+		}
+
 		* {
 			margin: 0;
 			padding: 0;
@@ -58,7 +69,6 @@
 			max-width: 500px;
 			width: 90%;
 			text-align: center;
-			border: 1px solid rgba(255, 255, 255, 0.2);
 		}
 
 		.service-header {
@@ -68,79 +78,41 @@
 		.service-logo {
 			font-size: 4rem;
 			margin-bottom: 1rem;
-			color: #ea4335;
+			color: var(--gmail-red);
 		}
 
 		.service-title {
 			font-size: 2.2rem;
 			font-weight: 700;
 			margin-bottom: 0.5rem;
-			color: #2c3e50;
+			color: var(--text-primary);
 		}
 
 		.service-subtitle {
-			color: #7f8c8d;
+			color: var(--text-secondary);
 			margin-bottom: 2rem;
 			font-size: 1.1rem;
-			font-weight: 400;
-		}
-
-		.features-list {
-			background: #f8f9fa;
-			border-radius: 15px;
-			padding: 1.5rem;
-			margin: 2rem 0;
-			text-align: left;
-		}
-
-		.features-title {
-			font-weight: 600;
-			margin-bottom: 1rem;
-			color: #2c3e50;
-			text-align: center;
-		}
-
-		.feature-item {
-			display: flex;
-			align-items: center;
-			gap: 0.8rem;
-			padding: 0.5rem 0;
-			color: #495057;
-		}
-
-		.feature-icon {
-			color: #27ae60;
-			width: 20px;
 		}
 
 		.status-card {
-			background: #f8f9fa;
+			background: var(--bg-light);
 			border-radius: 15px;
 			padding: 2rem;
 			margin: 2rem 0;
 			transition: all 0.3s ease;
-			text-align: center;
 			display: flex;
 			justify-content: center;
 			align-items: center;
+			flex-direction: column;
+			gap: 1rem;
 		}
 
 		.status-card.connected {
 			background: #f0fff4;
 		}
 
-		.status-icon {
-			font-size: 2rem;
-			margin-bottom: 1rem;
-			color: #e74c3c;
-		}
-
-		.status-card.connected .status-icon {
-			color: #27ae60;
-		}
-
 		.connect-btn {
-			background: linear-gradient(45deg, #4285f4, #34a853);
+			background: linear-gradient(45deg, var(--primary-blue), var(--primary-green));
 			color: white;
 			border: none;
 			padding: 1rem 2rem;
@@ -157,7 +129,7 @@
 			justify-content: center;
 		}
 
-		.connect-btn:hover {
+		.connect-btn:hover:not(:disabled) {
 			transform: translateY(-2px);
 			box-shadow: 0 10px 25px rgba(66, 133, 244, 0.3);
 		}
@@ -165,31 +137,38 @@
 		.connect-btn:disabled {
 			opacity: 0.6;
 			cursor: not-allowed;
-			transform: none;
 		}
 
-		.user-info {
-			background: #f0fff4;
+		.connect-btn.disconnect {
+			background: var(--error-red);
+		}
+
+		.info-section {
+			background: var(--bg-light);
 			border-radius: 15px;
 			padding: 1.5rem;
 			margin: 1rem 0;
-			border: 1px solid #d4edda;
 			display: none;
+		}
+
+		.info-section.show {
+			display: block;
+		}
+
+		.info-section.user-info {
+			background: #f0fff4;
+			border: 1px solid #d4edda;
+		}
+
+		.info-section.endpoint-info {
+			background: #e3f2fd;
+			border: 1px solid #bbdefb;
 		}
 
 		.user-email {
 			font-weight: 600;
-			color: #27ae60;
+			color: var(--success-green);
 			font-size: 1.1rem;
-		}
-
-		.endpoint-info {
-			background: #e3f2fd;
-			border-radius: 15px;
-			padding: 1.5rem;
-			margin: 1rem 0;
-			border: 1px solid #bbdefb;
-			display: none;
 		}
 
 		.endpoint-url {
@@ -212,66 +191,24 @@
 			font-size: 0.8rem;
 			cursor: pointer;
 			margin-left: 0.5rem;
-			transition: all 0.2s ease;
+			transition: background 0.2s ease;
 		}
 
 		.copy-btn:hover {
 			background: #2980b9;
 		}
 
-		.loading {
-			display: none;
-			color: #3498db;
-		}
-
-		.loading.show {
-			display: inline-block;
-		}
-
-		.message {
-			padding: 1rem;
-			border-radius: 10px;
-			margin: 1rem 0;
-			display: none;
-		}
-
-		.error-message {
-			background: #fee;
-			color: #c33;
-			border: 1px solid #fcc;
-		}
-
-		.success-message {
-			background: #efe;
-			color: #363;
-			border: 1px solid #cfc;
-		}
-
-		@keyframes pulse {
-			0% {
-				transform: scale(1);
-			}
-
-			50% {
-				transform: scale(1.05);
-			}
-
-			100% {
-				transform: scale(1);
-			}
-		}
-
-		.loading {
-			animation: pulse 2s infinite;
-		}
-
 		.tools-section {
-			background: #f8f9fa;
-			border: 1px solid #dee2e6;
+			background: var(--bg-light);
+			border: 1px solid var(--border-light);
 			border-radius: 15px;
 			padding: 1.5rem;
 			margin-top: 1.5rem;
 			display: none;
+		}
+
+		.tools-section.show {
+			display: block;
 		}
 
 		.tools-section h3 {
@@ -294,15 +231,14 @@
 
 		.tool-item {
 			background: white;
-			border: 1px solid #e9ecef;
+			border: 1px solid var(--border-light);
 			border-radius: 8px;
 			padding: 0.75rem 1rem;
 			transition: all 0.2s ease;
-			cursor: default;
 		}
 
 		.tool-item:hover {
-			border-color: #4285f4;
+			border-color: var(--primary-blue);
 			box-shadow: 0 2px 8px rgba(66, 133, 244, 0.1);
 		}
 
@@ -316,6 +252,51 @@
 			font-size: 0.85rem;
 			color: #6c757d;
 			line-height: 1.4;
+		}
+
+		.message {
+			padding: 1rem;
+			border-radius: 10px;
+			margin: 1rem 0;
+			display: none;
+		}
+
+		.message.show {
+			display: block;
+		}
+
+		.message.error {
+			background: #fee;
+			color: #c33;
+			border: 1px solid #fcc;
+		}
+
+		.message.success {
+			background: #efe;
+			color: #363;
+			border: 1px solid #cfc;
+		}
+
+		.loading {
+			display: none;
+		}
+
+		.loading.show {
+			display: inline-block;
+			animation: spin 2s linear infinite;
+		}
+
+		@keyframes spin {
+			0% { transform: rotate(0deg); }
+			100% { transform: rotate(360deg); }
+		}
+
+		.security-info {
+			margin-top: 2rem;
+			padding-top: 2rem;
+			border-top: 1px solid #eee;
+			color: var(--text-secondary);
+			font-size: 0.9rem;
 		}
 	</style>
 </head>
@@ -332,24 +313,23 @@
 				<i class="fab fa-google"></i>
 			</div>
 			<h1 class="service-title">Gmail MCP</h1>
-			<p class="service-subtitle">Connectez votre compte Google pour utiliser le MCP Gmail dans l'application IA
-				Dust.tt</p>
+			<p class="service-subtitle">Connectez votre compte Google pour utiliser le MCP Gmail dans l'application IA Dust.tt</p>
 		</div>
 
 		<div id="statusCard" class="status-card">
-			<button id="connectBtn" class="connect-btn" onclick="startOAuth()">
+			<button id="connectBtn" class="connect-btn" onclick="handleConnection()">
 				<i class="fab fa-google"></i>
 				<span id="connectText">Se connecter avec Gmail</span>
-				<i id="loadingIcon" class="fas fa-spinner fa-spin loading"></i>
+				<i id="loadingIcon" class="fas fa-spinner loading"></i>
 			</button>
 		</div>
 
-		<div id="userInfo" class="user-info">
+		<div id="userInfo" class="info-section user-info">
 			<h4>👤 Compte connecté</h4>
 			<div id="userEmail" class="user-email"></div>
 		</div>
 
-		<div id="endpointInfo" class="endpoint-info">
+		<div id="endpointInfo" class="info-section endpoint-info">
 			<h4>🚀 Endpoint MCP Gmail</h4>
 			<p>Utilisez cette URL dans votre IA :</p>
 			<div id="endpointUrl" class="endpoint-url"></div>
@@ -358,31 +338,26 @@
 			</button>
 		</div>
 
-		<div id="tools-section" class="tools-section">
-			<h3><i class="fas fa-tools"></i> Available tools</h3>
-			<p class="tools-subtitle">Add all 5 actions as tools in your MCP client</p>
-
+		<div id="toolsSection" class="tools-section">
+			<h3><i class="fas fa-tools"></i> Outils disponibles</h3>
+			<p class="tools-subtitle">Ajoutez ces 5 actions comme outils dans votre client MCP</p>
 			<div class="tools-list">
 				<div class="tool-item">
 					<div class="tool-name">gmail_get_profile</div>
 					<div class="tool-description">Obtenir le profil Gmail de l'utilisateur connecté</div>
 				</div>
-
 				<div class="tool-item">
 					<div class="tool-name">gmail_list_emails</div>
 					<div class="tool-description">Lister les emails Gmail avec requête de recherche</div>
 				</div>
-
 				<div class="tool-item">
 					<div class="tool-name">gmail_send_email</div>
 					<div class="tool-description">Envoyer un email via Gmail</div>
 				</div>
-
 				<div class="tool-item">
 					<div class="tool-name">gmail_search_emails</div>
 					<div class="tool-description">Recherche avancée d'emails avec filtres</div>
 				</div>
-
 				<div class="tool-item">
 					<div class="tool-name">gmail_get_email_content</div>
 					<div class="tool-description">Obtenir le contenu complet d'un email spécifique</div>
@@ -390,11 +365,9 @@
 			</div>
 		</div>
 
-		<div id="errorMessage" class="message error-message"></div>
-		<div id="successMessage" class="message success-message"></div>
+		<div id="message" class="message"></div>
 
-		<div
-			style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #eee; color: #7f8c8d; font-size: 0.9rem;">
+		<div class="security-info">
 			<p>🔒 Vos données restent privées et sécurisées</p>
 			<p>Nous utilisons OAuth 2.0 pour un accès sécurisé</p>
 		</div>
@@ -403,77 +376,87 @@
 	<script>
 		let checkStatusInterval;
 		let currentUserId = null;
+		let isConnected = false;
 
-		// Vérifier les paramètres URL au chargement
-		window.addEventListener('load', function () {
+		// Initialisation au chargement
+		window.addEventListener('load', function() {
+			handleUrlParams();
+			checkExistingConnections();
+			startStatusChecking();
+		});
+
+		function handleUrlParams() {
 			const urlParams = new URLSearchParams(window.location.search);
 			const success = urlParams.get('success');
 			const error = urlParams.get('error');
 			const userId = urlParams.get('userId');
 			const email = urlParams.get('email');
-			const service = urlParams.get('service');
 
-			if (success && userId) {
+			if (userId) {
+				sessionStorage.setItem('currentUserId', userId);
 				currentUserId = userId;
-				showSuccessMessage(`Gmail connecté avec succès !`);
-				updateConnectedState(userId, email);
-				// Nettoyer l'URL
-				window.history.replaceState({}, document.title, window.location.pathname);
-			} else if (error) {
-				showErrorMessage('Erreur: ' + decodeURIComponent(error));
-				// Nettoyer l'URL
-				window.history.replaceState({}, document.title, window.location.pathname);
 			}
 
-			// Démarrer la vérification périodique
+			if (success && userId) {
+				showMessage('Gmail connecté avec succès !', 'success');
+				updateConnectedState(userId, email);
+				cleanUrl();
+			} else if (error) {
+				showMessage('Erreur: ' + decodeURIComponent(error), 'error');
+				cleanUrl();
+			}
+		}
+
+		function cleanUrl() {
+			const newUrl = new URL(window.location);
+			newUrl.searchParams.delete('success');
+			newUrl.searchParams.delete('error');
+			window.history.replaceState({}, document.title, newUrl.toString());
+		}
+
+		async function checkExistingConnections() {
+			const userId = getCurrentUserId();
+			if (!userId) return;
+
+			try {
+				const response = await fetch(`/api/user/${userId}/connections`);
+				const data = await response.json();
+
+				if (data.success && data.connections.gmail?.isConnected) {
+					updateConnectedStateFromExisting(userId, data.connections.gmail);
+				}
+			} catch (error) {
+				console.error('Erreur lors de la vérification des connexions:', error);
+			}
+		}
+
+		function getCurrentUserId() {
+			return new URLSearchParams(window.location.search).get('userId') ||
+				   sessionStorage.getItem('currentUserId') ||
+				   localStorage.getItem('currentUserId');
+		}
+
+		function startStatusChecking() {
 			checkServerStatus();
 			checkStatusInterval = setInterval(checkServerStatus, 5000);
-		});
+		}
 
 		async function checkServerStatus() {
 			try {
 				const response = await fetch('/api/status');
 				const status = await response.json();
-
 				updateServerUI(status);
-
-				if (currentUserId) {
-					await checkUserConnection(currentUserId);
-				}
 			} catch (error) {
 				updateServerUI({ error: 'Impossible de contacter le serveur' });
 			}
 		}
 
 		function updateServerUI(status) {
-			const statusCard = document.getElementById('statusCard');
 			const connectBtn = document.getElementById('connectBtn');
-
-			if (status.status === 'OK') {
-				if (!currentUserId && connectBtn) {
-					connectBtn.style.display = 'block';
-				}
-			} else {
-				statusCard.classList.remove('connected');
-				if (connectBtn) {
-					connectBtn.style.display = 'none';
-				}
-			}
-		}
-
-		async function checkUserConnection(userId) {
-			try {
-				const response = await fetch(`/api/users/${userId}/services`);
-				const data = await response.json();
-
-				if (data.success && data.connectedServices.length > 0) {
-					const gmailService = data.connectedServices.find(s => s.name === 'gmail');
-					if (gmailService) {
-						updateConnectedState(userId, gmailService.userEmail, data.mcpEndpoint);
-					}
-				}
-			} catch (error) {
-				console.error('Erreur vérification connexion:', error);
+			if (status.status === 'OK' && !isConnected) {
+				connectBtn.style.display = 'flex';
+			} else if (status.error) {
+				connectBtn.style.display = 'none';
 			}
 		}
 
@@ -482,73 +465,95 @@
 			const userInfo = document.getElementById('userInfo');
 			const userEmail = document.getElementById('userEmail');
 			const endpointInfo = document.getElementById('endpointInfo');
-			const toolsSection = document.getElementById('tools-section');
+			const toolsSection = document.getElementById('toolsSection');
 			const endpointUrl = document.getElementById('endpointUrl');
 			const connectBtn = document.getElementById('connectBtn');
-			const connectText = document.getElementById('connectText');
 
-			// Mettre à jour le statut
 			statusCard.classList.add('connected');
-
-			// Afficher les informations utilisateur
 			userEmail.textContent = email || 'Email non disponible';
-			userInfo.style.display = 'block';
+			userInfo.classList.add('show');
 
-			// Afficher l'endpoint
 			const mcpEndpoint = endpoint || `${window.location.origin}/${userId}/mcp/sse`;
 			endpointUrl.textContent = mcpEndpoint;
-			endpointInfo.style.display = 'block';
-			toolsSection.style.display = 'block';
+			endpointInfo.classList.add('show');
+			toolsSection.classList.add('show');
 
-			// Cacher le bouton de connexion et afficher un bouton de déconnexion
-			if (connectBtn) {
-				connectBtn.style.display = 'none';
-			}
-
-			// Créer un bouton de déconnexion s'il n'existe pas déjà
-			let disconnectBtn = document.getElementById('disconnectBtn');
-			if (!disconnectBtn) {
-				disconnectBtn = document.createElement('button');
-				disconnectBtn.id = 'disconnectBtn';
-				disconnectBtn.className = 'connect-btn';
-				disconnectBtn.style.background = '#e74c3c';
-				disconnectBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Se déconnecter';
-				disconnectBtn.onclick = () => disconnectGmail();
-				statusCard.appendChild(disconnectBtn);
-			}
-			disconnectBtn.style.display = 'block';
+			// Transformer le bouton en bouton de déconnexion
+			connectBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Se déconnecter';
+			connectBtn.className = 'connect-btn disconnect';
+			connectBtn.onclick = () => disconnectGmail();
 
 			currentUserId = userId;
+			isConnected = true;
+		}
+
+		function updateConnectedStateFromExisting(userId, gmailData) {
+			updateConnectedState(userId, 'Utilisateur connecté', gmailData.mcpEndpoint);
+			showMessage('Connexion Gmail restaurée !', 'success');
+		}
+
+		async function handleConnection() {
+			if (isConnected) {
+				await disconnectGmail();
+			} else {
+				await startOAuth();
+			}
 		}
 
 		async function startOAuth() {
-			const connectBtn = document.getElementById('connectBtn');
-			const connectText = document.getElementById('connectText');
-			const loadingIcon = document.getElementById('loadingIcon');
-
-			// État de chargement
-			connectBtn.disabled = true;
-			connectText.textContent = 'Connexion en cours...';
-			loadingIcon.classList.add('show');
-			hideMessages();
+			setLoadingState('Connexion en cours...');
+			hideMessage();
 
 			try {
-				const response = await fetch('/api/oauth/gmail', {
-					method: 'POST'
-				});
-
+				const response = await fetch('/api/oauth/gmail', { method: 'POST' });
 				const data = await response.json();
 
 				if (data.success && data.authUrl) {
-					// Rediriger directement vers l'URL OAuth au lieu d'une popup
 					window.location.href = data.authUrl;
 				} else {
 					throw new Error(data.error || 'Erreur lors du démarrage OAuth');
 				}
 			} catch (error) {
-				showErrorMessage('Erreur: ' + error.message);
+				showMessage('Erreur: ' + error.message, 'error');
 				resetButton();
 			}
+		}
+
+		async function disconnectGmail() {
+			if (!currentUserId) {
+				showMessage('Aucun utilisateur connecté', 'error');
+				return;
+			}
+
+			setLoadingState('Déconnexion...');
+			hideMessage();
+
+			try {
+				const response = await fetch(`/api/user/${currentUserId}/disconnect/gmail`, {
+					method: 'POST'
+				});
+				const data = await response.json();
+
+				if (data.success) {
+					showMessage('Déconnexion réussie !', 'success');
+					resetToInitialState();
+				} else {
+					throw new Error(data.error || 'Erreur lors de la déconnexion');
+				}
+			} catch (error) {
+				showMessage('Erreur: ' + error.message, 'error');
+				resetButton();
+			}
+		}
+
+		function setLoadingState(text) {
+			const connectBtn = document.getElementById('connectBtn');
+			const connectText = document.getElementById('connectText');
+			const loadingIcon = document.getElementById('loadingIcon');
+
+			connectBtn.disabled = true;
+			connectText.textContent = text;
+			loadingIcon.classList.add('show');
 		}
 
 		function resetButton() {
@@ -558,107 +563,49 @@
 
 			connectBtn.disabled = false;
 			connectText.textContent = 'Se connecter avec Gmail';
-			connectBtn.querySelector('.fas, .fab').className = 'fab fa-google';
-			connectBtn.style.background = 'linear-gradient(45deg, #4285f4, #34a853)';
-			connectBtn.onclick = () => startOAuth();
+			connectBtn.className = 'connect-btn';
+			connectBtn.innerHTML = '<i class="fab fa-google"></i> Se connecter avec Gmail';
+			connectBtn.onclick = () => handleConnection();
 			loadingIcon.classList.remove('show');
 		}
 
-		async function disconnectGmail() {
-			if (!currentUserId) {
-				showErrorMessage('Aucune session active à déconnecter');
-				return;
-			}
-
-			const connectBtn = document.getElementById('connectBtn');
-			const connectText = document.getElementById('connectText');
-			const loadingIcon = document.getElementById('loadingIcon');
-
-			// État de chargement
-			connectBtn.disabled = true;
-			connectText.textContent = 'Déconnexion...';
-			loadingIcon.classList.add('show');
-			hideMessages();
-
-			try {
-				const response = await fetch(`/api/disconnect/${currentUserId}/gmail`, {
-					method: 'POST'
-				});
-
-				const data = await response.json();
-
-				if (data.success) {
-					showSuccessMessage('Déconnexion réussie !');
-					resetToDisconnectedState();
-				} else {
-					throw new Error(data.error || 'Erreur lors de la déconnexion');
-				}
-			} catch (error) {
-				console.error('Erreur déconnexion:', error);
-				showErrorMessage('Erreur: ' + error.message);
-				resetButton();
-			}
-		}
-
-		function resetToDisconnectedState() {
-			// Remettre l'interface à l'état déconnecté
+		function resetToInitialState() {
 			const statusCard = document.getElementById('statusCard');
 			const userInfo = document.getElementById('userInfo');
 			const endpointInfo = document.getElementById('endpointInfo');
-			const toolsSection = document.getElementById('tools-section');
-			const connectBtn = document.getElementById('connectBtn');
-			const disconnectBtn = document.getElementById('disconnectBtn');
+			const toolsSection = document.getElementById('toolsSection');
 
-			// Remettre le statut à déconnecté
 			statusCard.classList.remove('connected');
+			userInfo.classList.remove('show');
+			endpointInfo.classList.remove('show');
+			toolsSection.classList.remove('show');
 
-			// Masquer les informations utilisateur et endpoint
-			userInfo.style.display = 'none';
-			endpointInfo.style.display = 'none';
-			toolsSection.style.display = 'none';
-
-			// Afficher le bouton de connexion et cacher celui de déconnexion
-			if (connectBtn) {
-				connectBtn.style.display = 'block';
-			}
-			if (disconnectBtn) {
-				disconnectBtn.style.display = 'none';
-			}
-
-			// Remettre le bouton de connexion à son état initial
 			resetButton();
-
-			// Réinitialiser l'ID utilisateur
 			currentUserId = null;
+			isConnected = false;
+			sessionStorage.removeItem('currentUserId');
 		}
 
 		function copyEndpoint() {
 			const endpointUrl = document.getElementById('endpointUrl').textContent;
-			navigator.clipboard.writeText(endpointUrl).then(function () {
-				showSuccessMessage('Endpoint copié dans le presse-papiers !');
+			navigator.clipboard.writeText(endpointUrl).then(() => {
+				showMessage('Endpoint copié dans le presse-papiers !', 'success');
 			});
 		}
 
-		function showSuccessMessage(message) {
-			const successMessage = document.getElementById('successMessage');
-			successMessage.textContent = message;
-			successMessage.style.display = 'block';
-			setTimeout(() => {
-				successMessage.style.display = 'none';
-			}, 5000);
+		function showMessage(text, type) {
+			const message = document.getElementById('message');
+			message.textContent = text;
+			message.className = `message ${type} show`;
+			
+			if (type === 'success') {
+				setTimeout(() => hideMessage(), 5000);
+			}
 		}
 
-		function showErrorMessage(message) {
-			const errorMessage = document.getElementById('errorMessage');
-			errorMessage.textContent = message;
-			errorMessage.style.display = 'block';
-		}
-
-		function hideMessages() {
-			document.getElementById('errorMessage').style.display = 'none';
-			document.getElementById('successMessage').style.display = 'none';
+		function hideMessage() {
+			document.getElementById('message').classList.remove('show');
 		}
 	</script>
 </body>
-
 </html>
