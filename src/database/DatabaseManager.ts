@@ -38,22 +38,26 @@ export class DatabaseManager {
     private pool: Pool;
     private isInitialized = false;
 
+    // src/database/DatabaseManager.ts - Configuration simplifiée
     constructor() {
-        // Configuration PostgreSQL pour Railway et développement local
+        // Configuration PostgreSQL simplifiée - utilise uniquement DATABASE_URL
         const config = {
-            // En développement, utiliser l'URL publique. En production, Railway utilisera l'interne automatiquement
-            connectionString: process.env.NODE_ENV === 'production' 
-                ? (process.env.DATABASE_URL_INTERNAL || process.env.DATABASE_URL || process.env.DATABASE_URL_PUBLIC)
-                : (process.env.DATABASE_URL || process.env.DATABASE_URL_PUBLIC),
+            connectionString: process.env.DATABASE_URL,
             ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
             max: 10, // Maximum de connexions dans le pool
             idleTimeoutMillis: 30000,
             connectionTimeoutMillis: 10000,
         };
 
+        // Validation de la variable d'environnement
+        if (!process.env.DATABASE_URL) {
+            console.error('❌ DATABASE_URL manquante dans les variables d\'environnement');
+            throw new Error('DATABASE_URL est requise');
+        }
+
         this.pool = new Pool(config);
 
-        // Gestion des erreurs de connexion
+        // Gestion des événements de connexion
         this.pool.on('error', (err) => {
             console.error('❌ Erreur PostgreSQL pool:', err);
         });
@@ -61,6 +65,11 @@ export class DatabaseManager {
         this.pool.on('connect', () => {
             console.log('✅ Nouvelle connexion PostgreSQL établie');
         });
+
+        // Log de la configuration (sans exposer l'URL complète)
+        const dbUrl = process.env.DATABASE_URL;
+        const maskedUrl = dbUrl.replace(/:\/\/[^@]*@/, '://***:***@');
+        console.log(`🗄️ PostgreSQL configuré: ${maskedUrl}`);
     }
 
     // Initialiser la base de données

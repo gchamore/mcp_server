@@ -9,14 +9,16 @@ export class DatabaseManager {
     isInitialized = false;
     constructor() {
         const config = {
-            connectionString: process.env.NODE_ENV === 'production'
-                ? (process.env.DATABASE_URL_INTERNAL || process.env.DATABASE_URL || process.env.DATABASE_URL_PUBLIC)
-                : (process.env.DATABASE_URL || process.env.DATABASE_URL_PUBLIC),
+            connectionString: process.env.DATABASE_URL,
             ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
             max: 10,
             idleTimeoutMillis: 30000,
             connectionTimeoutMillis: 10000,
         };
+        if (!process.env.DATABASE_URL) {
+            console.error('❌ DATABASE_URL manquante dans les variables d\'environnement');
+            throw new Error('DATABASE_URL est requise');
+        }
         this.pool = new Pool(config);
         this.pool.on('error', (err) => {
             console.error('❌ Erreur PostgreSQL pool:', err);
@@ -24,6 +26,9 @@ export class DatabaseManager {
         this.pool.on('connect', () => {
             console.log('✅ Nouvelle connexion PostgreSQL établie');
         });
+        const dbUrl = process.env.DATABASE_URL;
+        const maskedUrl = dbUrl.replace(/:\/\/[^@]*@/, '://***:***@');
+        console.log(`🗄️ PostgreSQL configuré: ${maskedUrl}`);
     }
     async initialize() {
         if (this.isInitialized) {
