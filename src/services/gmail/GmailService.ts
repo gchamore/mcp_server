@@ -1,5 +1,4 @@
-// src/services/gmail/GmailService.ts - Service Gmail refactorisé
-
+// src/services/gmail/GmailService.ts - Service Gmail optimisé et corrigé
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { v4 as uuidv4 } from 'uuid';
@@ -48,9 +47,9 @@ export class GmailService extends BaseService {
 		return oauth2Client.generateAuthUrl({
 			access_type: 'offline',
 			prompt: 'consent',
-			include_granted_scopes: true,      // ← optionnel, mais propre
-			scope: this.requiredScopes,        // ← déjà bon
-			state                               // ← ⚡ distingue clairement le flux
+			include_granted_scopes: true,
+			scope: this.requiredScopes,
+			state
 		});
 	}
 
@@ -81,7 +80,6 @@ export class GmailService extends BaseService {
 
 	private async createGmailSession(tokens: any): Promise<string> {
 		const userId = uuidv4();
-
 		const oauth2Client = new google.auth.OAuth2(
 			this.oauthConfig.clientId,
 			this.oauthConfig.clientSecret,
@@ -91,7 +89,7 @@ export class GmailService extends BaseService {
 		oauth2Client.setCredentials(tokens);
 		const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-		// Obtenir l'email de l'utilisateur
+		// Obtenir l'email utilisateur
 		const profile = await gmail.users.getProfile({ userId: 'me' });
 		const userEmail = profile.data.emailAddress as string;
 
@@ -99,7 +97,7 @@ export class GmailService extends BaseService {
 			throw new Error('Email utilisateur manquant dans la réponse Gmail');
 		}
 
-		// Créer la session Gmail avec chiffrement
+		// Créer la session avec chiffrement des tokens
 		const gmailSession: GmailSession = {
 			serviceName: 'gmail',
 			userId,
@@ -109,54 +107,38 @@ export class GmailService extends BaseService {
 			lastAccessed: new Date(),
 			gmail,
 			oauth2Client,
-			// Chiffrer les tokens sensibles
 			encryptedRefreshToken: tokens.refresh_token ? encrypt(tokens.refresh_token) : undefined,
 			encryptedAccessToken: tokens.access_token ? encrypt(tokens.access_token) : undefined
 		};
 
 		this.gmailSessions.set(userId, gmailSession);
 		console.log(`✅ Session Gmail créée pour ${userEmail}: ${userId}`);
-		console.log(`🔐 Tokens chiffrés: refresh=${!!gmailSession.encryptedRefreshToken}, access=${!!gmailSession.encryptedAccessToken}`);
 
 		return userId;
 	}
 
-	// Méthode pour obtenir le refresh token déchiffré
-	private getDecryptedRefreshToken(session: GmailSession): string | null {
+	private getDecryptedToken(encryptedToken: string | undefined): string | null {
 		try {
-			return session.encryptedRefreshToken ? decrypt(session.encryptedRefreshToken) : null;
+			return encryptedToken ? decrypt(encryptedToken) : null;
 		} catch (error) {
-			console.error('❌ Erreur déchiffrement refresh token:', error);
-			return null;
-		}
-	}
-
-	// Méthode pour obtenir l'access token déchiffré
-	private getDecryptedAccessToken(session: GmailSession): string | null {
-		try {
-			return session.encryptedAccessToken ? decrypt(session.encryptedAccessToken) : null;
-		} catch (error) {
-			console.error('❌ Erreur déchiffrement access token:', error);
+			console.error('❌ Erreur déchiffrement token:', error);
 			return null;
 		}
 	}
 
 	async refreshTokens(session: GmailSession): Promise<boolean> {
 		try {
-			// Utiliser le refresh token déchiffré
-			const refreshToken = this.getDecryptedRefreshToken(session);
+			const refreshToken = this.getDecryptedToken(session.encryptedRefreshToken);
 			if (!refreshToken) {
-				console.error('❌ Refresh token manquant ou impossible à déchiffrer');
+				console.error('❌ Refresh token manquant');
 				return false;
 			}
 
-			// Configurer temporairement le refresh token
 			session.oauth2Client.setCredentials({ refresh_token: refreshToken });
-
 			const newTokens = await session.oauth2Client.refreshAccessToken();
 			session.oauth2Client.setCredentials(newTokens.credentials);
 
-			// Chiffrer et stocker le nouveau access token
+			// Chiffrer le nouveau access token
 			if (newTokens.credentials.access_token) {
 				session.encryptedAccessToken = encrypt(newTokens.credentials.access_token);
 			}
@@ -165,7 +147,7 @@ export class GmailService extends BaseService {
 			console.log(`🔄 Tokens Gmail refreshés pour ${maskApiKey(session.userId)}`);
 			return true;
 		} catch (error) {
-			console.error(`❌ Erreur refresh token Gmail:`, error);
+			console.error('❌ Erreur refresh token Gmail:', error);
 			return false;
 		}
 	}
@@ -181,7 +163,7 @@ export class GmailService extends BaseService {
 					const profile = await userSession.gmail.users.getProfile({ userId: 'me' });
 					return {
 						content: [{
-							type: "text",
+							type: "text" as const,
 							text: JSON.stringify({
 								success: true,
 								profile: {
@@ -195,17 +177,7 @@ export class GmailService extends BaseService {
 						}]
 					};
 				} catch (error) {
-					return {
-						content: [{
-							type: "text",
-							text: JSON.stringify({
-								success: false,
-								error: (error as Error).message,
-								service: 'gmail'
-							})
-						}],
-						isError: true
-					};
+					return this.createErrorResponse(error);
 				}
 			}
 		);
@@ -218,16 +190,15 @@ export class GmailService extends BaseService {
 				query: z.string().optional().describe("Requête de recherche Gmail"),
 				maxResults: z.number().optional().default(10).describe("Nombre maximum de résultats")
 			},
-			async ({ query, maxResults = 10 }) => {
+			async (args: { query?: string; maxResults?: number }) => {
+				const { query, maxResults = 10 } = args;
 				try {
 					const searchParams: any = {
 						userId: 'me',
 						maxResults: Math.min(maxResults, 20)
 					};
 
-					if (query) {
-						searchParams.q = query;
-					}
+					if (query) searchParams.q = query;
 
 					const results = await userSession.gmail.users.messages.list(searchParams);
 					const messages = results.data.messages || [];
@@ -235,7 +206,7 @@ export class GmailService extends BaseService {
 					if (messages.length === 0) {
 						return {
 							content: [{
-								type: "text",
+								type: "text" as const,
 								text: JSON.stringify({
 									success: true,
 									message: `Aucun email trouvé${query ? ` pour: ${query}` : ''}`,
@@ -248,37 +219,11 @@ export class GmailService extends BaseService {
 						};
 					}
 
-					const detailedEmails: EmailData[] = [];
-
-					for (const msg of messages) {
-						try {
-							const msgDetail = await userSession.gmail.users.messages.get({
-								userId: 'me',
-								id: msg.id,
-								format: 'metadata',
-								metadataHeaders: ['From', 'Subject', 'Date']
-							});
-
-							const headers: GmailHeader[] = msgDetail.data.payload?.headers || [];
-
-							const emailData: EmailData = {
-								id: msg.id,
-								subject: headers.find(h => h.name === 'Subject')?.value || 'Pas de sujet',
-								from: headers.find(h => h.name === 'From')?.value || 'Expéditeur inconnu',
-								date: headers.find(h => h.name === 'Date')?.value || 'Date inconnue',
-								snippet: msgDetail.data.snippet || '',
-								is_unread: msgDetail.data.labelIds?.includes('UNREAD') || false
-							};
-
-							detailedEmails.push(emailData);
-						} catch (error) {
-							continue;
-						}
-					}
+					const detailedEmails = await this.getDetailedEmails(userSession, messages);
 
 					return {
 						content: [{
-							type: "text",
+							type: "text" as const,
 							text: JSON.stringify({
 								success: true,
 								message: `${detailedEmails.length} emails trouvés`,
@@ -289,19 +234,8 @@ export class GmailService extends BaseService {
 							})
 						}]
 					};
-
 				} catch (error) {
-					return {
-						content: [{
-							type: "text",
-							text: JSON.stringify({
-								success: false,
-								error: (error as Error).message,
-								service: 'gmail'
-							})
-						}],
-						isError: true
-					};
+					return this.createErrorResponse(error);
 				}
 			}
 		);
@@ -315,7 +249,8 @@ export class GmailService extends BaseService {
 				subject: z.string().describe("Sujet"),
 				body: z.string().describe("Corps de l'email")
 			},
-			async ({ to, subject, body }) => {
+			async (args: { to: string; subject: string; body: string }) => {
+				const { to, subject, body } = args;
 				try {
 					const email = [
 						`To: ${to}`,
@@ -333,21 +268,19 @@ export class GmailService extends BaseService {
 
 					const sendResult = await userSession.gmail.users.messages.send({
 						userId: 'me',
-						requestBody: {
-							raw: encodedMessage
-						}
+						requestBody: { raw: encodedMessage }
 					});
 
 					return {
 						content: [{
-							type: "text",
+							type: "text" as const,
 							text: JSON.stringify({
 								success: true,
 								message: "Email envoyé avec succès",
 								email_sent: {
 									id: sendResult.data.id,
-									to: to,
-									subject: subject,
+									to,
+									subject,
 									from: userSession.userEmail
 								},
 								user: userSession.userEmail,
@@ -355,19 +288,8 @@ export class GmailService extends BaseService {
 							})
 						}]
 					};
-
 				} catch (error) {
-					return {
-						content: [{
-							type: "text",
-							text: JSON.stringify({
-								success: false,
-								error: (error as Error).message,
-								service: 'gmail'
-							})
-						}],
-						isError: true
-					};
+					return this.createErrorResponse(error);
 				}
 			}
 		);
@@ -382,67 +304,31 @@ export class GmailService extends BaseService {
 				isUnread: z.boolean().optional().describe("Emails non lus seulement"),
 				maxResults: z.number().optional().default(10).describe("Nombre maximum de résultats")
 			},
-			async ({ fromEmail, subjectContains, isUnread, maxResults = 10 }) => {
+			async (args: { fromEmail?: string; subjectContains?: string; isUnread?: boolean; maxResults?: number }) => {
+				const { fromEmail, subjectContains, isUnread, maxResults = 10 } = args;
 				try {
 					const queryParts: string[] = [];
 
-					if (fromEmail) {
-						queryParts.push(`from:${fromEmail}`);
-					}
-					if (subjectContains) {
-						queryParts.push(`subject:${subjectContains}`);
-					}
-					if (isUnread === true) {
-						queryParts.push("is:unread");
-					} else if (isUnread === false) {
-						queryParts.push("is:read");
-					}
+					if (fromEmail) queryParts.push(`from:${fromEmail}`);
+					if (subjectContains) queryParts.push(`subject:${subjectContains}`);
+					if (isUnread === true) queryParts.push("is:unread");
+					else if (isUnread === false) queryParts.push("is:read");
 
 					const searchQuery = queryParts.length > 0 ? queryParts.join(" ") : undefined;
-
 					const searchParams: any = {
 						userId: 'me',
 						maxResults: Math.min(maxResults, 20)
 					};
 
-					if (searchQuery) {
-						searchParams.q = searchQuery;
-					}
+					if (searchQuery) searchParams.q = searchQuery;
 
 					const results = await userSession.gmail.users.messages.list(searchParams);
 					const messages = results.data.messages || [];
-
-					const detailedEmails: EmailData[] = [];
-
-					for (const msg of messages) {
-						try {
-							const msgDetail = await userSession.gmail.users.messages.get({
-								userId: 'me',
-								id: msg.id,
-								format: 'metadata',
-								metadataHeaders: ['From', 'Subject', 'Date']
-							});
-
-							const headers: GmailHeader[] = msgDetail.data.payload?.headers || [];
-
-							const emailData: EmailData = {
-								id: msg.id,
-								subject: headers.find(h => h.name === 'Subject')?.value || 'Pas de sujet',
-								from: headers.find(h => h.name === 'From')?.value || 'Expéditeur inconnu',
-								date: headers.find(h => h.name === 'Date')?.value || 'Date inconnue',
-								snippet: msgDetail.data.snippet || '',
-								is_unread: msgDetail.data.labelIds?.includes('UNREAD') || false
-							};
-
-							detailedEmails.push(emailData);
-						} catch (error) {
-							continue;
-						}
-					}
+					const detailedEmails = await this.getDetailedEmails(userSession, messages);
 
 					return {
 						content: [{
-							type: "text",
+							type: "text" as const,
 							text: JSON.stringify({
 								success: true,
 								message: `${detailedEmails.length} emails trouvés`,
@@ -453,19 +339,8 @@ export class GmailService extends BaseService {
 							})
 						}]
 					};
-
 				} catch (error) {
-					return {
-						content: [{
-							type: "text",
-							text: JSON.stringify({
-								success: false,
-								error: (error as Error).message,
-								service: 'gmail'
-							})
-						}],
-						isError: true
-					};
+					return this.createErrorResponse(error);
 				}
 			}
 		);
@@ -477,7 +352,8 @@ export class GmailService extends BaseService {
 			{
 				messageId: z.string().describe("ID du message Gmail")
 			},
-			async ({ messageId }) => {
+			async (args: { messageId: string }) => {
+				const { messageId } = args;
 				try {
 					const message = await userSession.gmail.users.messages.get({
 						userId: 'me',
@@ -486,9 +362,9 @@ export class GmailService extends BaseService {
 					});
 
 					const headers: GmailHeader[] = message.data.payload?.headers || [];
-
 					let emailContent = '';
 
+					// Extraction du contenu
 					if (message.data.payload?.body?.data) {
 						emailContent = Buffer.from(message.data.payload.body.data, 'base64').toString('utf-8');
 					} else if (message.data.payload?.parts) {
@@ -502,7 +378,7 @@ export class GmailService extends BaseService {
 
 					return {
 						content: [{
-							type: "text",
+							type: "text" as const,
 							text: JSON.stringify({
 								success: true,
 								message: {
@@ -518,48 +394,73 @@ export class GmailService extends BaseService {
 							})
 						}]
 					};
-
 				} catch (error) {
-					return {
-						content: [{
-							type: "text",
-							text: JSON.stringify({
-								success: false,
-								error: (error as Error).message,
-								service: 'gmail'
-							})
-						}],
-						isError: true
-					};
+					return this.createErrorResponse(error);
 				}
 			}
 		);
 	}
 
-	// Méthodes utilitaires pour la gestion des sessions
+	// Méthodes utilitaires privées
+	private async getDetailedEmails(userSession: GmailSession, messages: any[]): Promise<EmailData[]> {
+		const detailedEmails: EmailData[] = [];
+
+		for (const msg of messages) {
+			try {
+				const msgDetail = await userSession.gmail.users.messages.get({
+					userId: 'me',
+					id: msg.id,
+					format: 'metadata',
+					metadataHeaders: ['From', 'Subject', 'Date']
+				});
+
+				const headers: GmailHeader[] = msgDetail.data.payload?.headers || [];
+				const emailData: EmailData = {
+					id: msg.id,
+					subject: headers.find(h => h.name === 'Subject')?.value || 'Pas de sujet',
+					from: headers.find(h => h.name === 'From')?.value || 'Expéditeur inconnu',
+					date: headers.find(h => h.name === 'Date')?.value || 'Date inconnue',
+					snippet: msgDetail.data.snippet || '',
+					is_unread: msgDetail.data.labelIds?.includes('UNREAD') || false
+				};
+
+				detailedEmails.push(emailData);
+			} catch (error) {
+				continue; // Ignorer les erreurs d'emails individuels
+			}
+		}
+
+		return detailedEmails;
+	}
+
+	private createErrorResponse(error: any) {
+		return {
+			content: [{
+				type: "text" as const,
+				text: JSON.stringify({
+					success: false,
+					error: (error as Error).message,
+					service: 'gmail'
+				})
+			}],
+			isError: true
+		};
+	}
+
+	// Méthodes de gestion des sessions
 	cleanupExpiredSessions() {
-		// ❌ DÉSACTIVÉ : Préservation des sessions Gmail pour les connexions MCP
 		console.log('🔒 Nettoyage Gmail désactivé - sessions préservées pour MCP');
-		
-		// Log du nombre de sessions Gmail actives
-		const activeGmailSessions = this.gmailSessions.size;
-		console.log(`📧 Sessions Gmail actives: ${activeGmailSessions}`);
-		
-		// Optionnel : Refresh des tokens expirés au lieu de supprimer les sessions
+		console.log(`📧 Sessions Gmail actives: ${this.gmailSessions.size}`);
 		this.refreshExpiredTokens();
 	}
 
-	// Nouvelle méthode pour refresh les tokens expirés
 	private async refreshExpiredTokens() {
 		let refreshedCount = 0;
 		
 		for (const [userId, session] of this.gmailSessions) {
 			try {
-				// Tenter de refresh les tokens si nécessaire
 				const refreshed = await this.refreshTokens(session);
-				if (refreshed) {
-					refreshedCount++;
-				}
+				if (refreshed) refreshedCount++;
 			} catch (error) {
 				console.warn(`⚠️ Impossible de refresh les tokens pour ${userId}:`, error);
 			}
@@ -570,8 +471,7 @@ export class GmailService extends BaseService {
 		}
 	}
 
-	// Nettoyage forcé pour les sessions très anciennes (utilisation manuelle)
-	forceCleanupOldSessions(daysOld: number = 30) {
+	forceCleanupOldSessions(daysOld: number = 30): number {
 		const now = new Date();
 		const EXPIRY_TIME = daysOld * 24 * 60 * 60 * 1000;
 		let cleanedCount = 0;
@@ -581,7 +481,7 @@ export class GmailService extends BaseService {
 			if (timeSinceLastAccess > EXPIRY_TIME) {
 				this.gmailSessions.delete(userId);
 				cleanedCount++;
-				console.log(`🗑️ Session Gmail très ancienne supprimée: ${userId} (${Math.round(timeSinceLastAccess / (24 * 60 * 60 * 1000))} jours)`);
+				console.log(`🗑️ Session Gmail ancienne supprimée: ${userId} (${Math.round(timeSinceLastAccess / (24 * 60 * 60 * 1000))} jours)`);
 			}
 		}
 
@@ -589,18 +489,16 @@ export class GmailService extends BaseService {
 		return cleanedCount;
 	}
 
-	// Supprimer une session Gmail
 	removeSession(userId: string): boolean {
 		const sessionExists = this.gmailSessions.has(userId);
 		if (sessionExists) {
 			this.gmailSessions.delete(userId);
-			console.log(`🗑️ Session Gmail supprimée pour l'utilisateur: ${userId}`);
-			return true;
+			console.log(`🗑️ Session Gmail supprimée: ${userId}`);
 		}
-		console.log(`⚠️ Aucune session Gmail trouvée pour l'utilisateur: ${userId}`);
-		return false;
+		return sessionExists;
 	}
 
+	// Getters
 	getAllSessions(): GmailSession[] {
 		return Array.from(this.gmailSessions.values());
 	}
@@ -617,7 +515,6 @@ export class GmailService extends BaseService {
 		return session || null;
 	}
 
-	// Méthode pour obtenir les sessions brutes (pour la sauvegarde globale Redis)
 	getGmailSessionsMap(): Map<string, GmailSession> {
 		return this.gmailSessions;
 	}
