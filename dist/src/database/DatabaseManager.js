@@ -101,28 +101,59 @@ export class DatabaseManager {
             throw error;
         }
     }
+    async query(text, params) {
+        if (!this.isInitialized) {
+            throw new Error('DatabaseManager non initialisé');
+        }
+        return this.pool.query(text, params);
+    }
     async upsertUser(userData) {
-        const query = `
-            INSERT INTO users (user_id, email, name, picture, google_refresh_token, last_login_at)
-            VALUES ($1, $2, $3, $4, $5, NOW())
-            ON CONFLICT (user_id) 
-            DO UPDATE SET 
-                email = EXCLUDED.email,
-                name = EXCLUDED.name,
-                picture = EXCLUDED.picture,
-                google_refresh_token = EXCLUDED.google_refresh_token,
-                last_login_at = NOW(),
-                updated_at = NOW()
-            RETURNING *`;
-        const values = [
-            userData.user_id,
-            userData.email,
-            userData.name,
-            userData.picture || null,
-            userData.google_refresh_token || null
-        ];
-        const result = await this.pool.query(query, values);
-        return result.rows[0];
+        const existingUserQuery = `
+            SELECT * FROM users 
+            WHERE email = $1 OR user_id = $2
+            LIMIT 1
+        `;
+        const existingResult = await this.pool.query(existingUserQuery, [userData.email, userData.user_id]);
+        if (existingResult.rows.length > 0) {
+            const existingUser = existingResult.rows[0];
+            const updateQuery = `
+                UPDATE users 
+                SET name = $1,
+                    picture = $2,
+                    google_refresh_token = $3,
+                    last_login_at = NOW(),
+                    updated_at = NOW(),
+                    is_active = true
+                WHERE id = $4
+                RETURNING *
+            `;
+            const updateValues = [
+                userData.name,
+                userData.picture || null,
+                userData.google_refresh_token || null,
+                existingUser.id
+            ];
+            const result = await this.pool.query(updateQuery, updateValues);
+            console.log(`✅ Utilisateur mis à jour: ${userData.email}`);
+            return result.rows[0];
+        }
+        else {
+            const insertQuery = `
+                INSERT INTO users (user_id, email, name, picture, google_refresh_token, last_login_at)
+                VALUES ($1, $2, $3, $4, $5, NOW())
+                RETURNING *
+            `;
+            const insertValues = [
+                userData.user_id,
+                userData.email,
+                userData.name,
+                userData.picture || null,
+                userData.google_refresh_token || null
+            ];
+            const result = await this.pool.query(insertQuery, insertValues);
+            console.log(`✅ Nouvel utilisateur créé: ${userData.email}`);
+            return result.rows[0];
+        }
     }
     async getUserById(user_id) {
         const query = 'SELECT * FROM users WHERE user_id = $1 AND is_active = true';
@@ -133,6 +164,30 @@ export class DatabaseManager {
         const query = 'SELECT * FROM users WHERE email = $1 AND is_active = true';
         const result = await this.pool.query(query, [email]);
         return result.rows[0] || null;
+    }
+    async createUser(userData) {
+        try {
+            const insertQuery = `
+                INSERT INTO users (user_id, email, name, picture, google_refresh_token, is_active, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            `;
+            const insertValues = [
+                userData.id,
+                userData.email,
+                userData.name,
+                null,
+                null,
+                userData.is_active,
+                userData.created_at,
+                userData.updated_at
+            ];
+            const result = await this.pool.query(insertQuery, insertValues);
+            return (result.rowCount || 0) > 0;
+        }
+        catch (error) {
+            console.error('❌ Erreur création utilisateur:', error);
+            return false;
+        }
     }
     async deactivateUser(user_id) {
         const query = 'UPDATE users SET is_active = false, updated_at = NOW() WHERE user_id = $1';

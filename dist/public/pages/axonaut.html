@@ -375,15 +375,6 @@
 				</div>
 			</div>
 
-			<div class="form-group">
-				<label for="userEmail">Email (optionnel) :</label>
-				<input type="email" id="userEmail" placeholder="votre@email.com">
-				<div class="help-text">
-					<i class="fas fa-envelope"></i>
-					Pour identifier la session dans l'interface MCP
-				</div>
-			</div>
-
 			<button id="auth-btn" class="auth-btn">
 				<i class="fas fa-plug"></i>
 				Se connecter à Axonaut
@@ -462,7 +453,6 @@
 		const userInfo = document.getElementById('user-info');
 		const toolsSection = document.getElementById('tools-section');
 		const apiKeyInput = document.getElementById('apiKey');
-		const userEmailInput = document.getElementById('userEmail');
 		const disconnectBtn = document.getElementById('disconnect-btn');
 		const mcpUrlInput = document.getElementById('mcp-url');
 		const copyBtn = document.getElementById('copy-btn');
@@ -533,10 +523,39 @@
 			}
 		}
 
+		// Fonction pour récupérer l'USER_ID de la session active
+		async function getCurrentUserId() {
+			try {
+				// D'abord essayer de récupérer l'utilisateur connecté
+				const sessionResponse = await fetch(`${baseUrl}/api/user/me`, {
+					credentials: 'include' // Inclure les cookies de session
+				});
+				
+				if (sessionResponse.ok) {
+					const sessionData = await sessionResponse.json();
+					if (sessionData.success && sessionData.user && sessionData.user.user_id) {
+						console.log('✅ USER_ID récupéré depuis la session:', sessionData.user.user_id);
+						return sessionData.user.user_id;
+					}
+				}
+				
+				// Utiliser l'email par défaut comme fallback
+				const defaultResponse = await fetch(`${baseUrl}/api/debug/userid/gregoire.chamorel@wesype.com`);
+				if (defaultResponse.ok) {
+					const result = await defaultResponse.json();
+					console.log('✅ USER_ID récupéré par défaut:', result.userId);
+					return result.userId;
+				}
+				
+			} catch (error) {
+				console.error('❌ Erreur récupération USER_ID:', error);
+			}
+			return null;
+		}
+
 		// Gestion de l'authentification
 		async function authenticateAxonaut() {
 			const apiKey = apiKeyInput.value.trim();
-			const userEmail = userEmailInput.value.trim() || undefined;
 
 			if (!apiKey) {
 				showStatus('Veuillez remplir votre clé API', 'error');
@@ -547,8 +566,16 @@
 			showStatus('Connexion à Axonaut en cours...');
 
 			try {
-				// Générer un ID utilisateur unique
-				currentUserId = 'user-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+				// Récupérer l'USER_ID de la session active
+				currentUserId = await getCurrentUserId();
+				
+				if (!currentUserId) {
+					showStatus('Impossible de récupérer l\'ID utilisateur. Veuillez vous connecter d\'abord via Google.', 'error');
+					authBtn.disabled = false;
+					return;
+				}
+
+				console.log('🔗 Connexion Axonaut avec USER_ID:', currentUserId);
 
 				const response = await fetch(`${baseUrl}/api/axonaut/auth`, {
 					method: 'POST',
@@ -558,8 +585,7 @@
 					body: JSON.stringify({
 						userId: currentUserId,
 						baseUrl: 'https://axonaut.com',
-						apiKey: apiKey,
-						userEmail: userEmail
+						apiKey: apiKey
 					})
 				});
 
@@ -570,7 +596,7 @@
 					setTimeout(() => {
 						showUserInfo({
 							userId: currentUserId,
-							userEmail: result.userEmail || userEmail
+							userEmail: result.userEmail || 'Utilisateur Axonaut'
 						});
 					}, 1000);
 				} else {
@@ -605,7 +631,6 @@
 						showAuthForm();
 						// Réinitialiser le formulaire
 						apiKeyInput.value = '';
-						userEmailInput.value = '';
 					}, 1000);
 				} else {
 					showStatus(`Erreur : ${result.error}`, 'error');
@@ -643,12 +668,10 @@
 		copyBtn.addEventListener('click', copyMcpUrl);
 
 		// Permettre l'authentification avec Entrée
-		[apiKeyInput, userEmailInput].forEach(input => {
-			input.addEventListener('keypress', (e) => {
-				if (e.key === 'Enter') {
-					authenticateAxonaut();
-				}
-			});
+		apiKeyInput.addEventListener('keypress', (e) => {
+			if (e.key === 'Enter') {
+				authenticateAxonaut();
+			}
 		});
 
 		// Initialisation

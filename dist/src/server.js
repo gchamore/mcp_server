@@ -7,12 +7,12 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { ServiceRegistry } from "./core/ServiceRegistry.js";
 import { MultiTenantManager } from "./core/MultiTenantManager.js";
-import { DatabaseUserManager } from "./core/DatabaseUserManager.js";
+import { PostgreSQLUserManager } from "./core/PostgreSQLUserManager.js";
+import { PostgreSQLSessionManager } from "./core/PostgreSQLSessionManager.js";
+import { PostgreSQLHTTPSessionManager } from "./core/PostgreSQLHTTPSessionManager.js";
 import { DatabaseManager } from "./database/DatabaseManager.js";
-import { SessionManager } from "./core/SessionManager.js";
 import { GmailService } from "./services/gmail/GmailService.js";
 import { AxonautService } from "./services/axonaut/AxonautService.js";
-import { redisPersistence as sessionPersistence } from "./utils/redis-persistence.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const PORT = process.env.PORT || 3000;
@@ -35,18 +35,28 @@ console.log('🏗️ Initialisation de l\'architecture multi-services...');
 const serviceRegistry = new ServiceRegistry();
 const database = new DatabaseManager();
 await database.initialize();
-const userManager = new DatabaseUserManager(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, `${BASE_URL}/auth/google/callback`, database);
-const sessionManager = new SessionManager();
+const mcpSessionManager = new PostgreSQLSessionManager(database);
+const httpSessionManager = new PostgreSQLHTTPSessionManager(database);
+const userManager = new PostgreSQLUserManager(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, `${BASE_URL}/auth/google/callback`, database, mcpSessionManager);
 const multiTenantManager = new MultiTenantManager(serviceRegistry);
 const gmailService = new GmailService(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, BASE_URL);
 const axonautService = new AxonautService();
 serviceRegistry.registerService(gmailService);
 serviceRegistry.registerService(axonautService);
 console.log('Architecture initialisée avec les services:', serviceRegistry.getServiceNames());
-console.log('📌 Sessions permanentes activées - pas de suppression automatique');
-console.log('💾 Initialisation du système de persistance Redis...');
-await sessionPersistence.initialize();
-console.log('📝 Redis configuré - connexion automatique en arrière-plan');
+console.log('✅ Architecture PostgreSQL 100% initialisée');
+setInterval(async () => {
+    try {
+        const cleanedMCP = await mcpSessionManager.cleanupExpiredSessions();
+        const cleanedHTTP = await httpSessionManager.cleanupExpiredSessions();
+        if (cleanedMCP > 0 || cleanedHTTP > 0) {
+            console.log(`🧹 Sessions nettoyées: ${cleanedMCP} MCP, ${cleanedHTTP} HTTP`);
+        }
+    }
+    catch (error) {
+        console.error('❌ Erreur nettoyage sessions:', error);
+    }
+}, 60 * 60 * 1000);
 const app = express();
 app.set('trust proxy', 1);
 app.use(express.json());
@@ -67,7 +77,7 @@ app.use((req, res, next) => {
 app.use(async (req, res, next) => {
     const sessionId = req.cookies['mcp-session'];
     if (sessionId) {
-        const session = await sessionManager.getSession(sessionId);
+        const session = await httpSessionManager.getSession(sessionId);
         if (session) {
             req.userSession = session;
         }
@@ -92,6 +102,126 @@ app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     next();
+});
+app.get('/api/debug/userid/:email', (req, res) => {
+    const email = decodeURIComponent(req.params.email);
+    const userId = userManager.createUserIdFromEmail(email);
+    res.json({
+        email,
+        userId,
+        mcpEndpoint: `${BASE_URL}/${userId}/mcp/sse`
+    });
+});
+app.get('/api/w/:workspaceId/mcp/discover_oauth_metadata', async (req, res) => {
+    console.log('[DUST.TT] Découverte OAuth metadata');
+    res.json({
+        endpoints: [
+            {
+                name: "Wesype MCP Server",
+                description: "Multi-service MCP server supporting Gmail and Axonaut",
+                url: `${BASE_URL}/mcp`,
+                oauth: {
+                    client_id: GOOGLE_CLIENT_ID,
+                    auth_url: "https://accounts.google.com/o/oauth2/auth",
+                    token_url: "https://oauth2.googleapis.com/token",
+                    scopes: ["https://www.googleapis.com/auth/gmail.readonly", "https://www.googleapis.com/auth/gmail.send"]
+                }
+            }
+        ]
+    });
+});
+app.get('/mcp', async (req, res) => {
+    console.log(`[MCP-DUST] Connexion MCP globale depuis Dust.tt`);
+    const demoUserId = "df07fc29133a08605492e76941c54606";
+    let userSession = multiTenantManager.getUserSession(demoUserId);
+    if (!userSession) {
+        const gmailSession = gmailService.getGmailSession(demoUserId);
+        if (gmailSession) {
+            multiTenantManager.createUserSession(demoUserId);
+            userSession = multiTenantManager.getUserSession(demoUserId);
+            if (userSession) {
+                userSession.services.gmail = gmailSession;
+            }
+        }
+    }
+    if (!userSession) {
+        console.log('[MCP-DUST] Aucune session utilisateur trouvée, création d\'une session par défaut');
+        multiTenantManager.createUserSession(demoUserId);
+        userSession = multiTenantManager.getUserSession(demoUserId);
+    }
+    const connectedServices = multiTenantManager.getConnectedServices(demoUserId);
+    console.log(`[MCP-DUST] Services connectés: ${connectedServices.join(', ')}`);
+    if (connectedServices.length === 0) {
+        console.log('[MCP-DUST] Aucun service connecté, serveur MCP minimal');
+    }
+    let transport = undefined;
+    let sessionId = undefined;
+    try {
+        req.socket.setTimeout(0);
+        req.socket.setNoDelay(true);
+        req.socket.setKeepAlive(true);
+        transport = new SSEServerTransport(`/mcp/message`, res);
+        sessionId = transport.sessionId;
+        const server = new McpServer({
+            name: "Wesype MCP Server",
+            version: "2.0.0",
+        });
+        for (const serviceName of connectedServices) {
+            const service = serviceRegistry.getService(serviceName);
+            const serviceSession = multiTenantManager.getServiceSession(demoUserId, serviceName);
+            if (service && serviceSession) {
+                console.log(`[MCP-DUST] Enregistrement des outils ${serviceName}...`);
+                service.registerTools(server, serviceSession);
+            }
+        }
+        if (connectedServices.length === 0) {
+            server.tool("wesype_status", "Obtenir le statut du serveur Wesype", {}, async () => {
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: `🔧 **Serveur Wesype MCP**\n\n` +
+                                `Services disponibles: Gmail, Axonaut\n` +
+                                `Services connectés: ${connectedServices.length}\n` +
+                                `Pour utiliser les services, connectez-vous via: ${BASE_URL}`
+                        }
+                    ]
+                };
+            });
+        }
+        multiTenantManager.setActiveMcpSession(sessionId, transport);
+        server.connect(transport).then(() => {
+            console.log(`[MCP-DUST] Serveur MCP connecté pour Dust.tt`);
+        });
+    }
+    catch (error) {
+        console.error(`[MCP-DUST] Erreur connexion:`, error);
+        if (sessionId) {
+            multiTenantManager.removeActiveMcpSession(sessionId);
+        }
+        if (transport) {
+            transport.close();
+        }
+        res.status(500).send('Internal server error');
+    }
+});
+app.post('/mcp/message', async (req, res) => {
+    const sessionId = req.query.sessionId;
+    const transport = multiTenantManager.getActiveMcpSession(sessionId);
+    if (!transport) {
+        res.status(404).json({ error: 'Session MCP not found' });
+        return;
+    }
+    transport.handlePostMessage(req, res);
+});
+app.get('/api/mcp/metadata', async (req, res) => {
+    res.json({
+        name: "Wesype MCP Server",
+        version: "1.0.0",
+        description: "Multi-service MCP server supporting Gmail and Axonaut",
+        capabilities: ["gmail", "axonaut"],
+        endpoint: `${BASE_URL}/mcp`
+    });
 });
 app.get('/:userId/mcp/sse', async (req, res) => {
     const userId = req.params.userId;
@@ -443,13 +573,13 @@ app.get('/auth/google/callback', async (req, res) => {
         if (!code) {
             return res.redirect('/?error=no_code');
         }
-        const userId = await userManager.authenticateWithGoogle(code);
-        const user = await userManager.getUser(userId);
+        const authResult = await userManager.authenticateWithGoogle(code);
+        const { userId, user } = authResult;
         if (!user) {
             console.error('❌ Utilisateur non trouvé après authentification');
             return res.redirect('/?error=user_not_found');
         }
-        const sessionId = await sessionManager.createSession({
+        const sessionId = await httpSessionManager.createSession({
             userId: user.user_id,
             email: user.email,
             name: user.name,
@@ -491,12 +621,7 @@ app.get('/auth/google/callback/gmail', async (req, res) => {
         if (authResult.success && authResult.userId) {
             const gmailSession = gmailService.gmailSessions.get(authResult.userId);
             if (gmailSession) {
-                await userManager.connectMCPService(userId, 'gmail', {
-                    externalUserId: authResult.userId,
-                    userEmail: authResult.userEmail,
-                    encryptedAccessToken: gmailSession.encryptedAccessToken,
-                    encryptedRefreshToken: gmailSession.encryptedRefreshToken
-                });
+                await userManager.connectGmailService(userId, gmailSession.encryptedRefreshToken || '', gmailSession.encryptedAccessToken || '', authResult.userEmail || '', undefined);
                 return res.redirect(`/pages/gmail.html?success=true&userId=${userId}&email=${encodeURIComponent(authResult.userEmail || '')}`);
             }
             else {
@@ -541,7 +666,7 @@ app.get('/api/user/me', async (req, res) => {
 app.post('/api/auth/logout', async (req, res) => {
     const sessionId = req.cookies['mcp-session'];
     if (sessionId) {
-        await sessionManager.deleteSession(sessionId);
+        await httpSessionManager.deleteSession(sessionId);
     }
     res.setHeader('Set-Cookie', 'mcp-session=; Max-Age=0; Path=/; HttpOnly');
     res.json({
@@ -717,7 +842,6 @@ app.delete('/api/account/:userId/delete', async (req, res) => {
             }
         }
         multiTenantManager.getUserSessionsMap().delete(userId);
-        await sessionPersistence.deleteUserSession(userId);
         await userManager.deleteUser(userId);
         res.json({
             success: true,
@@ -797,7 +921,7 @@ app.post('/api/oauth/gmail', async (req, res) => {
                 error: 'Session utilisateur requise'
             });
         }
-        const session = await sessionManager.getSession(sessionId);
+        const session = await httpSessionManager.getSession(sessionId);
         if (!session) {
             console.error('❌ [API-OAUTH-GMAIL] Session invalide');
             return res.status(401).json({
@@ -844,21 +968,7 @@ app.get('/oauth/callback', async (req, res) => {
                 multiTenantManager.addServiceSession(authResult.userId, 'gmail', gmailSession);
                 console.log(`[Gmail] Session ajoutée à l'utilisateur ${authResult.userId}`);
             }
-            try {
-                const newGmailSession = gmailService.getGmailSession(authResult.userId);
-                if (newGmailSession && userSession) {
-                    const tempGmailMap = new Map();
-                    tempGmailMap.set(authResult.userId, newGmailSession);
-                    await sessionPersistence.saveGmailSessions(tempGmailMap);
-                    const tempUserMap = new Map();
-                    tempUserMap.set(authResult.userId, userSession);
-                    await sessionPersistence.saveUserSessions(tempUserMap);
-                    console.log(`💾 Session Gmail ${authResult.userId} + session utilisateur sauvegardées immédiatement`);
-                }
-            }
-            catch (error) {
-                console.error('❌ Erreur sauvegarde immédiate Gmail:', error);
-            }
+            console.log(`✅ Session Gmail ${authResult.userId} sauvegardée en PostgreSQL`);
             res.redirect(`/pages/gmail.html?success=true&userId=${authResult.userId}&email=${encodeURIComponent(authResult.userEmail || '')}&service=gmail`);
         }
         else {
@@ -871,7 +981,7 @@ app.get('/oauth/callback', async (req, res) => {
     }
 });
 app.post('/api/axonaut/auth', express.json(), async (req, res) => {
-    const { userId, apiKey, baseUrl, userEmail } = req.body;
+    const { userId, apiKey, baseUrl } = req.body;
     if (!userId || !apiKey || !baseUrl) {
         return res.status(400).json({
             success: false,
@@ -880,12 +990,21 @@ app.post('/api/axonaut/auth', express.json(), async (req, res) => {
     }
     try {
         console.log(`[Axonaut] Tentative d'authentification pour l'utilisateur ${userId}`);
-        const authResult = await axonautService.authenticateWithApiKey(apiKey, baseUrl, userEmail, userId);
+        const existingUser = await userManager.getUser(userId);
+        if (!existingUser) {
+            return res.status(400).json({
+                success: false,
+                error: 'Utilisateur non trouvé. Veuillez vous connecter d\'abord via Google.'
+            });
+        }
+        console.log(`✅ Utilisateur existant trouvé: ${existingUser.email}`);
+        const authResult = await axonautService.authenticateWithApiKey(apiKey, baseUrl, existingUser.email, userId);
         if (authResult.success && authResult.userId) {
             const axonautSession = axonautService.getAxonautSession(authResult.userId);
             if (!axonautSession) {
                 throw new Error('Session Axonaut non trouvée après création');
             }
+            const mcpSession = await userManager.connectAxonautService(userId, apiKey, baseUrl, authResult.userEmail || existingUser.email);
             let userSession = multiTenantManager.getUserSession(userId);
             if (!userSession) {
                 multiTenantManager.createUserSession(userId);
@@ -894,25 +1013,15 @@ app.post('/api/axonaut/auth', express.json(), async (req, res) => {
             if (userSession) {
                 multiTenantManager.addServiceSession(userId, 'axonaut', axonautSession);
                 console.log(`[Axonaut] Authentification réussie pour ${userId}`);
-                try {
-                    const tempAxonautMap = new Map();
-                    tempAxonautMap.set(userId, axonautSession);
-                    await sessionPersistence.saveAxonautSessions(tempAxonautMap);
-                    const tempUserMap = new Map();
-                    tempUserMap.set(userId, userSession);
-                    await sessionPersistence.saveUserSessions(tempUserMap);
-                    console.log(`💾 Session Axonaut ${userId} sauvegardée immédiatement`);
-                }
-                catch (error) {
-                    console.error('❌ Erreur sauvegarde immédiate Axonaut:', error);
-                }
+                console.log(`✅ Session Axonaut ${userId} sauvegardée en PostgreSQL avec ID: ${mcpSession.sessionId}`);
                 res.json({
                     success: true,
                     message: 'Authentification Axonaut réussie',
                     userId,
                     service: 'axonaut',
                     userEmail: authResult.userEmail,
-                    mcpEndpoint: `${BASE_URL}/${userId}/mcp/sse`
+                    mcpEndpoint: `${BASE_URL}/${userId}/mcp/sse`,
+                    sessionId: mcpSession.sessionId
                 });
             }
             else {
@@ -1048,19 +1157,18 @@ app.get('/api/status', (req, res) => {
     });
 });
 app.get('/health', async (req, res) => {
-    const redisHealth = await sessionPersistence.healthCheck();
-    const redisStats = await sessionPersistence.getStats();
+    const dbStats = await userManager.getStats();
     res.json({
         status: 'OK',
         timestamp: new Date().toISOString(),
         baseUrl: BASE_URL,
         environment: process.env.NODE_ENV || 'development',
-        version: '2.0.0',
-        architecture: 'multi-services',
-        redis: {
-            connected: redisHealth,
-            url_configured: !!process.env.REDIS_URL,
-            stats: redisStats
+        version: '3.0.0',
+        architecture: 'postgresql-only',
+        database: {
+            connected: true,
+            url_configured: !!process.env.DATABASE_URL,
+            stats: dbStats
         }
     });
 });

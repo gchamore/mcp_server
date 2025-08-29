@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS mcp_connections (
     last_used TIMESTAMP WITH TIME ZONE,
     credentials TEXT, -- JSON chiffré avec les credentials spécifiques au service
     service_metadata JSONB, -- Métadonnées spécifiques (ex: baseUrl pour Axonaut)
+    session_id VARCHAR(64), -- ID de session unique pour identifier la session MCP active
+    expires_at TIMESTAMP WITH TIME ZONE, -- Date d'expiration optionnelle
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     

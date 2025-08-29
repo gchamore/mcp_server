@@ -13,7 +13,7 @@ declare global {
     namespace Express {
         interface Request {
             cookies: { [key: string]: string };
-            userSession?: import('./core/SessionManager.js').UserSession;
+            userSession?: import('./core/PostgreSQLHTTPSessionManager.js').HTTPUserSession;
         }
     }
 }
@@ -21,13 +21,13 @@ declare global {
 // Import des nouvelles classes
 import { ServiceRegistry } from "./core/ServiceRegistry.js";
 import { MultiTenantManager } from "./core/MultiTenantManager.js";
-import { DatabaseUserManager } from "./core/DatabaseUserManager.js";
+import { PostgreSQLUserManager } from "./core/PostgreSQLUserManager.js";
+import { PostgreSQLSessionManager } from "./core/PostgreSQLSessionManager.js";
+import { PostgreSQLHTTPSessionManager } from "./core/PostgreSQLHTTPSessionManager.js";
 import { DatabaseManager } from "./database/DatabaseManager.js";
-import { SessionManager } from "./core/SessionManager.js";
 import { GmailService } from "./services/gmail/GmailService.js";
 import { AxonautService } from "./services/axonaut/AxonautService.js";
 import { UserSession, GmailSession, AxonautSession } from "./types/index.js";
-import { redisPersistence as sessionPersistence } from "./utils/redis-persistence.js";
 import { google } from 'googleapis';
 import { decrypt } from "./utils/encryption.js";
 
@@ -68,51 +68,55 @@ const serviceRegistry = new ServiceRegistry();
 const database = new DatabaseManager();
 await database.initialize();
 
-// 3. Créer le gestionnaire utilisateur avec PostgreSQL
-const userManager = new DatabaseUserManager(
+// 3. Créer le gestionnaire de sessions MCP PostgreSQL
+const mcpSessionManager = new PostgreSQLSessionManager(database);
+
+// 4. Créer le gestionnaire de sessions HTTP PostgreSQL
+const httpSessionManager = new PostgreSQLHTTPSessionManager(database);
+
+// 5. Créer le gestionnaire utilisateur avec PostgreSQL
+const userManager = new PostgreSQLUserManager(
 	GOOGLE_CLIENT_ID,
 	GOOGLE_CLIENT_SECRET,
 	`${BASE_URL}/auth/google/callback`,
-	database
+	database,
+	mcpSessionManager
 );
 
-// 3. Créer le gestionnaire de sessions sécurisées
-const sessionManager = new SessionManager();
-
-// 4. Créer le gestionnaire multi-tenant
+// 5. Créer le gestionnaire multi-tenant
 const multiTenantManager = new MultiTenantManager(serviceRegistry);
 
-// 5. Initialiser le service Gmail
+// 6. Initialiser le service Gmail
 const gmailService = new GmailService(
 	GOOGLE_CLIENT_ID,
 	GOOGLE_CLIENT_SECRET,
 	BASE_URL
 );
 
-// 6. Initialiser le service Axonaut
+// 7. Initialiser le service Axonaut
 const axonautService = new AxonautService();
 
-// 6. Enregistrer les services
+// 8. Enregistrer les services
 serviceRegistry.registerService(gmailService);
 serviceRegistry.registerService(axonautService);
 
 console.log('Architecture initialisée avec les services:', serviceRegistry.getServiceNames());
 
-// ❌ SUPPRIMÉ : Nettoyage automatique des sessions (peut interrompre les connexions MCP)
-// setInterval(() => {
-//     multiTenantManager.cleanupExpiredSessions();
-//     gmailService.cleanupExpiredSessions();
-//     axonautService.cleanupExpiredSessions();
-// }, 60 * 60 * 1000);
+console.log('✅ Architecture PostgreSQL 100% initialisée');
 
-console.log('📌 Sessions permanentes activées - pas de suppression automatique');
-
-// 🔄 INITIALISATION DE LA PERSISTANCE REDIS
-console.log('💾 Initialisation du système de persistance Redis...');
-await sessionPersistence.initialize();
-
-// Redis se connecte de manière asynchrone via les event listeners
-console.log('📝 Redis configuré - connexion automatique en arrière-plan');
+// Nettoyage périodique des sessions expirées (toutes les heures)
+setInterval(async () => {
+	try {
+		const cleanedMCP = await mcpSessionManager.cleanupExpiredSessions();
+		const cleanedHTTP = await httpSessionManager.cleanupExpiredSessions();
+		
+		if (cleanedMCP > 0 || cleanedHTTP > 0) {
+			console.log(`🧹 Sessions nettoyées: ${cleanedMCP} MCP, ${cleanedHTTP} HTTP`);
+		}
+	} catch (error) {
+		console.error('❌ Erreur nettoyage sessions:', error);
+	}
+}, 60 * 60 * 1000); // 1 heure
 
 // APPLICATION EXPRESS UNIFIÉE
 const app = express();
@@ -145,7 +149,7 @@ app.use((req, res, next) => {
 app.use(async (req, res, next) => {
 	const sessionId = req.cookies['mcp-session'];
 	if (sessionId) {
-		const session = await sessionManager.getSession(sessionId);
+		const session = await httpSessionManager.getSession(sessionId);
 		if (session) {
 			req.userSession = session;
 		}
@@ -179,6 +183,170 @@ app.use((req, res, next) => {
 });
 
 // NOUVELLES ROUTES MULTI-SERVICES
+
+// Route debug pour récupérer le USER_ID basé sur l'email
+app.get('/api/debug/userid/:email', (req, res) => {
+	const email = decodeURIComponent(req.params.email);
+	const userId = userManager.createUserIdFromEmail(email);
+	
+	res.json({
+		email,
+		userId,
+		mcpEndpoint: `${BASE_URL}/${userId}/mcp/sse`
+	});
+});
+
+// Endpoint de découverte OAuth pour Dust.tt
+app.get('/api/w/:workspaceId/mcp/discover_oauth_metadata', async (req, res) => {
+	console.log('[DUST.TT] Découverte OAuth metadata');
+	
+	res.json({
+		endpoints: [
+			{
+				name: "Wesype MCP Server",
+				description: "Multi-service MCP server supporting Gmail and Axonaut",
+				url: `${BASE_URL}/mcp`,
+				oauth: {
+					client_id: GOOGLE_CLIENT_ID,
+					auth_url: "https://accounts.google.com/o/oauth2/auth",
+					token_url: "https://oauth2.googleapis.com/token",
+					scopes: ["https://www.googleapis.com/auth/gmail.readonly", "https://www.googleapis.com/auth/gmail.send"]
+				}
+			}
+		]
+	});
+});
+
+// Endpoint MCP global pour Dust.tt (niveau workspace)
+app.get('/mcp', async (req, res) => {
+	console.log(`[MCP-DUST] Connexion MCP globale depuis Dust.tt`);
+	
+	// Pour Dust.tt, on utilise un utilisateur de démonstration ou le premier utilisateur disponible
+	// TODO: Implémenter l'authentification Dust.tt appropriée
+	const demoUserId = "df07fc29133a08605492e76941c54606"; // Votre USER_ID de test
+	
+	// Vérifier si l'utilisateur existe
+	let userSession = multiTenantManager.getUserSession(demoUserId);
+	
+	// Si pas de session, essayer de récupérer depuis les services directs
+	if (!userSession) {
+		const gmailSession = gmailService.getGmailSession(demoUserId);
+		if (gmailSession) {
+			multiTenantManager.createUserSession(demoUserId);
+			userSession = multiTenantManager.getUserSession(demoUserId);
+			if (userSession) {
+				userSession.services.gmail = gmailSession;
+			}
+		}
+	}
+
+	if (!userSession) {
+		console.log('[MCP-DUST] Aucune session utilisateur trouvée, création d\'une session par défaut');
+		multiTenantManager.createUserSession(demoUserId);
+		userSession = multiTenantManager.getUserSession(demoUserId);
+	}
+
+	const connectedServices = multiTenantManager.getConnectedServices(demoUserId);
+	console.log(`[MCP-DUST] Services connectés: ${connectedServices.join(', ')}`);
+
+	// Si aucun service connecté, retourner un serveur MCP minimal
+	if (connectedServices.length === 0) {
+		console.log('[MCP-DUST] Aucun service connecté, serveur MCP minimal');
+	}
+
+	let transport: SSEServerTransport | undefined = undefined;
+	let sessionId: string | undefined = undefined;
+
+	try {
+		req.socket.setTimeout(0);
+		req.socket.setNoDelay(true);
+		req.socket.setKeepAlive(true);
+
+		// Créer le transport pour Dust.tt
+		transport = new SSEServerTransport(`/mcp/message`, res);
+		sessionId = transport.sessionId;
+
+		// Créer le serveur MCP pour Dust.tt
+		const server = new McpServer({
+			name: "Wesype MCP Server",
+			version: "2.0.0",
+		});
+
+		// Enregistrer les outils de tous les services connectés
+		for (const serviceName of connectedServices) {
+			const service = serviceRegistry.getService(serviceName);
+			const serviceSession = multiTenantManager.getServiceSession(demoUserId, serviceName);
+
+			if (service && serviceSession) {
+				console.log(`[MCP-DUST] Enregistrement des outils ${serviceName}...`);
+				service.registerTools(server, serviceSession);
+			}
+		}
+
+		// Si aucun service, ajouter des outils de démonstration
+		if (connectedServices.length === 0) {
+			server.tool(
+				"wesype_status",
+				"Obtenir le statut du serveur Wesype",
+				{},
+				async () => {
+					return {
+						content: [
+							{
+								type: "text",
+								text: `🔧 **Serveur Wesype MCP**\n\n` +
+									`Services disponibles: Gmail, Axonaut\n` +
+									`Services connectés: ${connectedServices.length}\n` +
+									`Pour utiliser les services, connectez-vous via: ${BASE_URL}`
+							}
+						]
+					};
+				}
+			);
+		}
+
+		// Connecter le transport au serveur
+		multiTenantManager.setActiveMcpSession(sessionId, transport);
+
+		server.connect(transport).then(() => {
+			console.log(`[MCP-DUST] Serveur MCP connecté pour Dust.tt`);
+		});
+
+	} catch (error) {
+		console.error(`[MCP-DUST] Erreur connexion:`, error);
+		if (sessionId) {
+			multiTenantManager.removeActiveMcpSession(sessionId);
+		}
+		if (transport) {
+			transport.close();
+		}
+		res.status(500).send('Internal server error');
+	}
+});
+
+// Route pour traiter les messages MCP depuis Dust.tt
+app.post('/mcp/message', async (req, res) => {
+	const sessionId = req.query.sessionId as string;
+
+	const transport = multiTenantManager.getActiveMcpSession(sessionId);
+	if (!transport) {
+		res.status(404).json({ error: 'Session MCP not found' });
+		return;
+	}
+
+	transport.handlePostMessage(req, res);
+});
+
+// Endpoint pour les métadonnées MCP générales
+app.get('/api/mcp/metadata', async (req, res) => {
+	res.json({
+		name: "Wesype MCP Server",
+		version: "1.0.0",
+		description: "Multi-service MCP server supporting Gmail and Axonaut",
+		capabilities: ["gmail", "axonaut"],
+		endpoint: `${BASE_URL}/mcp`
+	});
+});
 
 // Route MCP unifiée par utilisateur (remplace l'ancienne route Gmail)
 app.get('/:userId/mcp/sse', async (req, res) => {
@@ -646,8 +814,8 @@ app.get('/auth/google/callback', async (req, res) => {
 		}
 
 		// Authentifier l'utilisateur avec Google
-		const userId = await userManager.authenticateWithGoogle(code as string);
-		const user = await userManager.getUser(userId);
+		const authResult = await userManager.authenticateWithGoogle(code as string);
+		const { userId, user } = authResult;
         
 		if (!user) {
 			console.error('❌ Utilisateur non trouvé après authentification');
@@ -655,7 +823,7 @@ app.get('/auth/google/callback', async (req, res) => {
 		}
 
 		// Créer une session sécurisée
-		const sessionId = await sessionManager.createSession({
+		const sessionId = await httpSessionManager.createSession({
 			userId: user.user_id,
 			email: user.email,
 			name: user.name,
@@ -714,13 +882,14 @@ app.get('/auth/google/callback/gmail', async (req, res) => {
 		if (authResult.success && authResult.userId) {
 			const gmailSession = (gmailService as any).gmailSessions.get(authResult.userId);
 			if (gmailSession) {
-				// Enregistrer la connexion MCP en base avec les informations Gmail
-				await userManager.connectMCPService(userId, 'gmail', {
-					externalUserId: authResult.userId,
-					userEmail: authResult.userEmail,
-					encryptedAccessToken: gmailSession.encryptedAccessToken,
-					encryptedRefreshToken: gmailSession.encryptedRefreshToken
-				});
+				// Enregistrer la connexion Gmail directement avec le nouveau système
+				await userManager.connectGmailService(
+					userId,
+					gmailSession.encryptedRefreshToken || '',
+					gmailSession.encryptedAccessToken || '',
+					authResult.userEmail || '',
+					undefined // tokenExpiresAt
+				);
 
 				return res.redirect(`/pages/gmail.html?success=true&userId=${userId}&email=${encodeURIComponent(authResult.userEmail || '')}`);
 			} else {
@@ -771,7 +940,7 @@ app.get('/api/user/me', async (req, res) => {
 app.post('/api/auth/logout', async (req, res) => {
 	const sessionId = req.cookies['mcp-session'];
 	if (sessionId) {
-		await sessionManager.deleteSession(sessionId);
+		await httpSessionManager.deleteSession(sessionId);
 	}
 	
 	// Supprimer le cookie
@@ -985,10 +1154,7 @@ app.delete('/api/account/:userId/delete', async (req, res) => {
 		// Supprimer la session utilisateur
 		multiTenantManager.getUserSessionsMap().delete(userId);
 		
-		// Supprimer de Redis
-		await sessionPersistence.deleteUserSession(userId);
-		
-		// Supprimer l'utilisateur du gestionnaire persistant
+		// Supprimer l'utilisateur et toutes ses sessions MCP
 		await userManager.deleteUser(userId);
 		
 		res.json({
@@ -1086,7 +1252,7 @@ app.post('/api/oauth/gmail', async (req, res) => {
 			});
 		}
 
-		const session = await sessionManager.getSession(sessionId);
+		const session = await httpSessionManager.getSession(sessionId);
 		if (!session) {
 			console.error('❌ [API-OAUTH-GMAIL] Session invalide');
 			return res.status(401).json({
@@ -1146,25 +1312,8 @@ app.get('/oauth/callback', async (req, res) => {
 				console.log(`[Gmail] Session ajoutée à l'utilisateur ${authResult.userId}`);
 			}
 			
-			// 💾 Sauvegarde immédiate dans Redis
-			try {
-				// Sauvegarder la session Gmail + session utilisateur
-				const newGmailSession = gmailService.getGmailSession(authResult.userId);
-				if (newGmailSession && userSession) {
-					const tempGmailMap = new Map();
-					tempGmailMap.set(authResult.userId, newGmailSession);
-					await sessionPersistence.saveGmailSessions(tempGmailMap);
-					
-					// Sauvegarder aussi la session utilisateur correspondante
-					const tempUserMap = new Map();
-					tempUserMap.set(authResult.userId, userSession);
-					await sessionPersistence.saveUserSessions(tempUserMap);
-					
-					console.log(`💾 Session Gmail ${authResult.userId} + session utilisateur sauvegardées immédiatement`);
-				}
-			} catch (error) {
-				console.error('❌ Erreur sauvegarde immédiate Gmail:', error);
-			}
+			// ✅ Session Gmail maintenant persistée automatiquement en PostgreSQL
+			console.log(`✅ Session Gmail ${authResult.userId} sauvegardée en PostgreSQL`);
 			
 			res.redirect(`/pages/gmail.html?success=true&userId=${authResult.userId}&email=${encodeURIComponent(authResult.userEmail || '')}&service=gmail`);
 		} else {
@@ -1178,7 +1327,7 @@ app.get('/oauth/callback', async (req, res) => {
 
 // ROUTES AXONAUT 
 app.post('/api/axonaut/auth', express.json(), async (req, res) => {
-	const { userId, apiKey, baseUrl, userEmail } = req.body;
+	const { userId, apiKey, baseUrl } = req.body;
 
 	if (!userId || !apiKey || !baseUrl) {
 		return res.status(400).json({
@@ -1190,7 +1339,18 @@ app.post('/api/axonaut/auth', express.json(), async (req, res) => {
 	try {
 		console.log(`[Axonaut] Tentative d'authentification pour l'utilisateur ${userId}`);
 
-		const authResult = await axonautService.authenticateWithApiKey(apiKey, baseUrl, userEmail, userId);
+		// Vérifier que l'utilisateur existe déjà (il devrait être connecté via Google)
+		const existingUser = await userManager.getUser(userId);
+		if (!existingUser) {
+			return res.status(400).json({
+				success: false,
+				error: 'Utilisateur non trouvé. Veuillez vous connecter d\'abord via Google.'
+			});
+		}
+
+		console.log(`✅ Utilisateur existant trouvé: ${existingUser.email}`);
+
+		const authResult = await axonautService.authenticateWithApiKey(apiKey, baseUrl, existingUser.email, userId);
 
 		if (authResult.success && authResult.userId) {
 			// Récupérer la session créée par le service
@@ -1200,33 +1360,28 @@ app.post('/api/axonaut/auth', express.json(), async (req, res) => {
 				throw new Error('Session Axonaut non trouvée après création');
 			}
 
-			// Créer/récupérer la session utilisateur
+			// 🔄 Sauvegarder dans PostgreSQL - l'utilisateur existe déjà
+			const mcpSession = await userManager.connectAxonautService(
+				userId,
+				apiKey,
+				baseUrl,
+				authResult.userEmail || existingUser.email
+			);
+
+			// Créer/récupérer la session utilisateur (pour compatibilité)
 			let userSession = multiTenantManager.getUserSession(userId);
 			if (!userSession) {
 				multiTenantManager.createUserSession(userId);
 				userSession = multiTenantManager.getUserSession(userId);
 			}
 
-			// Ajouter la session Axonaut
+			// Ajouter la session Axonaut (pour compatibilité avec l'ancien système)
 			if (userSession) {
 				multiTenantManager.addServiceSession(userId, 'axonaut', axonautSession);
 				console.log(`[Axonaut] Authentification réussie pour ${userId}`);
 
-				// 💾 Sauvegarde immédiate dans Redis
-				try {
-					// Sauvegarder seulement la nouvelle session Axonaut + session utilisateur
-					const tempAxonautMap = new Map();
-					tempAxonautMap.set(userId, axonautSession);
-					await sessionPersistence.saveAxonautSessions(tempAxonautMap);
-					
-					const tempUserMap = new Map();
-					tempUserMap.set(userId, userSession);
-					await sessionPersistence.saveUserSessions(tempUserMap);
-					
-					console.log(`💾 Session Axonaut ${userId} sauvegardée immédiatement`);
-				} catch (error) {
-					console.error('❌ Erreur sauvegarde immédiate Axonaut:', error);
-				}
+				// ✅ Session Axonaut maintenant persistée en PostgreSQL
+				console.log(`✅ Session Axonaut ${userId} sauvegardée en PostgreSQL avec ID: ${mcpSession.sessionId}`);
 
 				res.json({
 					success: true,
@@ -1234,7 +1389,8 @@ app.post('/api/axonaut/auth', express.json(), async (req, res) => {
 					userId,
 					service: 'axonaut',
 					userEmail: authResult.userEmail,
-					mcpEndpoint: `${BASE_URL}/${userId}/mcp/sse`
+					mcpEndpoint: `${BASE_URL}/${userId}/mcp/sse`,
+					sessionId: mcpSession.sessionId
 				});
 			} else {
 				throw new Error('Erreur lors de la création de la session utilisateur');
@@ -1394,20 +1550,19 @@ app.get('/api/status', (req, res) => {
 
 //  HEALTH CHECK POUR RAILWAY
 app.get('/health', async (req, res) => {
-	const redisHealth = await sessionPersistence.healthCheck();
-	const redisStats = await sessionPersistence.getStats();
+	const dbStats = await userManager.getStats();
 	
 	res.json({
 		status: 'OK',
 		timestamp: new Date().toISOString(),
 		baseUrl: BASE_URL,
 		environment: process.env.NODE_ENV || 'development',
-		version: '2.0.0',
-		architecture: 'multi-services',
-		redis: {
-			connected: redisHealth,
-			url_configured: !!process.env.REDIS_URL,
-			stats: redisStats
+		version: '3.0.0',
+		architecture: 'postgresql-only',
+		database: {
+			connected: true,
+			url_configured: !!process.env.DATABASE_URL,
+			stats: dbStats
 		}
 	});
 });

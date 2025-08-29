@@ -90,8 +90,8 @@ export class DatabaseManager {
                 client.release();
             }
 
-            // Vérifier si les tables existent, sinon les créer
-            await this.ensureTablesExist();
+        // Vérifier si les tables existent, sinon les créer
+        await this.ensureTablesExist();
             
             this.isInitialized = true;
             console.log('✅ Base de données PostgreSQL initialisée');
@@ -154,6 +154,18 @@ export class DatabaseManager {
         }
     }
 
+    // === MÉTHODE QUERY GÉNÉRIQUE ===
+
+    /**
+     * Exécuter une requête SQL avec paramètres
+     */
+    async query(text: string, params?: any[]): Promise<QueryResult> {
+        if (!this.isInitialized) {
+            throw new Error('DatabaseManager non initialisé');
+        }
+        return this.pool.query(text, params);
+    }
+
     // === GESTION DES UTILISATEURS ===
 
     // Créer ou mettre à jour un utilisateur
@@ -164,29 +176,60 @@ export class DatabaseManager {
         picture?: string;
         google_refresh_token?: string;
     }): Promise<DatabaseUser> {
-        const query = `
-            INSERT INTO users (user_id, email, name, picture, google_refresh_token, last_login_at)
-            VALUES ($1, $2, $3, $4, $5, NOW())
-            ON CONFLICT (user_id) 
-            DO UPDATE SET 
-                email = EXCLUDED.email,
-                name = EXCLUDED.name,
-                picture = EXCLUDED.picture,
-                google_refresh_token = EXCLUDED.google_refresh_token,
-                last_login_at = NOW(),
-                updated_at = NOW()
-            RETURNING *`;
+        // D'abord, essayer de trouver un utilisateur existant par email ou user_id
+        const existingUserQuery = `
+            SELECT * FROM users 
+            WHERE email = $1 OR user_id = $2
+            LIMIT 1
+        `;
+        
+        const existingResult = await this.pool.query(existingUserQuery, [userData.email, userData.user_id]);
+        
+        if (existingResult.rows.length > 0) {
+            // Utilisateur existe, mettre à jour
+            const existingUser = existingResult.rows[0];
+            const updateQuery = `
+                UPDATE users 
+                SET name = $1,
+                    picture = $2,
+                    google_refresh_token = $3,
+                    last_login_at = NOW(),
+                    updated_at = NOW(),
+                    is_active = true
+                WHERE id = $4
+                RETURNING *
+            `;
+            
+            const updateValues = [
+                userData.name,
+                userData.picture || null,
+                userData.google_refresh_token || null,
+                existingUser.id
+            ];
+            
+            const result = await this.pool.query(updateQuery, updateValues);
+            console.log(`✅ Utilisateur mis à jour: ${userData.email}`);
+            return result.rows[0];
+        } else {
+            // Nouvel utilisateur, insérer
+            const insertQuery = `
+                INSERT INTO users (user_id, email, name, picture, google_refresh_token, last_login_at)
+                VALUES ($1, $2, $3, $4, $5, NOW())
+                RETURNING *
+            `;
 
-        const values = [
-            userData.user_id,
-            userData.email,
-            userData.name,
-            userData.picture || null,
-            userData.google_refresh_token || null
-        ];
+            const insertValues = [
+                userData.user_id,
+                userData.email,
+                userData.name,
+                userData.picture || null,
+                userData.google_refresh_token || null
+            ];
 
-        const result = await this.pool.query(query, values);
-        return result.rows[0];
+            const result = await this.pool.query(insertQuery, insertValues);
+            console.log(`✅ Nouvel utilisateur créé: ${userData.email}`);
+            return result.rows[0];
+        }
     }
 
     // Récupérer un utilisateur par user_id
@@ -201,6 +244,41 @@ export class DatabaseManager {
         const query = 'SELECT * FROM users WHERE email = $1 AND is_active = true';
         const result = await this.pool.query(query, [email]);
         return result.rows[0] || null;
+    }
+
+    // Créer un nouvel utilisateur
+    async createUser(userData: {
+        id: string;
+        email: string;
+        name: string;
+        google_id?: string | null;
+        created_at: Date;
+        updated_at: Date;
+        is_active: boolean;
+    }): Promise<boolean> {
+        try {
+            const insertQuery = `
+                INSERT INTO users (user_id, email, name, picture, google_refresh_token, is_active, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            `;
+
+            const insertValues = [
+                userData.id,
+                userData.email,
+                userData.name,
+                null, // picture
+                null, // google_refresh_token
+                userData.is_active,
+                userData.created_at,
+                userData.updated_at
+            ];
+
+            const result = await this.pool.query(insertQuery, insertValues);
+            return (result.rowCount || 0) > 0;
+        } catch (error) {
+            console.error('❌ Erreur création utilisateur:', error);
+            return false;
+        }
     }
 
     // Désactiver un utilisateur (soft delete)
