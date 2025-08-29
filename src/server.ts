@@ -553,7 +553,7 @@ app.get('/:userId/mcp/sse', async (req, res) => {
 			);
 		}
 
-		// 4. CONNECTER LE SERVEUR ET LE TRANSPORT (comme le SDK)
+		// 4. CONNECTER LE SERVEUR ET LE TRANSPORT (comme les exemples SDK)
 		console.log(`[MCP] GET SSE - Connexion du serveur MCP...`);
 		await server.connect(transport);
 		console.log(`[MCP] GET SSE - ✅ Serveur MCP connecté et prêt pour Dust.tt`);
