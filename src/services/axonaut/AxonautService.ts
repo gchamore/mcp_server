@@ -49,10 +49,9 @@ export class AxonautService extends BaseService {
 	}
 
 	// Méthode spécifique pour Axonaut : authentification par clé API
-	async authenticateWithApiKey(apiKey: string, baseUrl: string, userEmail?: string, userId?: string): Promise<AuthResult> {
+	async authenticateWithApiKey(apiKey: string, baseUrl: string, userEmail?: string): Promise<AuthResult> {
 		try {
-			// Utiliser l'userId fourni ou en générer un nouveau
-			const sessionUserId = userId || uuidv4();
+			const userId = uuidv4();
 
 			// Tester la validité de la clé API (avec la vraie clé)
 			const isValid = await this.testApiKey(apiKey, baseUrl);
@@ -72,7 +71,7 @@ export class AxonautService extends BaseService {
 			// Créer la session Axonaut sécurisée
 			const axonautSession: AxonautSession = {
 				serviceName: 'axonaut',
-				userId: sessionUserId,
+				userId,
 				userEmail: userEmail || 'utilisateur@axonaut.com',
 				isAuthenticated: true,
 				createdAt: new Date(),
@@ -82,15 +81,13 @@ export class AxonautService extends BaseService {
 				axonautClient
 			};
 
-			this.axonautSessions.set(sessionUserId, axonautSession);
-			console.log(`✅ Session Axonaut créée pour ${userEmail || 'utilisateur'}: ${sessionUserId}`);
+			this.axonautSessions.set(userId, axonautSession);
+			console.log(`✅ Session Axonaut créée pour ${userEmail || 'utilisateur'}: ${userId}`);
 			console.log(`🔐 Clé API chiffrée: ${maskApiKey(apiKey)}`);
-
-			// ✅ Plus d'auto-sauvegarde - Redis gère tout
 
 			return {
 				success: true,
-				userId: sessionUserId,
+				userId,
 				userEmail: userEmail || 'utilisateur@axonaut.com'
 			};
 		} catch (error) {
@@ -148,7 +145,7 @@ export class AxonautService extends BaseService {
 		return {
 			request: async (endpoint: string, options: any = {}) => {
 				const url = `${baseUrl}/api/v2${endpoint}`;
-
+				
 				// Déchiffrer la clé API juste pour cette requête
 				const apiKey = decrypt(encryptedApiKey);
 
@@ -186,12 +183,12 @@ export class AxonautService extends BaseService {
 			// Pour Axonaut, on teste si la clé API est toujours valide
 			const apiKey = this.getDecryptedApiKey(session);
 			const isValid = await this.testApiKey(apiKey, session.baseUrl);
-
+			
 			if (isValid) {
 				// ✅ Recréer le client avec la clé chiffrée
 				session.axonautClient = this.createAxonautClient(session.encryptedApiKey, session.baseUrl);
 			}
-
+			
 			return isValid;
 		} catch (error) {
 			console.error('❌ Erreur refresh Axonaut:', error);
@@ -511,57 +508,15 @@ export class AxonautService extends BaseService {
 
 	// Méthodes utilitaires
 	cleanupExpiredSessions() {
-		// ❌ DÉSACTIVÉ : Préservation des sessions Axonaut pour les connexions MCP
-		console.log('🔒 Nettoyage Axonaut désactivé - sessions préservées pour MCP');
-		
-		// Log du nombre de sessions Axonaut actives
-		const activeAxonautSessions = this.axonautSessions.size;
-		console.log(`📊 Sessions Axonaut actives: ${activeAxonautSessions}`);
-		
-		// Optionnel : Vérification de la validité des clés API
-		this.validateActiveApiKeys();
-	}
-
-	// Nouvelle méthode pour valider les clés API actives
-	private async validateActiveApiKeys() {
-		let validatedCount = 0;
-		
-		for (const [userId, session] of this.axonautSessions) {
-			try {
-				// Tester la validité de la clé API
-				const isValid = await this.refreshTokens(session);
-				if (isValid) {
-					validatedCount++;
-				} else {
-					console.warn(`⚠️ Clé API Axonaut invalide pour ${userId} - session conservée`);
-				}
-			} catch (error) {
-				console.warn(`⚠️ Erreur validation clé API pour ${userId}:`, error);
-			}
-		}
-		
-		if (validatedCount > 0) {
-			console.log(`✅ ${validatedCount} clés API Axonaut validées`);
-		}
-	}
-
-	// Nettoyage forcé pour les sessions très anciennes (utilisation manuelle)
-	forceCleanupOldSessions(daysOld: number = 30) {
 		const now = new Date();
-		const EXPIRY_TIME = daysOld * 24 * 60 * 60 * 1000;
-		let cleanedCount = 0;
+		const EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 heures
 
 		for (const [userId, session] of this.axonautSessions) {
-			const timeSinceLastAccess = now.getTime() - session.lastAccessed.getTime();
-			if (timeSinceLastAccess > EXPIRY_TIME) {
+			if (now.getTime() - session.lastAccessed.getTime() > EXPIRY_TIME) {
 				this.axonautSessions.delete(userId);
-				cleanedCount++;
-				console.log(`🗑️ Session Axonaut très ancienne supprimée: ${userId} (${Math.round(timeSinceLastAccess / (24 * 60 * 60 * 1000))} jours)`);
+				console.log(`🧹 Session Axonaut expirée supprimée: ${userId}`);
 			}
 		}
-
-		console.log(`🧹 Nettoyage Axonaut forcé: ${cleanedCount} sessions supprimées`);
-		return cleanedCount;
 	}
 
 	removeSession(userId: string): boolean {
@@ -579,10 +534,5 @@ export class AxonautService extends BaseService {
 
 	getSessionCount(): number {
 		return this.axonautSessions.size;
-	}
-
-	// Méthode pour obtenir les sessions brutes (pour la sauvegarde globale Redis)
-	getAxonautSessionsMap(): Map<string, AxonautSession> {
-		return this.axonautSessions;
 	}
 }
