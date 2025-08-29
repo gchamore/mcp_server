@@ -391,12 +391,25 @@ Pour connecter des services:
             });
         }
         multiTenantManager.setActiveMcpSession(sessionId, transport);
+        transport.onclose = () => {
+            console.log(`[MCP] Transport fermé pour ${userId}`);
+            if (sessionId) {
+                multiTenantManager.removeActiveMcpSession(sessionId);
+            }
+        };
+        transport.onerror = (error) => {
+            console.error(`[MCP] Erreur transport pour ${userId}:`, error);
+        };
+        console.log(`[MCP] Tentative de connexion du serveur MCP pour ${userId}...`);
         server.connect(transport).then(() => {
-            console.log(`[MCP] Serveur connecté pour ${userId} avec les services: ${connectedServices.join(', ')}`);
+            console.log(`[MCP] ✅ Serveur MCP connecté avec succès pour ${userId}`);
+            console.log(`[MCP] Services: ${connectedServices.join(', ') || 'aucun'}`);
+            console.log(`[MCP] Session ID: ${sessionId}`);
             const heartbeatInterval = setInterval(() => {
                 try {
                     if (res && !res.headersSent && !res.destroyed) {
                         res.write('data: {"type":"heartbeat","timestamp":' + Date.now() + '}\n\n');
+                        console.log(`[MCP] ❤️ Heartbeat envoyé pour ${userId}`);
                     }
                     else {
                         clearInterval(heartbeatInterval);
@@ -415,6 +428,14 @@ Pour connecter des services:
                     multiTenantManager.removeActiveMcpSession(sessionId);
                 }
             });
+        }).catch((error) => {
+            console.error(`[MCP] ❌ Erreur lors de la connexion du serveur pour ${userId}:`, error);
+            if (sessionId) {
+                multiTenantManager.removeActiveMcpSession(sessionId);
+            }
+            if (transport) {
+                transport.close();
+            }
         });
     }
     catch (error) {
@@ -429,13 +450,24 @@ Pour connecter des services:
     }
 });
 app.post('/:userId/mcp/message', async (req, res) => {
+    const userId = req.params.userId;
     const sessionId = req.query.sessionId;
+    console.log(`[MCP] Message reçu pour ${userId}, session: ${sessionId}`);
+    console.log(`[MCP] Body:`, JSON.stringify(req.body, null, 2));
     const transport = multiTenantManager.getActiveMcpSession(sessionId);
     if (!transport) {
+        console.error(`[MCP] Session MCP introuvable: ${sessionId}`);
         res.status(404).json({ error: 'Session MCP not found' });
         return;
     }
-    transport.handlePostMessage(req, res);
+    try {
+        console.log(`[MCP] Traitement du message pour ${userId}`);
+        transport.handlePostMessage(req, res);
+    }
+    catch (error) {
+        console.error(`[MCP] Erreur traitement message:`, error);
+        res.status(500).json({ error: 'Message processing error' });
+    }
 });
 app.post('/:userId/mcp/sse', async (req, res) => {
     const userId = req.params.userId;
