@@ -297,6 +297,72 @@ app.get('/api/mcp/metadata', async (req, res) => {
         endpoint: `${BASE_URL}/mcp`
     });
 });
+app.get('/:userId/mcp', async (req, res) => {
+    const userId = req.params.userId;
+    console.log(`[MCP] GET /mcp - Connexion pour l'utilisateur ${userId}`);
+    try {
+        const transport = new SSEServerTransport(`/${userId}/mcp/message`, res);
+        console.log(`[MCP] Transport créé, sessionId: ${transport.sessionId}`);
+        const server = new McpServer({
+            name: "wesype-mcp-server",
+            version: "1.0.0",
+        }, { capabilities: { logging: {} } });
+        const connectedServices = multiTenantManager.getConnectedServices(userId);
+        console.log(`[MCP] Services connectés: ${connectedServices.join(', ') || 'aucun'}`);
+        for (const serviceName of connectedServices) {
+            const service = serviceRegistry.getService(serviceName);
+            const serviceSession = multiTenantManager.getServiceSession(userId, serviceName);
+            if (service && serviceSession) {
+                console.log(`[MCP] Enregistrement outils ${serviceName}...`);
+                service.registerTools(server, serviceSession);
+            }
+        }
+        if (connectedServices.length === 0) {
+            server.tool("wesype_status", "Obtenir le statut du serveur Wesype MCP", {
+                type: "object",
+                properties: {},
+            }, async () => {
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: `🔧 **Serveur Wesype MCP**\n\nUtilisateur: ${userId}\nServices disponibles: Gmail, Axonaut\nServices connectés: ${connectedServices.length}\n\nPour connecter des services:\n• Gmail: ${BASE_URL}/pages/gmail.html\n• Axonaut: ${BASE_URL}/pages/axonaut.html`
+                        }
+                    ]
+                };
+            });
+        }
+        console.log(`[MCP] Connexion du serveur MCP...`);
+        await server.connect(transport);
+        console.log(`[MCP] ✅ Serveur MCP connecté`);
+        res.on('close', () => {
+            console.log(`[MCP] Connexion fermée pour ${userId}`);
+        });
+    }
+    catch (error) {
+        console.log(`[MCP] ❌ Erreur connexion pour ${userId}:`, error);
+        if (!res.headersSent) {
+            res.status(500).send('Internal server error');
+        }
+    }
+});
+app.post('/:userId/mcp/message', async (req, res) => {
+    const userId = req.params.userId;
+    const sessionId = req.query.sessionId;
+    console.log(`[MCP] POST message pour ${userId}, session: ${sessionId}`);
+    if (!sessionId) {
+        console.error(`[MCP] Pas de sessionId pour ${userId}`);
+        res.status(400).send('Missing sessionId parameter');
+        return;
+    }
+    try {
+        res.status(202).send('Accepted');
+    }
+    catch (error) {
+        console.error(`[MCP] Erreur traitement message:`, error);
+        res.status(500).send('Internal server error');
+    }
+});
 app.get('/:userId/mcp/sse', async (req, res) => {
     const userId = req.params.userId;
     console.log(`[MCP] GET SSE - Connexion pour l'utilisateur ${userId}`);

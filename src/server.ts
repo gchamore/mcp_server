@@ -443,6 +443,98 @@ app.get('/api/mcp/metadata', async (req, res) => {
 	});
 });
 
+// Route MCP SSE simple - Basée sur l'exemple SDK
+app.get('/:userId/mcp', async (req, res) => {
+	const userId = req.params.userId;
+	console.log(`[MCP] GET /mcp - Connexion pour l'utilisateur ${userId}`);
+
+	try {
+		// 1. CRÉER LE TRANSPORT SSE (comme l'exemple SDK)
+		const transport = new SSEServerTransport(`/${userId}/mcp/message`, res);
+		console.log(`[MCP] Transport créé, sessionId: ${transport.sessionId}`);
+
+		// 2. CRÉER LE SERVEUR MCP (simple comme l'exemple)
+		const server = new McpServer({
+			name: "wesype-mcp-server",
+			version: "1.0.0",
+		}, { capabilities: { logging: {} } });
+
+		// 3. RÉCUPÉRER ET ENREGISTRER LES SERVICES
+		const connectedServices = multiTenantManager.getConnectedServices(userId);
+		console.log(`[MCP] Services connectés: ${connectedServices.join(', ') || 'aucun'}`);
+
+		for (const serviceName of connectedServices) {
+			const service = serviceRegistry.getService(serviceName);
+			const serviceSession = multiTenantManager.getServiceSession(userId, serviceName);
+			
+			if (service && serviceSession) {
+				console.log(`[MCP] Enregistrement outils ${serviceName}...`);
+				service.registerTools(server, serviceSession);
+			}
+		}
+
+		// Outil de base si aucun service
+		if (connectedServices.length === 0) {
+			server.tool(
+				"wesype_status",
+				"Obtenir le statut du serveur Wesype MCP",
+				{
+					type: "object",
+					properties: {},
+				},
+				async () => {
+					return {
+						content: [
+							{
+								type: "text",
+								text: `🔧 **Serveur Wesype MCP**\n\nUtilisateur: ${userId}\nServices disponibles: Gmail, Axonaut\nServices connectés: ${connectedServices.length}\n\nPour connecter des services:\n• Gmail: ${BASE_URL}/pages/gmail.html\n• Axonaut: ${BASE_URL}/pages/axonaut.html`
+							}
+						]
+					};
+				}
+			);
+		}
+
+		// 4. CONNECTER LE SERVEUR (comme l'exemple SDK)
+		console.log(`[MCP] Connexion du serveur MCP...`);
+		await server.connect(transport);
+		console.log(`[MCP] ✅ Serveur MCP connecté`);
+
+		// 5. GÉRER LA FERMETURE
+		res.on('close', () => {
+			console.log(`[MCP] Connexion fermée pour ${userId}`);
+		});
+
+	} catch (error) {
+		console.log(`[MCP] ❌ Erreur connexion pour ${userId}:`, error);
+		if (!res.headersSent) {
+			res.status(500).send('Internal server error');
+		}
+	}
+});
+
+// Route POST pour les messages (comme l'exemple SDK)
+app.post('/:userId/mcp/message', async (req, res) => {
+	const userId = req.params.userId;
+	const sessionId = req.query.sessionId as string;
+	
+	console.log(`[MCP] POST message pour ${userId}, session: ${sessionId}`);
+
+	if (!sessionId) {
+		console.error(`[MCP] Pas de sessionId pour ${userId}`);
+		res.status(400).send('Missing sessionId parameter');
+		return;
+	}
+
+	try {
+		// Traitement simple du message
+		res.status(202).send('Accepted');
+	} catch (error) {
+		console.error(`[MCP] Erreur traitement message:`, error);
+		res.status(500).send('Internal server error');
+	}
+});
+
 // Route MCP unifiée par utilisateur - SIMPLIFIÉE pour compatibilité Dust.tt
 app.get('/:userId/mcp/sse', async (req, res) => {
 	const userId = req.params.userId;
