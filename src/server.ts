@@ -480,6 +480,18 @@ app.get('/:userId/mcp/sse', async (req, res) => {
 	const connectedServices = multiTenantManager.getConnectedServices(userId);
 	console.log(`[MCP] GET SSE - Services connectés: ${connectedServices.join(', ') || 'aucun'}`);
 
+	// Définir le nom du serveur
+	let serverName = "MCP";
+	if (connectedServices.length === 1) {
+		const serviceName = connectedServices[0];
+		const service = serviceRegistry.getService(serviceName);
+		serverName = `MCP ${service?.displayName || serviceName}`;
+	} else if (connectedServices.length > 1) {
+		serverName = "MCP Multi-Services";
+	} else {
+		serverName = "MCP Wesype";
+	}
+
 	let transport: SSEServerTransport | undefined = undefined;
 	let sessionId: string | undefined = undefined;
 
@@ -493,22 +505,20 @@ app.get('/:userId/mcp/sse', async (req, res) => {
 		sessionId = transport.sessionId;
 		console.log(`[MCP] GET SSE - Transport créé, sessionId: ${sessionId}`);
 
-		// 2. CRÉER LE SERVEUR MCP
-		let serverName = "MCP";
-		if (connectedServices.length === 1) {
-			const serviceName = connectedServices[0];
-			const service = serviceRegistry.getService(serviceName);
-			serverName = `MCP ${service?.displayName || serviceName}`;
-		} else if (connectedServices.length > 1) {
-			serverName = "MCP Multi-Services";
-		} else {
-			serverName = "MCP Wesype";
-		}
-
-		const server = new McpServer({
-			name: serverName,
-			version: "2.0.0",
-		});
+		// 2. CRÉER LE SERVEUR MCP (avec informations complètes comme le SDK)
+		const server = new McpServer(
+			{
+				name: serverName,
+				version: "2.0.0",
+			},
+			{
+				capabilities: {
+					tools: {},
+					resources: {},
+					logging: {}
+				}
+			}
+		);
 
 		// 3. ENREGISTRER LES OUTILS
 		for (const serviceName of connectedServices) {
@@ -543,7 +553,12 @@ app.get('/:userId/mcp/sse', async (req, res) => {
 			);
 		}
 
-		// 4. STOCKER LA SESSION ACTIVE (comme l'ancien code)
+		// 4. CONNECTER LE SERVEUR ET LE TRANSPORT (comme le SDK)
+		console.log(`[MCP] GET SSE - Connexion du serveur MCP...`);
+		await server.connect(transport);
+		console.log(`[MCP] GET SSE - ✅ Serveur MCP connecté et prêt pour Dust.tt`);
+
+		// 5. STOCKER LA SESSION ACTIVE (comme l'ancien code)
 		multiTenantManager.setActiveMcpSession(sessionId, transport);
 		console.log(`[MCP] GET SSE - Session stockée: ${sessionId}`);
 
