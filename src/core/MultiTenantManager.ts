@@ -251,6 +251,10 @@ export class MultiTenantManager {
 		return this.activeMcpSessions.get(sessionId);
 	}
 
+	getActiveMcpSessions(): Map<string, any> {
+		return this.activeMcpSessions;
+	}
+
 	removeActiveMcpSession(sessionId: string) {
 		this.activeMcpSessions.delete(sessionId);
 	}

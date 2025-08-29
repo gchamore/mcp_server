@@ -177,6 +177,9 @@ export class MultiTenantManager {
     getActiveMcpSession(sessionId) {
         return this.activeMcpSessions.get(sessionId);
     }
+    getActiveMcpSessions() {
+        return this.activeMcpSessions;
+    }
     removeActiveMcpSession(sessionId) {
         this.activeMcpSessions.delete(sessionId);
     }

@@ -118,11 +118,51 @@ setInterval(async () => {
 	}
 }, 60 * 60 * 1000); // 1 heure
 
+// Heartbeat pour les connexions SSE (toutes les 30 secondes)
+setInterval(() => {
+	const activeSessions = multiTenantManager.getActiveMcpSessions();
+	let heartbeatCount = 0;
+	
+	for (const [sessionId, transport] of activeSessions) {
+		try {
+			// Envoyer un ping SSE pour maintenir la connexion
+			if (transport && typeof transport.write === 'function') {
+				transport.write('event: ping\ndata: {}\n\n');
+				heartbeatCount++;
+			}
+		} catch (error) {
+			console.warn(`⚠️ Erreur heartbeat session ${sessionId}:`, error);
+			// Supprimer la session défaillante
+			multiTenantManager.removeActiveMcpSession(sessionId);
+		}
+	}
+	
+	if (heartbeatCount > 0) {
+		console.log(`💓 Heartbeat envoyé à ${heartbeatCount} session(s) MCP`);
+	}
+}, 30 * 1000); // 30 secondes
+
 // APPLICATION EXPRESS UNIFIÉE
 const app = express();
 
 // Juste trust proxy pour Railway (utile pour req.ip)
 app.set('trust proxy', 1);
+
+// Configuration CORS pour Dust.tt et autres clients MCP
+app.use((req, res, next) => {
+	res.header('Access-Control-Allow-Origin', '*');
+	res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control');
+	res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
+	
+	// Répondre aux requêtes preflight OPTIONS
+	if (req.method === 'OPTIONS') {
+		res.sendStatus(200);
+		return;
+	}
+	
+	next();
+});
 
 // Configuration des cookies et sessions
 app.use(express.json());
@@ -543,6 +583,33 @@ Pour connecter des services:
 
 		server.connect(transport).then(() => {
 			console.log(`[MCP] Serveur connecté pour ${userId} avec les services: ${connectedServices.join(', ')}`);
+			
+			// Démarrer le heartbeat pour maintenir la connexion SSE
+			const heartbeatInterval = setInterval(() => {
+				try {
+					// Vérifier si la réponse HTTP est encore active
+					if (res && !res.headersSent && !res.destroyed) {
+						// Envoyer un ping heartbeat via SSE
+						res.write('data: {"type":"heartbeat","timestamp":' + Date.now() + '}\n\n');
+					} else {
+						// Arrêter le heartbeat si la connexion est fermée
+						clearInterval(heartbeatInterval);
+						console.log(`[MCP] Heartbeat arrêté pour ${userId} (connexion fermée)`);
+					}
+				} catch (error) {
+					console.error(`[MCP] Erreur heartbeat pour ${userId}:`, error);
+					clearInterval(heartbeatInterval);
+				}
+			}, 30000); // Heartbeat toutes les 30 secondes
+
+			// Nettoyer le heartbeat quand la connexion se ferme
+			req.on('close', () => {
+				console.log(`[MCP] Connexion fermée pour ${userId}`);
+				clearInterval(heartbeatInterval);
+				if (sessionId) {
+					multiTenantManager.removeActiveMcpSession(sessionId);
+				}
+			});
 		});
 
 	} catch (error) {
@@ -568,6 +635,108 @@ app.post('/:userId/mcp/message', async (req, res) => {
 	}
 
 	transport.handlePostMessage(req, res);
+});
+
+// Endpoint POST pour SSE (requis par certains clients comme Dust.tt)
+app.post('/:userId/mcp/sse', async (req, res) => {
+	const userId = req.params.userId;
+	console.log(`[MCP] POST SSE pour ${userId}`);
+	
+	// Appeler la même logique que GET - créer ou récupérer la session
+	let userSession = multiTenantManager.getUserSession(userId);
+
+	// Pour la compatibilité avec l'ancienne version, vérifier Gmail directement
+	if (!userSession) {
+		const gmailSession = gmailService.getGmailSession(userId);
+		if (gmailSession) {
+			// Créer une session utilisateur avec le service Gmail
+			multiTenantManager.createUserSession(userId);
+			userSession = multiTenantManager.getUserSession(userId);
+			if (userSession) {
+				userSession.services.gmail = gmailSession;
+			}
+		}
+	}
+
+	// Si toujours pas de session, créer une session par défaut (pour Dust.tt)
+	if (!userSession) {
+		console.log(`[MCP] Création d'une session par défaut pour l'utilisateur ${userId} (POST)`);
+		multiTenantManager.createUserSession(userId);
+		userSession = multiTenantManager.getUserSession(userId);
+	}
+
+	if (!userSession) {
+		res.status(500).send('Cannot create user session');
+		return;
+	}
+
+	const connectedServices = multiTenantManager.getConnectedServices(userId);
+	console.log(`[MCP] POST SSE - Services connectés: ${connectedServices.join(', ') || 'aucun'}`);
+
+	// Créer un transport et serveur MCP minimal pour POST (même logique que GET)
+	let transport: SSEServerTransport | undefined = undefined;
+	let sessionId: string | undefined = undefined;
+
+	try {
+		req.socket.setTimeout(0);
+		req.socket.setNoDelay(true);
+		req.socket.setKeepAlive(true);
+
+		// 1. CRÉER LE TRANSPORT
+		transport = new SSEServerTransport(`/${userId}/mcp/message`, res);
+		sessionId = transport.sessionId;
+
+		// 2. CRÉER LE SERVEUR MCP
+		const server = new McpServer({
+			name: connectedServices.length > 0 ? "MCP Multi-Services" : "MCP Wesype",
+			version: "2.0.0",
+		});
+
+		// 3. ENREGISTRER LES OUTILS
+		if (connectedServices.length > 0) {
+			for (const serviceName of connectedServices) {
+				const service = serviceRegistry.getService(serviceName);
+				const serviceSession = multiTenantManager.getServiceSession(userId, serviceName);
+
+				if (service && serviceSession) {
+					console.log(`[MCP] POST - Enregistrement des outils ${serviceName}...`);
+					service.registerTools(server, serviceSession);
+				}
+			}
+		} else {
+			// Ajouter des outils par défaut pour un serveur minimal
+			server.tool(
+				"mcp_status",
+				"Obtenir le statut du serveur MCP",
+				{},
+				async () => {
+					return {
+						content: [{
+							type: "text",
+							text: `🚀 **MCP Wesype**\n\nServeur MCP actif pour l'utilisateur ${userId}\n\n📊 Services connectés: ${connectedServices.length}\n⏰ ${new Date().toLocaleString()}`
+						}]
+					};
+				}
+			);
+		}
+
+		// 4. CONNECTER LE TRANSPORT AU SERVEUR
+		multiTenantManager.setActiveMcpSession(sessionId, transport);
+
+		server.connect(transport).then(() => {
+			console.log(`[MCP] POST SSE - Serveur connecté pour ${userId}`);
+		});
+
+	} catch (error) {
+		console.error(`[MCP] Erreur POST SSE pour ${userId}:`, error);
+		if (sessionId) {
+			multiTenantManager.removeActiveMcpSession(sessionId);
+		}
+		if (transport) {
+			transport.close();
+		}
+		res.status(500).send('Internal server error');
+	}
 });
 
 // COMPATIBILITÉ AVEC L'ANCIENNE ROUTE GMAIL
