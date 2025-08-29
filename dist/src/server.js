@@ -299,6 +299,7 @@ app.get('/api/mcp/metadata', async (req, res) => {
 });
 app.get('/:userId/mcp/sse', async (req, res) => {
     const userId = req.params.userId;
+    console.log(`[MCP] GET SSE - Connexion pour l'utilisateur ${userId}`);
     let userSession = multiTenantManager.getUserSession(userId);
     if (!userSession) {
         const gmailSession = gmailService.getGmailSession(userId);
@@ -311,20 +312,17 @@ app.get('/:userId/mcp/sse', async (req, res) => {
         }
     }
     if (!userSession) {
-        console.log(`[MCP] Création d'une session par défaut pour l'utilisateur ${userId}`);
+        console.log(`[MCP] GET SSE - Création session pour ${userId}`);
         multiTenantManager.createUserSession(userId);
         userSession = multiTenantManager.getUserSession(userId);
     }
     if (!userSession) {
-        res.status(500).send('Cannot create user session');
+        console.error(`[MCP] GET SSE - Impossible de créer session pour ${userId}`);
+        res.status(404).send('User session not found');
         return;
     }
     const connectedServices = multiTenantManager.getConnectedServices(userId);
-    console.log(`[MCP] Connection multi-services pour l'utilisateur ${userId}`);
-    console.log(`[MCP] Services connectés: ${connectedServices.join(', ') || 'aucun'}`);
-    if (connectedServices.length === 0) {
-        console.log(`[MCP] Aucun service connecté pour ${userId}, création d'un serveur MCP minimal`);
-    }
+    console.log(`[MCP] GET SSE - Services connectés: ${connectedServices.join(', ') || 'aucun'}`);
     let transport = undefined;
     let sessionId = undefined;
     try {
@@ -333,6 +331,7 @@ app.get('/:userId/mcp/sse', async (req, res) => {
         req.socket.setKeepAlive(true);
         transport = new SSEServerTransport(`/${userId}/mcp/message`, res);
         sessionId = transport.sessionId;
+        console.log(`[MCP] GET SSE - Transport créé, sessionId: ${sessionId}`);
         let serverName = "MCP";
         if (connectedServices.length === 1) {
             const serviceName = connectedServices[0];
@@ -353,12 +352,11 @@ app.get('/:userId/mcp/sse', async (req, res) => {
             const service = serviceRegistry.getService(serviceName);
             const serviceSession = multiTenantManager.getServiceSession(userId, serviceName);
             if (service && serviceSession) {
-                console.log(`[MCP] Enregistrement des outils ${serviceName}...`);
+                console.log(`[MCP] GET SSE - Enregistrement outils ${serviceName}...`);
                 service.registerTools(server, serviceSession);
             }
         }
         if (connectedServices.length === 0) {
-            console.log(`[MCP] Ajout d'outils de démonstration pour ${userId}`);
             server.tool("wesype_status", "Obtenir le statut du serveur Wesype MCP", {
                 type: "object",
                 properties: {},
@@ -367,79 +365,20 @@ app.get('/:userId/mcp/sse', async (req, res) => {
                     content: [
                         {
                             type: "text",
-                            text: `🔧 Serveur Wesype MCP actif
-									
-Utilisateur: ${userId}
-Services disponibles: Gmail, Axonaut
-Services connectés: ${connectedServices.length}
-
-Pour connecter des services:
-- Gmail: ${BASE_URL}/pages/gmail.html
-- Axonaut: ${BASE_URL}/pages/axonaut.html`
+                            text: `🔧 **Serveur Wesype MCP**\n\nUtilisateur: ${userId}\nServices disponibles: Gmail, Axonaut\nServices connectés: ${connectedServices.length}\n\nPour connecter des services:\n• Gmail: ${BASE_URL}/pages/gmail.html\n• Axonaut: ${BASE_URL}/pages/axonaut.html`
                         }
-                    ],
-                };
-            });
-            server.tool("list_available_services", "Lister les services disponibles sur ce serveur MCP", {
-                type: "object",
-                properties: {},
-            }, async () => {
-                const services = serviceRegistry.getAllServices().map(s => ({
-                    name: s.serviceName,
-                    displayName: s.displayName,
-                    enabled: s.isEnabled(),
-                    description: s.serviceName === 'gmail' ? 'Service Gmail pour emails' : 'Service Axonaut CRM'
-                }));
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: `📋 Services disponibles:\n\n${services.map(s => `• ${s.displayName} (${s.name}) - ${s.enabled ? '✅ Activé' : '❌ Désactivé'}\n  ${s.description}`).join('\n\n')}`
-                        }
-                    ],
+                    ]
                 };
             });
         }
         multiTenantManager.setActiveMcpSession(sessionId, transport);
-        transport.onclose = () => {
-            console.log(`[MCP] Transport fermé pour ${userId}`);
-            if (sessionId) {
-                multiTenantManager.removeActiveMcpSession(sessionId);
-            }
-        };
-        transport.onerror = (error) => {
-            console.error(`[MCP] Erreur transport pour ${userId}:`, error);
-        };
-        console.log(`[MCP] Tentative de connexion du serveur MCP pour ${userId}...`);
+        console.log(`[MCP] GET SSE - Session stockée: ${sessionId}`);
         server.connect(transport).then(() => {
-            console.log(`[MCP] ✅ Serveur MCP connecté avec succès pour ${userId}`);
-            console.log(`[MCP] Services: ${connectedServices.join(', ') || 'aucun'}`);
-            console.log(`[MCP] Session ID: ${sessionId}`);
-            const heartbeatInterval = setInterval(() => {
-                try {
-                    if (res && !res.headersSent && !res.destroyed) {
-                        res.write('data: {"type":"heartbeat","timestamp":' + Date.now() + '}\n\n');
-                        console.log(`[MCP] ❤️ Heartbeat envoyé pour ${userId}`);
-                    }
-                    else {
-                        clearInterval(heartbeatInterval);
-                        console.log(`[MCP] Heartbeat arrêté pour ${userId} (connexion fermée)`);
-                    }
-                }
-                catch (error) {
-                    console.error(`[MCP] Erreur heartbeat pour ${userId}:`, error);
-                    clearInterval(heartbeatInterval);
-                }
-            }, 30000);
-            req.on('close', () => {
-                console.log(`[MCP] Connexion fermée pour ${userId}`);
-                clearInterval(heartbeatInterval);
-                if (sessionId) {
-                    multiTenantManager.removeActiveMcpSession(sessionId);
-                }
-            });
+            console.log(`[MCP] GET SSE - ✅ Serveur MCP connecté pour ${userId}`);
+            console.log(`[MCP] GET SSE - Services: ${connectedServices.join(', ') || 'aucun'}`);
+            console.log(`[MCP] GET SSE - Session ID: ${sessionId}`);
         }).catch((error) => {
-            console.error(`[MCP] ❌ Erreur lors de la connexion du serveur pour ${userId}:`, error);
+            console.error(`[MCP] GET SSE - ❌ Erreur connexion pour ${userId}:`, error);
             if (sessionId) {
                 multiTenantManager.removeActiveMcpSession(sessionId);
             }
@@ -449,7 +388,7 @@ Pour connecter des services:
         });
     }
     catch (error) {
-        console.error(`[MCP] Erreur connexion pour ${userId}:`, error);
+        console.error(`[MCP] GET SSE - Erreur pour ${userId}:`, error);
         if (sessionId) {
             multiTenantManager.removeActiveMcpSession(sessionId);
         }
@@ -462,114 +401,26 @@ Pour connecter des services:
 app.post('/:userId/mcp/message', async (req, res) => {
     const userId = req.params.userId;
     const sessionId = req.query.sessionId;
-    console.log(`[MCP] Message reçu pour ${userId}, session: ${sessionId}`);
-    console.log(`[MCP] Body:`, JSON.stringify(req.body, null, 2));
+    console.log(`[MCP] POST MESSAGE - Message pour ${userId}, session: ${sessionId}`);
     const transport = multiTenantManager.getActiveMcpSession(sessionId);
     if (!transport) {
-        console.error(`[MCP] Session MCP introuvable: ${sessionId}`);
+        console.error(`[MCP] POST MESSAGE - Session introuvable: ${sessionId}`);
         res.status(404).json({ error: 'Session MCP not found' });
         return;
     }
     try {
-        console.log(`[MCP] Traitement du message pour ${userId}`);
+        console.log(`[MCP] POST MESSAGE - Traitement message pour ${userId}`);
         transport.handlePostMessage(req, res);
     }
     catch (error) {
-        console.error(`[MCP] Erreur traitement message:`, error);
+        console.error(`[MCP] POST MESSAGE - Erreur:`, error);
         res.status(500).json({ error: 'Message processing error' });
     }
 });
 app.post('/:userId/mcp/sse', async (req, res) => {
     const userId = req.params.userId;
-    console.log(`[MCP] POST SSE pour ${userId}`);
-    let userSession = multiTenantManager.getUserSession(userId);
-    if (!userSession) {
-        const gmailSession = gmailService.getGmailSession(userId);
-        if (gmailSession) {
-            multiTenantManager.createUserSession(userId);
-            userSession = multiTenantManager.getUserSession(userId);
-            if (userSession) {
-                userSession.services.gmail = gmailSession;
-            }
-        }
-    }
-    if (!userSession) {
-        console.log(`[MCP] Création d'une session par défaut pour l'utilisateur ${userId} (POST)`);
-        multiTenantManager.createUserSession(userId);
-        userSession = multiTenantManager.getUserSession(userId);
-    }
-    if (!userSession) {
-        res.status(500).send('Cannot create user session');
-        return;
-    }
-    const connectedServices = multiTenantManager.getConnectedServices(userId);
-    console.log(`[MCP] POST SSE - Services connectés: ${connectedServices.join(', ') || 'aucun'}`);
-    let transport = undefined;
-    let sessionId = undefined;
-    try {
-        req.socket.setTimeout(0);
-        req.socket.setNoDelay(true);
-        req.socket.setKeepAlive(true);
-        transport = new SSEServerTransport(`/${userId}/mcp/message`, res);
-        sessionId = transport.sessionId;
-        console.log(`[MCP] POST SSE - Transport créé avec sessionId: ${sessionId}`);
-        res.on('close', () => {
-            console.log(`[MCP] POST SSE - Connexion fermée par le client pour session ${sessionId}`);
-            if (sessionId) {
-                multiTenantManager.removeActiveMcpSession(sessionId);
-            }
-        });
-        res.on('error', (error) => {
-            console.error(`[MCP] POST SSE - Erreur de connexion pour session ${sessionId}:`, error);
-        });
-        const server = new McpServer({
-            name: connectedServices.length > 0 ? "MCP Multi-Services" : "MCP Wesype",
-            version: "2.0.0",
-        });
-        if (connectedServices.length > 0) {
-            for (const serviceName of connectedServices) {
-                const service = serviceRegistry.getService(serviceName);
-                const serviceSession = multiTenantManager.getServiceSession(userId, serviceName);
-                if (service && serviceSession) {
-                    console.log(`[MCP] POST - Enregistrement des outils ${serviceName}...`);
-                    service.registerTools(server, serviceSession);
-                }
-            }
-        }
-        else {
-            server.tool("mcp_status", "Obtenir le statut du serveur MCP", {}, async () => {
-                return {
-                    content: [{
-                            type: "text",
-                            text: `🚀 **MCP Wesype**\n\nServeur MCP actif pour l'utilisateur ${userId}\n\n📊 Services connectés: ${connectedServices.length}\n⏰ ${new Date().toLocaleString()}`
-                        }]
-                };
-            });
-        }
-        multiTenantManager.setActiveMcpSession(sessionId, transport);
-        server.connect(transport).then(() => {
-            console.log(`[MCP] POST SSE - Serveur connecté pour ${userId} avec session ${sessionId}`);
-            console.log(`[MCP] POST SSE - Attente de messages de Dust.tt...`);
-            setTimeout(() => {
-                console.log(`[MCP] POST SSE - Pas de message reçu après 5 secondes pour ${userId}`);
-            }, 5000);
-        }).catch((error) => {
-            console.error(`[MCP] POST SSE - Erreur connexion serveur pour ${userId}:`, error);
-            if (sessionId) {
-                multiTenantManager.removeActiveMcpSession(sessionId);
-            }
-        });
-    }
-    catch (error) {
-        console.error(`[MCP] Erreur POST SSE pour ${userId}:`, error);
-        if (sessionId) {
-            multiTenantManager.removeActiveMcpSession(sessionId);
-        }
-        if (transport) {
-            transport.close();
-        }
-        res.status(500).send('Internal server error');
-    }
+    console.log(`[MCP] POST SSE - Redirection vers GET pour ${userId}`);
+    res.redirect(301, `/${userId}/mcp/sse`);
 });
 app.get('/:userId/gmail/sse', (req, res) => {
     const userId = req.params.userId;
