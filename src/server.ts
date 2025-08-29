@@ -547,11 +547,35 @@ app.get('/:userId/mcp/sse', async (req, res) => {
 		multiTenantManager.setActiveMcpSession(sessionId, transport);
 		console.log(`[MCP] GET SSE - Session stockée: ${sessionId}`);
 
+		// NOUVEAU: Gérer les événements de connexion pour Dust.tt
+		req.on('close', () => {
+			console.log(`[MCP] GET SSE - Connexion fermée pour ${userId}`);
+			if (sessionId) {
+				multiTenantManager.removeActiveMcpSession(sessionId);
+			}
+		});
+
+		req.on('error', (error) => {
+			console.error(`[MCP] GET SSE - Erreur connexion pour ${userId}:`, error);
+			if (sessionId) {
+				multiTenantManager.removeActiveMcpSession(sessionId);
+			}
+		});
+
 		// 5. CONNECTER LE TRANSPORT (version simplifiée comme l'ancien code)
 		server.connect(transport).then(() => {
 			console.log(`[MCP] GET SSE - ✅ Serveur MCP connecté pour ${userId}`);
 			console.log(`[MCP] GET SSE - Services: ${connectedServices.join(', ') || 'aucun'}`);
 			console.log(`[MCP] GET SSE - Session ID: ${sessionId}`);
+			
+			// NOUVEAU: Envoyer un signal de "ready" pour Dust.tt
+			try {
+				// Envoyer un événement de confirmation à Dust.tt
+				res.write('event: connected\ndata: {"status":"ready","services":' + JSON.stringify(connectedServices) + '}\n\n');
+				console.log(`[MCP] GET SSE - Signal "ready" envoyé à Dust.tt pour ${userId}`);
+			} catch (signalError) {
+				console.warn(`[MCP] GET SSE - Erreur envoi signal ready:`, signalError);
+			}
 		}).catch((error) => {
 			console.error(`[MCP] GET SSE - ❌ Erreur connexion pour ${userId}:`, error);
 			if (sessionId) {
