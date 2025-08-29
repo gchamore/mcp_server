@@ -271,12 +271,22 @@ app.get('/mcp', async (req, res) => {
 });
 app.post('/mcp/message', async (req, res) => {
     const sessionId = req.query.sessionId;
+    console.log(`[MCP] Message global reçu, session: ${sessionId}`);
+    console.log(`[MCP] Body global:`, JSON.stringify(req.body, null, 2));
     const transport = multiTenantManager.getActiveMcpSession(sessionId);
     if (!transport) {
+        console.error(`[MCP] Session MCP globale introuvable: ${sessionId}`);
         res.status(404).json({ error: 'Session MCP not found' });
         return;
     }
-    transport.handlePostMessage(req, res);
+    try {
+        console.log(`[MCP] Traitement du message global`);
+        transport.handlePostMessage(req, res);
+    }
+    catch (error) {
+        console.error(`[MCP] Erreur traitement message global:`, error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 app.get('/api/mcp/metadata', async (req, res) => {
     res.json({
@@ -502,6 +512,16 @@ app.post('/:userId/mcp/sse', async (req, res) => {
         req.socket.setKeepAlive(true);
         transport = new SSEServerTransport(`/${userId}/mcp/message`, res);
         sessionId = transport.sessionId;
+        console.log(`[MCP] POST SSE - Transport créé avec sessionId: ${sessionId}`);
+        res.on('close', () => {
+            console.log(`[MCP] POST SSE - Connexion fermée par le client pour session ${sessionId}`);
+            if (sessionId) {
+                multiTenantManager.removeActiveMcpSession(sessionId);
+            }
+        });
+        res.on('error', (error) => {
+            console.error(`[MCP] POST SSE - Erreur de connexion pour session ${sessionId}:`, error);
+        });
         const server = new McpServer({
             name: connectedServices.length > 0 ? "MCP Multi-Services" : "MCP Wesype",
             version: "2.0.0",
@@ -528,7 +548,16 @@ app.post('/:userId/mcp/sse', async (req, res) => {
         }
         multiTenantManager.setActiveMcpSession(sessionId, transport);
         server.connect(transport).then(() => {
-            console.log(`[MCP] POST SSE - Serveur connecté pour ${userId}`);
+            console.log(`[MCP] POST SSE - Serveur connecté pour ${userId} avec session ${sessionId}`);
+            console.log(`[MCP] POST SSE - Attente de messages de Dust.tt...`);
+            setTimeout(() => {
+                console.log(`[MCP] POST SSE - Pas de message reçu après 5 secondes pour ${userId}`);
+            }, 5000);
+        }).catch((error) => {
+            console.error(`[MCP] POST SSE - Erreur connexion serveur pour ${userId}:`, error);
+            if (sessionId) {
+                multiTenantManager.removeActiveMcpSession(sessionId);
+            }
         });
     }
     catch (error) {

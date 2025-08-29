@@ -412,14 +412,24 @@ app.get('/mcp', async (req, res) => {
 // Route pour traiter les messages MCP depuis Dust.tt
 app.post('/mcp/message', async (req, res) => {
 	const sessionId = req.query.sessionId as string;
+	
+	console.log(`[MCP] Message global reçu, session: ${sessionId}`);
+	console.log(`[MCP] Body global:`, JSON.stringify(req.body, null, 2));
 
 	const transport = multiTenantManager.getActiveMcpSession(sessionId);
 	if (!transport) {
+		console.error(`[MCP] Session MCP globale introuvable: ${sessionId}`);
 		res.status(404).json({ error: 'Session MCP not found' });
 		return;
 	}
 
-	transport.handlePostMessage(req, res);
+	try {
+		console.log(`[MCP] Traitement du message global`);
+		transport.handlePostMessage(req, res);
+	} catch (error) {
+		console.error(`[MCP] Erreur traitement message global:`, error);
+		res.status(500).json({ error: 'Internal server error' });
+	}
 });
 
 // Endpoint pour les métadonnées MCP générales
@@ -720,6 +730,20 @@ app.post('/:userId/mcp/sse', async (req, res) => {
 		// 1. CRÉER LE TRANSPORT
 		transport = new SSEServerTransport(`/${userId}/mcp/message`, res);
 		sessionId = transport.sessionId;
+		
+		console.log(`[MCP] POST SSE - Transport créé avec sessionId: ${sessionId}`);
+
+		// Surveiller les événements du transport
+		res.on('close', () => {
+			console.log(`[MCP] POST SSE - Connexion fermée par le client pour session ${sessionId}`);
+			if (sessionId) {
+				multiTenantManager.removeActiveMcpSession(sessionId);
+			}
+		});
+
+		res.on('error', (error) => {
+			console.error(`[MCP] POST SSE - Erreur de connexion pour session ${sessionId}:`, error);
+		});
 
 		// 2. CRÉER LE SERVEUR MCP
 		const server = new McpServer({
@@ -759,7 +783,19 @@ app.post('/:userId/mcp/sse', async (req, res) => {
 		multiTenantManager.setActiveMcpSession(sessionId, transport);
 
 		server.connect(transport).then(() => {
-			console.log(`[MCP] POST SSE - Serveur connecté pour ${userId}`);
+			console.log(`[MCP] POST SSE - Serveur connecté pour ${userId} avec session ${sessionId}`);
+			console.log(`[MCP] POST SSE - Attente de messages de Dust.tt...`);
+			
+			// Test : Envoyer un message initial pour voir si Dust.tt le reçoit
+			setTimeout(() => {
+				console.log(`[MCP] POST SSE - Pas de message reçu après 5 secondes pour ${userId}`);
+			}, 5000);
+			
+		}).catch((error) => {
+			console.error(`[MCP] POST SSE - Erreur connexion serveur pour ${userId}:`, error);
+			if (sessionId) {
+				multiTenantManager.removeActiveMcpSession(sessionId);
+			}
 		});
 
 	} catch (error) {
