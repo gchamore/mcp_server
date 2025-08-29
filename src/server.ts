@@ -128,6 +128,30 @@ app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Configuration CORS pour permettre les connexions MCP cross-origin
+app.use((req, res, next) => {
+	// Autoriser toutes les origines pour les endpoints MCP
+	res.header('Access-Control-Allow-Origin', '*');
+	res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+	res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+	res.header('Access-Control-Allow-Credentials', 'true');
+	
+	// Pour les endpoints SSE, configuration spéciale
+	if (req.path.includes('/sse')) {
+		res.header('Cache-Control', 'no-cache');
+		res.header('Connection', 'keep-alive');
+		res.header('Content-Type', 'text/event-stream');
+	}
+	
+	// Répondre aux requêtes OPTIONS (preflight)
+	if (req.method === 'OPTIONS') {
+		res.sendStatus(200);
+		return;
+	}
+	
+	next();
+});
+
 // Middleware pour parser les cookies
 app.use((req, res, next) => {
 	// Parser simple des cookies
@@ -199,6 +223,27 @@ app.get('/api/debug/userid/:email', (req, res) => {
 // Endpoint de découverte OAuth pour Dust.tt
 app.get('/api/w/:workspaceId/mcp/discover_oauth_metadata', async (req, res) => {
 	console.log('[DUST.TT] Découverte OAuth metadata');
+	
+	res.json({
+		endpoints: [
+			{
+				name: "Wesype MCP Server",
+				description: "Multi-service MCP server supporting Gmail and Axonaut",
+				url: `${BASE_URL}/mcp`,
+				oauth: {
+					client_id: GOOGLE_CLIENT_ID,
+					auth_url: "https://accounts.google.com/o/oauth2/auth",
+					token_url: "https://oauth2.googleapis.com/token",
+					scopes: ["https://www.googleapis.com/auth/gmail.readonly", "https://www.googleapis.com/auth/gmail.send"]
+				}
+			}
+		]
+	});
+});
+
+// Endpoint de découverte simple (au cas où)
+app.get('/discover_oauth_metadata', async (req, res) => {
+	console.log('[DUST.TT] Découverte OAuth metadata (endpoint simple)');
 	
 	res.json({
 		endpoints: [
@@ -368,20 +413,26 @@ app.get('/:userId/mcp/sse', async (req, res) => {
 		}
 	}
 
+	// Si toujours pas de session, créer une session par défaut (pour Dust.tt)
 	if (!userSession) {
-		res.status(404).send('User session not found');
+		console.log(`[MCP] Création d'une session par défaut pour l'utilisateur ${userId}`);
+		multiTenantManager.createUserSession(userId);
+		userSession = multiTenantManager.getUserSession(userId);
+	}
+
+	if (!userSession) {
+		res.status(500).send('Cannot create user session');
 		return;
 	}
 
 	const connectedServices = multiTenantManager.getConnectedServices(userId);
 
-	if (connectedServices.length === 0) {
-		res.status(400).send('No services connected for this user');
-		return;
-	}
-
 	console.log(`[MCP] Connection multi-services pour l'utilisateur ${userId}`);
-	console.log(`[MCP] Services connectés: ${connectedServices.join(', ')}`);
+	console.log(`[MCP] Services connectés: ${connectedServices.join(', ') || 'aucun'}`);
+
+	if (connectedServices.length === 0) {
+		console.log(`[MCP] Aucun service connecté pour ${userId}, création d'un serveur MCP minimal`);
+	}
 
 	let transport: SSEServerTransport | undefined = undefined;
 	let sessionId: string | undefined = undefined;
@@ -425,6 +476,66 @@ app.get('/:userId/mcp/sse', async (req, res) => {
 				console.log(`[MCP] Enregistrement des outils ${serviceName}...`);
 				service.registerTools(server, serviceSession);
 			}
+		}
+
+		// Si aucun service connecté, ajouter des outils de démonstration
+		if (connectedServices.length === 0) {
+			console.log(`[MCP] Ajout d'outils de démonstration pour ${userId}`);
+			
+			server.tool(
+				"wesype_status",
+				"Obtenir le statut du serveur Wesype MCP",
+				{
+					type: "object",
+					properties: {},
+				},
+				async () => {
+					return {
+						content: [
+							{
+								type: "text",
+								text: `🔧 Serveur Wesype MCP actif
+									
+Utilisateur: ${userId}
+Services disponibles: Gmail, Axonaut
+Services connectés: ${connectedServices.length}
+
+Pour connecter des services:
+- Gmail: ${BASE_URL}/pages/gmail.html
+- Axonaut: ${BASE_URL}/pages/axonaut.html`
+							}
+						],
+					};
+				}
+			);
+
+			server.tool(
+				"list_available_services",
+				"Lister les services disponibles sur ce serveur MCP",
+				{
+					type: "object",
+					properties: {},
+				},
+				async () => {
+					const services = serviceRegistry.getAllServices().map(s => ({
+						name: s.serviceName,
+						displayName: s.displayName,
+						enabled: s.isEnabled(),
+						description: s.serviceName === 'gmail' ? 'Service Gmail pour emails' : 'Service Axonaut CRM'
+					}));
+
+					return {
+						content: [
+							{
+								type: "text",
+								text: `📋 Services disponibles:\n\n${services.map(s => 
+									`• ${s.displayName} (${s.name}) - ${s.enabled ? '✅ Activé' : '❌ Désactivé'}\n  ${s.description}`
+								).join('\n\n')}`
+							}
+						],
+					};
+				}
+			);
 		}
 
 		// 4. CONNECTER LE TRANSPORT AU SERVEUR
