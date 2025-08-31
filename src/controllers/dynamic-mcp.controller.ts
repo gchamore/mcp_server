@@ -161,6 +161,11 @@ export class DynamicMcpController {
             }
           });
 
+        case 'notifications/initialized':
+          // Les notifications n'ont pas de réponse, juste un 200 OK
+          console.log('✅ Client MCP initialisé');
+          return res.status(200).end();
+
         case 'tools/list':
           // Retourner la liste des outils disponibles
           const toolConfig = DynamicMcpController.mcpService.getToolConfig(toolName);
