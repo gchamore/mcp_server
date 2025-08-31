@@ -4,7 +4,7 @@ import { AuthService } from '../services/auth.service.js';
 import { McpService } from '../services/mcp.service.js';
 
 export class DynamicMcpController {
-  private static mcpService = new DynamicMcpService();
+  private static mcpService = DynamicMcpService.getInstance();
 
   /**
    * Créer une nouvelle session MCP

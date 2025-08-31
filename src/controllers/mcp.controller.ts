@@ -5,7 +5,7 @@ import { ApiValidationService } from '../services/api-validation.service.js';
 import { DynamicMcpService } from '../services/dynamic-mcp.service.js';
 
 export class McpController {
-  private static dynamicMcpService = new DynamicMcpService();
+  private static dynamicMcpService = DynamicMcpService.getInstance();
 
   /**
    * Créer une nouvelle session MCP

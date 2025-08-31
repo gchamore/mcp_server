@@ -17,6 +17,12 @@ export class DynamicMcpService {
                 }]
         ]);
     }
+    static getInstance() {
+        if (!DynamicMcpService.instance) {
+            DynamicMcpService.instance = new DynamicMcpService();
+        }
+        return DynamicMcpService.instance;
+    }
     async createMcpSession(userId, toolName) {
         try {
             console.log(`🔨 Création d'une session MCP ${toolName} pour l'utilisateur ${userId}`);

@@ -13,8 +13,19 @@ import { McpService } from './mcp.service.js';
  * Service pour gérer les serveurs MCP dynamiques
  */
 export class DynamicMcpService {
+  private static instance: DynamicMcpService;
   private activeSessions: Map<string, ActiveMcpSession> = new Map();
   
+  /**
+   * Singleton pattern
+   */
+  public static getInstance(): DynamicMcpService {
+    if (!DynamicMcpService.instance) {
+      DynamicMcpService.instance = new DynamicMcpService();
+    }
+    return DynamicMcpService.instance;
+  }
+
   /**
    * Configuration des outils par type
    */

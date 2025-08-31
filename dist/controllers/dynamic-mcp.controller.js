@@ -236,4 +236,4 @@ export class DynamicMcpController {
         }
     }
 }
-DynamicMcpController.mcpService = new DynamicMcpService();
+DynamicMcpController.mcpService = DynamicMcpService.getInstance();
