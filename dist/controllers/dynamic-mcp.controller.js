@@ -124,6 +124,9 @@ export class DynamicMcpController {
                             }
                         }
                     });
+                case 'notifications/initialized':
+                    console.log('✅ Client MCP initialisé');
+                    return res.status(200).end();
                 case 'tools/list':
                     const toolConfig = DynamicMcpController.mcpService.getToolConfig(toolName);
                     if (!toolConfig) {

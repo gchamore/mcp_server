@@ -79,19 +79,25 @@ export class AxonautClient {
       headers: {
         'userApiKey': apiKey,
         'Accept': 'application/json',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'User-Agent': 'MCP-Axonaut-Client/1.0.0'
       },
-      timeout: 30000
+      timeout: 10000,  // Même timeout que le test réussi
+      validateStatus: function (status) {
+        return status >= 200 && status < 300; // Statuts valides
+      }
     });
 
     // Intercepteur pour les logs
     this.client.interceptors.request.use(
       (config) => {
-        console.log(`🔗 Axonaut API: ${config.method?.toUpperCase()} ${config.url}`);
+        console.log(`🔗 [AxonautClient] Requête: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+        console.log(`🔗 [AxonautClient] Headers complets:`, JSON.stringify(config.headers, null, 2));
+        console.log(`🔗 [AxonautClient] Timeout:`, config.timeout);
         return config;
       },
       (error) => {
-        console.error('❌ Axonaut Request Error:', error);
+        console.error('❌ [AxonautClient] Request Error:', error);
         return Promise.reject(error);
       }
     );
@@ -120,13 +126,29 @@ export class AxonautClient {
    */
   async testConnection(): Promise<{ success: boolean; message: string; data?: any }> {
     try {
+      console.log('🔍 [AxonautClient] Test de connexion...');
+      console.log('🔑 [AxonautClient] API Key reçue:', this.apiKey ? `${this.apiKey.substring(0, 10)}...` : 'VIDE');
+      console.log('🌐 [AxonautClient] Base URL:', this.client.defaults.baseURL);
+      console.log('📋 [AxonautClient] Headers:', JSON.stringify(this.client.defaults.headers, null, 2));
+      
       const response = await this.client.get('/me');
+      
+      console.log('✅ [AxonautClient] Connexion réussie:', response.status);
+      console.log('📊 [AxonautClient] Données reçues:', JSON.stringify(response.data, null, 2));
+      
       return {
         success: true,
         message: 'Connexion à Axonaut réussie',
         data: response.data
       };
     } catch (error: any) {
+      console.error('❌ [AxonautClient] Erreur de connexion:', error.message);
+      console.error('📄 [AxonautClient] Status:', error.response?.status);
+      console.error('📄 [AxonautClient] Status Text:', error.response?.statusText);
+      console.error('📄 [AxonautClient] Response Data:', JSON.stringify(error.response?.data, null, 2));
+      console.error('📄 [AxonautClient] Request Headers:', JSON.stringify(error.config?.headers, null, 2));
+      console.error('📄 [AxonautClient] Request URL:', error.config?.url);
+      
       return {
         success: false,
         message: `Erreur de connexion: ${error.response?.status || error.message}`,

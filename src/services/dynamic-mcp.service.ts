@@ -148,11 +148,17 @@ export class DynamicMcpService {
       
       try {
         const apiKey = getApiKey();
+        console.log(`🔑 [DynamicMcpService] API Key récupérée:`, apiKey ? `${apiKey.substring(0, 10)}...` : 'VIDE');
+        console.log(`🔑 [DynamicMcpService] Longueur API Key:`, apiKey?.length || 0);
+        
         if (!apiKey) {
           throw new Error('Clé API non configurée pour cette session');
         }
 
+        console.log(`🚀 [DynamicMcpService] Exécution de l'outil ${name} avec API Key`);
         const result = await tool.execute(args, apiKey);
+        console.log(`✅ [DynamicMcpService] Outil ${name} exécuté avec succès`);
+        
         return { 
           content: [{ 
             type: "text", 
@@ -160,7 +166,7 @@ export class DynamicMcpService {
           }] 
         };
       } catch (error) {
-        console.error(`❌ Erreur lors de l'exécution de l'outil ${name}:`, error);
+        console.error(`❌ [DynamicMcpService] Erreur lors de l'exécution de l'outil ${name}:`, error);
         return { 
           content: [{ 
             type: "text", 
