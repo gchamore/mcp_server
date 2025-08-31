@@ -156,16 +156,22 @@ export const getProjectsTool = {
 };
 export const getInvoicesTool = {
     name: "get_invoices",
-    description: "Récupérer les factures depuis Axonaut",
+    description: "Récupérer les factures depuis Axonaut avec pagination",
     inputSchema: {
         type: "object",
         properties: {
             limit: {
                 type: "number",
-                description: "Nombre maximum de factures à retourner",
+                description: "Nombre maximum de factures à retourner (max: 500, défaut: 10)",
                 default: 10,
                 minimum: 1,
-                maximum: 100
+                maximum: 500
+            },
+            page: {
+                type: "number",
+                description: "Numéro de page pour la pagination (défaut: 1)",
+                default: 1,
+                minimum: 1
             },
             status: {
                 type: "string",
@@ -177,20 +183,21 @@ export const getInvoicesTool = {
             }
         }
     },
-    async execute({ limit = 10, status, company_id }, apiKey) {
+    async execute({ limit = 10, page = 1, status, company_id }, apiKey) {
         try {
             const client = new AxonautClient(apiKey);
-            const invoices = await client.getInvoices({ limit, status, company_id });
+            const invoices = await client.getInvoices({ limit, page, status, company_id });
             if (!invoices || invoices.length === 0) {
-                return "🧾 Aucune facture trouvée.";
+                return `🧾 Aucune facture trouvée (page ${page}).`;
             }
-            return `🧾 **Factures Axonaut** (${invoices.length} résultats)\n\n` +
+            return `🧾 **Factures Axonaut** (page ${page}, ${invoices.length} résultats)\n\n` +
                 invoices.map((invoice, index) => `${index + 1}. **Facture ${invoice.number || invoice.id}**\n` +
                     `   💰 Montant: ${invoice.total_amount || invoice.amount || 'N/A'}€\n` +
                     `   📅 Date: ${invoice.date || invoice.creation_date || 'N/A'}\n` +
                     `   🔔 Statut: ${invoice.status || 'N/A'}\n` +
                     `   🏢 Client: ${invoice.company?.name || 'N/A'}\n` +
-                    `   🆔 ID: ${invoice.id}\n`).join('\n');
+                    `   🆔 ID: ${invoice.id}\n`).join('\n') +
+                `\n💡 *Astuce: Utilisez le paramètre 'page' pour voir plus de résultats (page suivante: ${page + 1})*`;
         }
         catch (error) {
             return `❌ Erreur lors de la récupération des factures: ${error instanceof Error ? error.message : 'Erreur inconnue'}`;

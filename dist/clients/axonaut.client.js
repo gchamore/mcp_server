@@ -67,20 +67,30 @@ export class AxonautClient {
             };
         }
     }
-    async getCompanies(params) {
+    async getCompanies(params = {}) {
         try {
-            const queryParams = new URLSearchParams();
-            if (params?.limit)
-                queryParams.append('limit', params.limit.toString());
-            if (params?.page)
-                queryParams.append('page', params.page.toString());
-            if (params?.search)
-                queryParams.append('search', params.search);
-            const url = `/companies${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-            const response = await this.client.get(url);
-            return Array.isArray(response.data) ? response.data : (response.data.data || []);
+            const page = params.page || 1;
+            const limit = params.limit || 10;
+            let endpoint = `/companies?page=${page}`;
+            if (params.search) {
+                endpoint += `&search=${encodeURIComponent(params.search)}`;
+            }
+            const headers = {
+                'page': page.toString()
+            };
+            console.log(`🔗 [AxonautClient] Récupération entreprises - URL: ${endpoint}, Headers page: ${page}`);
+            const response = await this.client.get(endpoint, {
+                headers
+            });
+            const companies = Array.isArray(response.data) ? response.data : (response.data.data || []);
+            return companies.slice(0, limit);
         }
         catch (error) {
+            console.error('❌ [AxonautClient] Erreur lors de la récupération des entreprises:', {
+                status: error.response?.status,
+                data: error.response?.data,
+                url: error.config?.url
+            });
             throw new Error(`Erreur lors de la récupération des entreprises: ${error.message}`);
         }
     }
@@ -102,18 +112,27 @@ export class AxonautClient {
             throw new Error(`Erreur lors de la récupération de l'entreprise: ${error.message}`);
         }
     }
-    async getProjects(params) {
+    async getProjects(params = {}) {
         try {
-            const queryParams = new URLSearchParams();
-            if (params?.limit)
-                queryParams.append('limit', params.limit.toString());
-            if (params?.page)
-                queryParams.append('page', params.page.toString());
-            const url = `/projects${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-            const response = await this.client.get(url);
-            return Array.isArray(response.data) ? response.data : (response.data.data || []);
+            const page = params.page || 1;
+            const limit = params.limit || 10;
+            let endpoint = `/projects?page=${page}`;
+            const headers = {
+                'page': page.toString()
+            };
+            console.log(`🔗 [AxonautClient] Récupération projets - URL: ${endpoint}, Headers page: ${page}`);
+            const response = await this.client.get(endpoint, {
+                headers
+            });
+            const projects = Array.isArray(response.data) ? response.data : (response.data.data || []);
+            return projects.slice(0, limit);
         }
         catch (error) {
+            console.error('❌ [AxonautClient] Erreur lors de la récupération des projets:', {
+                status: error.response?.status,
+                data: error.response?.data,
+                url: error.config?.url
+            });
             throw new Error(`Erreur lors de la récupération des projets: ${error.message}`);
         }
     }
@@ -126,22 +145,35 @@ export class AxonautClient {
             throw new Error(`Erreur lors de la création du projet: ${error.message}`);
         }
     }
-    async getInvoices(params) {
+    async getInvoices(params = {}) {
         try {
-            const queryParams = new URLSearchParams();
-            if (params?.limit)
-                queryParams.append('limit', params.limit.toString());
-            if (params?.page)
-                queryParams.append('page', params.page.toString());
-            if (params?.status)
-                queryParams.append('status', params.status);
-            if (params?.company_id)
-                queryParams.append('company_id', params.company_id.toString());
-            const url = `/invoices${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-            const response = await this.client.get(url);
-            return Array.isArray(response.data) ? response.data : (response.data.data || []);
+            const page = params.page || 1;
+            const limit = params.limit || 10;
+            let endpoint = `/invoices?page=${page}`;
+            if (params.status) {
+                endpoint += `&status=${encodeURIComponent(params.status)}`;
+            }
+            if (params.company_id) {
+                endpoint += `&company_id=${params.company_id}`;
+            }
+            const headers = {
+                'page': page.toString()
+            };
+            console.log(`🔗 [AxonautClient] Récupération factures - URL: ${endpoint}, Headers page: ${page}`);
+            const response = await this.client.get(endpoint, {
+                headers
+            });
+            const invoices = Array.isArray(response.data) ? response.data : (response.data.data || []);
+            return invoices.slice(0, limit);
         }
         catch (error) {
+            console.error('❌ [AxonautClient] Erreur détaillée lors de la récupération des factures:', {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data,
+                url: error.config?.url,
+                headers: error.config?.headers
+            });
             throw new Error(`Erreur lors de la récupération des factures: ${error.message}`);
         }
     }
