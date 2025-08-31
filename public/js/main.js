@@ -367,7 +367,7 @@ function showMessage(message, type = 'info') {
     activeNotifications.forEach(notification => {
         if (notification.classList.contains(`notification-${type}`)) {
             notification.style.opacity = '0';
-            notification.style.transform = 'translateX(100%)';
+            notification.style.transform = 'translateX(-50%) translateY(-20px)';
             setTimeout(() => {
                 if (notification.parentNode) {
                     notification.parentNode.removeChild(notification);
@@ -386,18 +386,19 @@ function showMessage(message, type = 'info') {
     notification.style.cssText = `
         position: fixed;
         top: ${20 + (activeNotifications.length * 70)}px;
-        right: 20px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-20px);
         padding: 16px 24px;
         border-radius: 12px;
         color: white;
         font-weight: 500;
         z-index: 1000;
         opacity: 0;
-        transform: translateX(100%);
         transition: all 0.3s ease;
         max-width: 400px;
         word-wrap: break-word;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        text-align: center;
     `;
     
     // Couleurs selon le type
@@ -422,13 +423,13 @@ function showMessage(message, type = 'info') {
     // Animation d'entrée
     setTimeout(() => {
         notification.style.opacity = '1';
-        notification.style.transform = 'translateX(0)';
+        notification.style.transform = 'translateX(-50%) translateY(0)';
     }, 100);
     
     // Suppression automatique
     setTimeout(() => {
         notification.style.opacity = '0';
-        notification.style.transform = 'translateX(100%)';
+        notification.style.transform = 'translateX(-50%) translateY(-20px)';
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.parentNode.removeChild(notification);
