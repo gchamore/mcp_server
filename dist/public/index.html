@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Wesype</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Page de Landing -->
+    <div id="landingPage" class="container">
+        <header class="header">
+            <div class="logo">
+                <h1>MCP Wesype</h1>
+                <p class="tagline">Model Context Protocol Platform</p>
+            </div>
+        </header>
+        
+        <main class="main-content">
+            <div class="welcome-section">
+                <h2>Bienvenue sur MCP Wesype</h2>
+                <p class="description">
+                    Plateforme avancée de Model Context Protocol pour une intégration intelligente 
+                    et seamless de vos données et services.
+                </p>
+            </div>
+            
+            <div class="action-section">
+                <div class="auth-buttons">
+                    <button id="loginBtn" class="auth-button login-btn">
+                        <span class="button-text">Se connecter</span>
+                        <div class="button-icon">→</div>
+                    </button>
+                    <button id="registerBtn" class="auth-button register-btn">
+                        <span class="button-text">S'inscrire</span>
+                        <div class="button-icon">+</div>
+                    </button>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="footer">
+            <p>&copy; 2025 MCP Wesype. Tous droits réservés.</p>
+            <div class="status-indicator">
+                <span class="status-dot"></span>
+                <span>Service en ligne</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Page d'accueil connecté -->
+    <div id="dashboardPage" class="container dashboard" style="display: none;">
+        <header class="dashboard-header">
+            <div class="main-title">
+                <h1>MCP Wesype</h1>
+                <p class="user-welcome">Bienvenue, <span class="user-name">Utilisateur</span></p>
+            </div>
+        </header>
+        
+        <main class="dashboard-content">
+            <div class="service-description">
+                <h2>Votre plateforme MCP</h2>
+                <p>
+                    Découvrez et utilisez une vaste collection de Model Context Protocols 
+                    conçus pour enrichir vos applications avec des capacités d'IA avancées.
+                </p>
+            </div>
+            
+            <div class="search-section">
+                <div class="search-container">
+                    <input type="text" id="mcpSearch" placeholder="Rechercher un MCP..." class="search-input">
+                    <button class="search-btn">🔍</button>
+                </div>
+            </div>
+            
+            <div class="dashboard-actions">
+                <button id="logoutBtn" class="logout-btn">
+                    <span class="button-text">Déconnexion</span>
+                    <div class="button-icon">🚪</div>
+                </button>
+                
+                <button id="settingsBtn" class="settings-btn">
+                    <span class="button-text">Paramètres</span>
+                    <div class="button-icon">⚙️</div>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal des paramètres -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Paramètres du compte</h3>
+                <span class="close" data-modal="settingsModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h4>Gestion du compte</h4>
+                    <div class="settings-actions">
+                        <button id="deleteAccountBtn" class="delete-account-btn">
+                            <span class="button-text">Supprimer le compte</span>
+                            <div class="button-icon">🗑️</div>
+                        </button>
+                        
+                        <!-- Bouton admin pour utilisateurs privilégiés -->
+                        <button id="adminPanelBtn" class="admin-panel-btn" style="display: none;">
+                            <span class="button-text">Panneau Admin</span>
+                            <div class="button-icon">👑</div>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4>Informations personnelles</h4>
+                    <p class="user-info">
+                        <strong>Email:</strong> <span class="user-email">-</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal du panneau admin -->
+    <div id="adminModal" class="modal">
+        <div class="modal-content admin-modal">
+            <div class="modal-header">
+                <h3>👑 Panneau d'Administration</h3>
+                <span class="close" data-modal="adminModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="admin-section">
+                    <h4>🔧 Outils & Plateformes</h4>
+                    <div class="admin-actions">
+                        <button id="n8nBtn" class="admin-action-btn n8n-btn">
+                            <span class="button-icon">🔗</span>
+                            <div class="button-content">
+                                <span class="button-text">N8N Platform</span>
+                                <span class="button-desc">Accéder à l'automatisation</span>
+                            </div>
+                        </button>
+                        
+                        <button id="databaseBtn" class="admin-action-btn database-btn">
+                            <span class="button-icon">💾</span>
+                            <div class="button-content">
+                                <span class="button-text">Base de données</span>
+                                <span class="button-desc">Prisma Studio</span>
+                            </div>
+                        </button>
+                        
+                        <button id="usersManagementBtn" class="admin-action-btn users-btn">
+                            <span class="button-icon">👥</span>
+                            <div class="button-content">
+                                <span class="button-text">Gestion utilisateurs</span>
+                                <span class="button-desc">Voir tous les comptes</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="admin-section">
+                    <h4>📊 Monitoring & Stats</h4>
+                    <div class="admin-actions">
+                        <button id="serverStatsBtn" class="admin-action-btn stats-btn">
+                            <span class="button-icon">📈</span>
+                            <div class="button-content">
+                                <span class="button-text">Statistiques serveur</span>
+                                <span class="button-desc">Performance & logs</span>
+                            </div>
+                        </button>
+                        
+                        <button id="systemConfigBtn" class="admin-action-btn config-btn">
+                            <span class="button-icon">⚙️</span>
+                            <div class="button-content">
+                                <span class="button-text">Configuration</span>
+                                <span class="button-desc">Paramètres système</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="admin-section">
+                    <h4>🛡️ Sécurité & Maintenance</h4>
+                    <div class="admin-actions">
+                        <button id="backupBtn" class="admin-action-btn backup-btn">
+                            <span class="button-icon">💿</span>
+                            <div class="button-content">
+                                <span class="button-text">Sauvegarde</span>
+                                <span class="button-desc">Backup & restore</span>
+                            </div>
+                        </button>
+                        
+                        <button id="logsBtn" class="admin-action-btn logs-btn">
+                            <span class="button-icon">📋</span>
+                            <div class="button-content">
+                                <span class="button-text">Logs système</span>
+                                <span class="button-desc">Historique & debug</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de connexion -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Se connecter</h3>
+                <span class="close" data-modal="loginModal">&times;</span>
+            </div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <input type="email" id="loginEmail" placeholder="Email" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="loginPassword" placeholder="Mot de passe" required>
+                </div>
+                <button type="submit" class="submit-btn">
+                    <span class="button-text">Se connecter</span>
+                    <div class="button-icon">→</div>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal d'inscription -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>S'inscrire</h3>
+                <span class="close" data-modal="registerModal">&times;</span>
+            </div>
+            <form id="registrationForm">
+                <div class="form-group">
+                    <input type="text" id="firstName" placeholder="Prénom" required>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="lastName" placeholder="Nom" required>
+                </div>
+                <div class="form-group">
+                    <input type="email" id="email" placeholder="Email" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="password" placeholder="Mot de passe (min. 6 caractères)" required>
+                </div>
+                <button type="submit" class="submit-btn">
+                    <span class="button-text">S'inscrire</span>
+                    <div class="button-icon">+</div>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/admin-config.js"></script>
+    <script src="/js/privileged-users.js"></script>
+    <script src="/js/main.js"></script>
+</body>
+</html>
