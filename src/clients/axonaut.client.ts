@@ -160,22 +160,41 @@ export class AxonautClient {
   /**
    * Récupérer les entreprises
    */
-  async getCompanies(params?: {
+  async getCompanies(params: {
+    search?: string;
     limit?: number;
     page?: number;
-    search?: string;
-  }): Promise<AxonautCompany[]> {
+  } = {}): Promise<AxonautCompany[]> {
     try {
       const queryParams = new URLSearchParams();
-      if (params?.limit) queryParams.append('limit', params.limit.toString());
-      if (params?.page) queryParams.append('page', params.page.toString());
-      if (params?.search) queryParams.append('search', params.search);
-
-      const url = `/companies${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      const response = await this.client.get<AxonautApiResponse<AxonautCompany>>(url);
       
+      if (params.search) {
+        queryParams.append('search', params.search);
+      }
+      
+      // Limite sécurisée pour éviter l'erreur 403
+      if (params.limit && params.limit <= 500) {
+        queryParams.append('limit', params.limit.toString());
+      } else {
+        queryParams.append('limit', '10');
+      }
+      
+      if (params.page && params.page > 0) {
+        queryParams.append('page', params.page.toString());
+      } else {
+        queryParams.append('page', '1');
+      }
+
+      console.log(`🔗 [AxonautClient] Récupération entreprises avec pagination: page=${params.page || 1}, limit=${params.limit || 10}`);
+      
+      const response = await this.client.get<AxonautApiResponse<AxonautCompany>>(`/companies?${queryParams.toString()}`);
       return Array.isArray(response.data) ? response.data : (response.data.data || []);
     } catch (error: any) {
+      console.error('❌ [AxonautClient] Erreur lors de la récupération des entreprises:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        url: error.config?.url
+      });
       throw new Error(`Erreur lors de la récupération des entreprises: ${error.message}`);
     }
   }
@@ -214,20 +233,35 @@ export class AxonautClient {
   /**
    * Récupérer les projets
    */
-  async getProjects(params?: {
+  async getProjects(params: {
     limit?: number;
     page?: number;
-  }): Promise<AxonautProject[]> {
+  } = {}): Promise<AxonautProject[]> {
     try {
       const queryParams = new URLSearchParams();
-      if (params?.limit) queryParams.append('limit', params.limit.toString());
-      if (params?.page) queryParams.append('page', params.page.toString());
-
-      const url = `/projects${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      const response = await this.client.get<AxonautApiResponse<AxonautProject>>(url);
       
+      if (params.limit && params.limit <= 500) {
+        queryParams.append('limit', params.limit.toString());
+      } else {
+        queryParams.append('limit', '10');
+      }
+      
+      if (params.page && params.page > 0) {
+        queryParams.append('page', params.page.toString());
+      } else {
+        queryParams.append('page', '1');
+      }
+
+      console.log(`🔗 [AxonautClient] Récupération projets avec pagination: page=${params.page || 1}, limit=${params.limit || 10}`);
+      
+      const response = await this.client.get<AxonautApiResponse<AxonautProject>>(`/projects?${queryParams.toString()}`);
       return Array.isArray(response.data) ? response.data : (response.data.data || []);
     } catch (error: any) {
+      console.error('❌ [AxonautClient] Erreur lors de la récupération des projets:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        url: error.config?.url
+      });
       throw new Error(`Erreur lors de la récupération des projets: ${error.message}`);
     }
   }
@@ -251,24 +285,47 @@ export class AxonautClient {
   /**
    * Récupérer les factures
    */
-  async getInvoices(params?: {
+  async getInvoices(params: {
     limit?: number;
     page?: number;
     status?: string;
     company_id?: number;
-  }): Promise<AxonautInvoice[]> {
+  } = {}): Promise<AxonautInvoice[]> {
     try {
       const queryParams = new URLSearchParams();
-      if (params?.limit) queryParams.append('limit', params.limit.toString());
-      if (params?.page) queryParams.append('page', params.page.toString());
-      if (params?.status) queryParams.append('status', params.status);
-      if (params?.company_id) queryParams.append('company_id', params.company_id.toString());
-
-      const url = `/invoices${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      const response = await this.client.get<AxonautApiResponse<AxonautInvoice>>(url);
       
+      // Axonaut utilise la pagination par page, pas par limit/offset
+      if (params.limit && params.limit <= 500) {
+        queryParams.append('limit', params.limit.toString());
+      } else {
+        queryParams.append('limit', '10'); // Limite par défaut sécurisée
+      }
+      
+      if (params.page && params.page > 0) {
+        queryParams.append('page', params.page.toString());
+      } else {
+        queryParams.append('page', '1'); // Page 1 par défaut
+      }
+      
+      if (params.status) {
+        queryParams.append('status', params.status);
+      }
+      
+      if (params.company_id) {
+        queryParams.append('company_id', params.company_id.toString());
+      }
+
+      console.log(`🔗 [AxonautClient] Récupération factures avec pagination: page=${params.page || 1}, limit=${params.limit || 10}`);
+      
+      const response = await this.client.get<AxonautApiResponse<AxonautInvoice>>(`/invoices?${queryParams.toString()}`);
       return Array.isArray(response.data) ? response.data : (response.data.data || []);
     } catch (error: any) {
+      console.error('❌ [AxonautClient] Erreur détaillée lors de la récupération des factures:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url
+      });
       throw new Error(`Erreur lors de la récupération des factures: ${error.message}`);
     }
   }
