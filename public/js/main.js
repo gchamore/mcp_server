@@ -258,37 +258,96 @@ function showLandingPage() {
 function handleLogout() {
     console.log('👋 Déconnexion...');
     
+    // Fermer toutes les modales ouvertes
+    ['settingsModal', 'adminModal', 'loginModal', 'registerModal'].forEach(modalId => {
+        const modal = document.getElementById(modalId);
+        if (modal && modal.style.display === 'block') {
+            closeModal(modalId);
+        }
+    });
+    
+    // Supprimer les données de session
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
     
     showMessage('👋 Déconnexion réussie', 'info');
-    showLandingPage();
+    
+    // Attendre un peu pour que les modales se ferment puis afficher la landing page
+    setTimeout(() => {
+        showLandingPage();
+    }, 400);
 }
 
 async function handleDeleteAccount() {
+    // Empêcher les clics multiples
+    const deleteBtn = document.getElementById('deleteAccountBtn');
+    if (deleteBtn && deleteBtn.disabled) {
+        console.log('🚫 Suppression déjà en cours...');
+        return;
+    }
+    
     const confirmation = confirm('⚠️ Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.');
     
     if (!confirmation) return;
     
+    // Désactiver le bouton pendant le traitement
+    if (deleteBtn) {
+        deleteBtn.disabled = true;
+        deleteBtn.innerHTML = '<span class="button-text">Suppression...</span><div class="button-icon">⏳</div>';
+    }
+    
     try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            showMessage('❌ Non connecté', 'error');
+            return;
+        }
+        
         const response = await fetch('/api/auth/account', {
             method: 'DELETE',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             }
         });
         
         const data = await response.json();
         
         if (data.success) {
-            showMessage('✅ Compte supprimé avec succès', 'success');
-            handleLogout();
+            // Fermer la modal des paramètres avant la déconnexion
+            closeModal('settingsModal');
+            
+            // Nettoyer les données de session sans notification
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userData');
+            
+            // Attendre un peu pour que la modal se ferme
+            setTimeout(() => {
+                showMessage('✅ Compte supprimé avec succès', 'success');
+                
+                // Fermer toutes les modales et revenir à la landing page
+                setTimeout(() => {
+                    ['adminModal', 'loginModal', 'registerModal'].forEach(modalId => {
+                        const modal = document.getElementById(modalId);
+                        if (modal && modal.style.display === 'block') {
+                            closeModal(modalId);
+                        }
+                    });
+                    showLandingPage();
+                }, 1000);
+            }, 300);
         } else {
             showMessage(`❌ ${data.error}`, 'error');
         }
     } catch (error) {
         console.error('Erreur suppression compte:', error);
         showMessage('❌ Erreur lors de la suppression', 'error');
+    } finally {
+        // Réactiver le bouton
+        if (deleteBtn) {
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = '<span class="button-text">Supprimer le compte</span><div class="button-icon">🗑️</div>';
+        }
     }
 }
 
@@ -299,8 +358,24 @@ function handleAdminPanel() {
 }
 
 // === SYSTÈME DE MESSAGES ===
+let activeNotifications = [];
+
 function showMessage(message, type = 'info') {
     console.log(`💬 Message ${type}:`, message);
+    
+    // Supprimer les notifications existantes du même type
+    activeNotifications.forEach(notification => {
+        if (notification.classList.contains(`notification-${type}`)) {
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                    activeNotifications = activeNotifications.filter(n => n !== notification);
+                }
+            }, 300);
+        }
+    });
     
     // Créer un élément de notification
     const notification = document.createElement('div');
@@ -310,7 +385,7 @@ function showMessage(message, type = 'info') {
     // Styles pour la notification
     notification.style.cssText = `
         position: fixed;
-        top: 20px;
+        top: ${20 + (activeNotifications.length * 70)}px;
         right: 20px;
         padding: 16px 24px;
         border-radius: 12px;
@@ -322,6 +397,7 @@ function showMessage(message, type = 'info') {
         transition: all 0.3s ease;
         max-width: 400px;
         word-wrap: break-word;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     `;
     
     // Couleurs selon le type
@@ -339,8 +415,9 @@ function showMessage(message, type = 'info') {
             notification.style.backgroundColor = '#3b82f6';
     }
     
-    // Ajouter au DOM
+    // Ajouter au DOM et à la liste des notifications actives
     document.body.appendChild(notification);
+    activeNotifications.push(notification);
     
     // Animation d'entrée
     setTimeout(() => {
@@ -355,6 +432,12 @@ function showMessage(message, type = 'info') {
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.parentNode.removeChild(notification);
+                activeNotifications = activeNotifications.filter(n => n !== notification);
+                
+                // Réorganiser les notifications restantes
+                activeNotifications.forEach((notif, index) => {
+                    notif.style.top = `${20 + (index * 70)}px`;
+                });
             }
         }, 300);
     }, 4000);
