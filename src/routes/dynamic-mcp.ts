@@ -30,6 +30,12 @@ router.post('/:sessionId/:toolName/messages', DynamicMcpController.handleMcpMess
 router.get('/:sessionId/:toolName', DynamicMcpController.getSessionInfo);
 
 /**
+ * POST /mcp/:sessionId/:toolName
+ * Endpoint principal pour les requêtes MCP via HTTP
+ */
+router.post('/:sessionId/:toolName', DynamicMcpController.handleMcpMessages);
+
+/**
  * DELETE /mcp/sessions/:sessionId
  * Supprimer une session MCP
  */

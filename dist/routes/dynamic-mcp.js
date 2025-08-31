@@ -5,6 +5,7 @@ router.post('/create-session', DynamicMcpController.createMcpSession);
 router.get('/:sessionId/:toolName/sse', DynamicMcpController.handleSSEConnection);
 router.post('/:sessionId/:toolName/messages', DynamicMcpController.handleMcpMessages);
 router.get('/:sessionId/:toolName', DynamicMcpController.getSessionInfo);
+router.post('/:sessionId/:toolName', DynamicMcpController.handleMcpMessages);
 router.delete('/sessions/:sessionId', DynamicMcpController.deleteSession);
 router.get('/admin/stats', DynamicMcpController.getStats);
 router.post('/admin/cleanup', DynamicMcpController.cleanup);

@@ -41,7 +41,7 @@ export class DynamicMcpController {
         });
       }
 
-      const result = await this.mcpService.createMcpSession(userId, toolName);
+      const result = await DynamicMcpController.mcpService.createMcpSession(userId, toolName);
 
       console.log(`🚀 Session MCP créée: ${result.sessionId} pour ${toolName}`);
 
@@ -96,7 +96,7 @@ export class DynamicMcpController {
       });
 
       // Créer la connexion SSE
-      await this.mcpService.createSSEConnection(sessionId, toolName, res, apiKey as string);
+      await DynamicMcpController.mcpService.createSSEConnection(sessionId, toolName, res, apiKey as string);
 
     } catch (error) {
       console.error('❌ Erreur SSE MCP:', error);
@@ -119,7 +119,7 @@ export class DynamicMcpController {
       console.log(`📨 Message MCP reçu pour ${sessionId}/${toolName}:`, req.body);
       
       // Vérifier que la session existe
-      const session = this.mcpService.getActiveSession(sessionId);
+      const session = DynamicMcpController.mcpService.getActiveSession(sessionId);
       if (!session) {
         return res.status(404).json({
           success: false,
@@ -157,7 +157,7 @@ export class DynamicMcpController {
     try {
       const { sessionId, toolName } = req.params;
 
-      const session = this.mcpService.getActiveSession(sessionId);
+      const session = DynamicMcpController.mcpService.getActiveSession(sessionId);
       if (!session) {
         return res.status(404).json({
           success: false,
@@ -215,7 +215,7 @@ export class DynamicMcpController {
       const decoded = AuthService.verifyToken(token);
       const userId = decoded.userId;
 
-      const session = this.mcpService.getActiveSession(sessionId);
+      const session = DynamicMcpController.mcpService.getActiveSession(sessionId);
       if (!session) {
         return res.status(404).json({
           success: false,
@@ -231,7 +231,7 @@ export class DynamicMcpController {
         });
       }
 
-      const removed = this.mcpService.removeSession(sessionId);
+      const removed = DynamicMcpController.mcpService.removeSession(sessionId);
       if (removed) {
         console.log(`🗑️ Session MCP supprimée: ${sessionId}`);
         res.json({
@@ -259,7 +259,7 @@ export class DynamicMcpController {
    */
   static async getStats(req: Request, res: Response) {
     try {
-      const stats = this.mcpService.getSessionStats();
+      const stats = DynamicMcpController.mcpService.getSessionStats();
       
       res.json({
         success: true,
@@ -281,7 +281,7 @@ export class DynamicMcpController {
    */
   static async cleanup(req: Request, res: Response) {
     try {
-      this.mcpService.cleanupExpiredSessions();
+      DynamicMcpController.mcpService.cleanupExpiredSessions();
       
       res.json({
         success: true,
