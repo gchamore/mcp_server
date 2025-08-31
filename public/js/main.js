@@ -15,6 +15,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // === GESTION DES BOUTONS ===
 function initializeButtons() {
+    // Bouton N8N (si présent)
+    const n8nBtn = document.getElementById('n8nBtn');
+    if (n8nBtn) {
+        n8nBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.open('https://n8n.gchamore.com', '_blank');
+        });
+    }
     // Boutons principaux
     const loginBtn = document.getElementById('loginBtn');
     const registerBtn = document.getElementById('registerBtn');
@@ -243,6 +251,15 @@ function showDashboard(user) {
             adminBtn.style.display = 'block';
         }
     }
+        // Masquer le bouton panneau admin si l'utilisateur n'est pas privilégié
+        const adminBtn = document.getElementById('adminPanelBtn');
+        if (adminBtn && typeof window.isPrivilegedUser === 'function') {
+            if (!window.isPrivilegedUser(user.email)) {
+                adminBtn.style.display = 'none';
+            } else {
+                adminBtn.style.display = '';
+            }
+        }
 }
 
 function showLandingPage() {
