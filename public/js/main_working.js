@@ -12,6 +12,20 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('registerBtn:', registerBtn);
     
     if (loginBtn) {
+        loginBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('🖱️ Clic login détecté');
+            openModal('loginModal');
+        });
+    }
+    
+    if (registerBtn) {
+        registerBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('🖱️ Clic register détecté');
+            openModal('registerModal');
+        });
+    }
     function handleAdminPanel() {
     console.log('⚙️ Ouverture du panneau admin...');
     
