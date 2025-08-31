@@ -166,29 +166,28 @@ export class AxonautClient {
     page?: number;
   } = {}): Promise<AxonautCompany[]> {
     try {
-      const queryParams = new URLSearchParams();
+      const page = params.page || 1;
+      const limit = params.limit || 10;
+      
+      let endpoint = `/companies?page=${page}`;
       
       if (params.search) {
-        queryParams.append('search', params.search);
-      }
-      
-      // Limite sécurisée pour éviter l'erreur 403
-      if (params.limit && params.limit <= 500) {
-        queryParams.append('limit', params.limit.toString());
-      } else {
-        queryParams.append('limit', '10');
-      }
-      
-      if (params.page && params.page > 0) {
-        queryParams.append('page', params.page.toString());
-      } else {
-        queryParams.append('page', '1');
+        endpoint += `&search=${encodeURIComponent(params.search)}`;
       }
 
-      console.log(`🔗 [AxonautClient] Récupération entreprises avec pagination: page=${params.page || 1}, limit=${params.limit || 10}`);
+      const headers: any = {
+        'page': page.toString()
+      };
+
+      console.log(`🔗 [AxonautClient] Récupération entreprises - URL: ${endpoint}, Headers page: ${page}`);
       
-      const response = await this.client.get<AxonautApiResponse<AxonautCompany>>(`/companies?${queryParams.toString()}`);
-      return Array.isArray(response.data) ? response.data : (response.data.data || []);
+      const response = await this.client.get<AxonautApiResponse<AxonautCompany>>(endpoint, {
+        headers
+      });
+      
+      const companies = Array.isArray(response.data) ? response.data : (response.data.data || []);
+      return companies.slice(0, limit);
+      
     } catch (error: any) {
       console.error('❌ [AxonautClient] Erreur lors de la récupération des entreprises:', {
         status: error.response?.status,
@@ -238,24 +237,24 @@ export class AxonautClient {
     page?: number;
   } = {}): Promise<AxonautProject[]> {
     try {
-      const queryParams = new URLSearchParams();
+      const page = params.page || 1;
+      const limit = params.limit || 10;
       
-      if (params.limit && params.limit <= 500) {
-        queryParams.append('limit', params.limit.toString());
-      } else {
-        queryParams.append('limit', '10');
-      }
-      
-      if (params.page && params.page > 0) {
-        queryParams.append('page', params.page.toString());
-      } else {
-        queryParams.append('page', '1');
-      }
+      let endpoint = `/projects?page=${page}`;
 
-      console.log(`🔗 [AxonautClient] Récupération projets avec pagination: page=${params.page || 1}, limit=${params.limit || 10}`);
+      const headers: any = {
+        'page': page.toString()
+      };
+
+      console.log(`🔗 [AxonautClient] Récupération projets - URL: ${endpoint}, Headers page: ${page}`);
       
-      const response = await this.client.get<AxonautApiResponse<AxonautProject>>(`/projects?${queryParams.toString()}`);
-      return Array.isArray(response.data) ? response.data : (response.data.data || []);
+      const response = await this.client.get<AxonautApiResponse<AxonautProject>>(endpoint, {
+        headers
+      });
+      
+      const projects = Array.isArray(response.data) ? response.data : (response.data.data || []);
+      return projects.slice(0, limit);
+      
     } catch (error: any) {
       console.error('❌ [AxonautClient] Erreur lors de la récupération des projets:', {
         status: error.response?.status,
@@ -292,39 +291,42 @@ export class AxonautClient {
     company_id?: number;
   } = {}): Promise<AxonautInvoice[]> {
     try {
-      const queryParams = new URLSearchParams();
+      const page = params.page || 1;
+      const limit = params.limit || 10;
       
-      // Axonaut utilise la pagination par page, pas par limit/offset
-      if (params.limit && params.limit <= 500) {
-        queryParams.append('limit', params.limit.toString());
-      } else {
-        queryParams.append('limit', '10'); // Limite par défaut sécurisée
-      }
-      
-      if (params.page && params.page > 0) {
-        queryParams.append('page', params.page.toString());
-      } else {
-        queryParams.append('page', '1'); // Page 1 par défaut
-      }
+      // Construction de l'URL avec page comme dans votre exemple
+      let endpoint = `/invoices?page=${page}`;
       
       if (params.status) {
-        queryParams.append('status', params.status);
+        endpoint += `&status=${encodeURIComponent(params.status)}`;
       }
       
       if (params.company_id) {
-        queryParams.append('company_id', params.company_id.toString());
+        endpoint += `&company_id=${params.company_id}`;
       }
 
-      console.log(`🔗 [AxonautClient] Récupération factures avec pagination: page=${params.page || 1}, limit=${params.limit || 10}`);
+      // Headers avec page comme dans votre exemple
+      const headers: any = {
+        'page': page.toString()
+      };
+
+      console.log(`🔗 [AxonautClient] Récupération factures - URL: ${endpoint}, Headers page: ${page}`);
       
-      const response = await this.client.get<AxonautApiResponse<AxonautInvoice>>(`/invoices?${queryParams.toString()}`);
-      return Array.isArray(response.data) ? response.data : (response.data.data || []);
+      const response = await this.client.get<AxonautApiResponse<AxonautInvoice>>(endpoint, {
+        headers
+      });
+      
+      // Limitation côté client comme dans votre exemple
+      const invoices = Array.isArray(response.data) ? response.data : (response.data.data || []);
+      return invoices.slice(0, limit);
+      
     } catch (error: any) {
       console.error('❌ [AxonautClient] Erreur détaillée lors de la récupération des factures:', {
         status: error.response?.status,
         statusText: error.response?.statusText,
         data: error.response?.data,
-        url: error.config?.url
+        url: error.config?.url,
+        headers: error.config?.headers
       });
       throw new Error(`Erreur lors de la récupération des factures: ${error.message}`);
     }
