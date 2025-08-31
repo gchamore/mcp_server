@@ -85,32 +85,137 @@ export class DynamicMcpController {
     static async handleMcpMessages(req, res) {
         try {
             const { sessionId, toolName } = req.params;
-            console.log(`📨 Message MCP reçu pour ${sessionId}/${toolName}:`, req.body);
+            const message = req.body;
+            console.log(`📨 Message MCP reçu pour ${sessionId}/${toolName}:`, message);
             const session = DynamicMcpController.mcpService.getActiveSession(sessionId);
             if (!session) {
                 return res.status(404).json({
-                    success: false,
-                    error: 'Session MCP non trouvée'
+                    jsonrpc: "2.0",
+                    id: message.id || null,
+                    error: {
+                        code: -32002,
+                        message: "Session MCP non trouvée"
+                    }
                 });
             }
             if (session.toolName !== toolName) {
                 return res.status(400).json({
-                    success: false,
-                    error: 'Outil incorrect pour cette session'
+                    jsonrpc: "2.0",
+                    id: message.id || null,
+                    error: {
+                        code: -32602,
+                        message: "Outil incorrect pour cette session"
+                    }
                 });
             }
-            res.json({
-                success: true,
-                status: 'received',
-                sessionId,
-                toolName
-            });
+            switch (message.method) {
+                case 'initialize':
+                    return res.json({
+                        jsonrpc: "2.0",
+                        id: message.id,
+                        result: {
+                            protocolVersion: "2025-06-18",
+                            capabilities: {
+                                tools: {}
+                            },
+                            serverInfo: {
+                                name: "mcp-wesype-server",
+                                version: "1.0.0"
+                            }
+                        }
+                    });
+                case 'tools/list':
+                    const toolConfig = DynamicMcpController.mcpService.getToolConfig(toolName);
+                    if (!toolConfig) {
+                        return res.json({
+                            jsonrpc: "2.0",
+                            id: message.id,
+                            error: {
+                                code: -32602,
+                                message: "Configuration d'outil non trouvée"
+                            }
+                        });
+                    }
+                    return res.json({
+                        jsonrpc: "2.0",
+                        id: message.id,
+                        result: {
+                            tools: toolConfig.tools.map((tool) => ({
+                                name: tool.name,
+                                description: tool.description,
+                                inputSchema: tool.inputSchema
+                            }))
+                        }
+                    });
+                case 'tools/call':
+                    const { name: toolCallName, arguments: toolArgs } = message.params;
+                    try {
+                        const toolConfig = DynamicMcpController.mcpService.getToolConfig(toolName);
+                        const tool = toolConfig?.tools.find((t) => t.name === toolCallName);
+                        if (!tool) {
+                            return res.json({
+                                jsonrpc: "2.0",
+                                id: message.id,
+                                error: {
+                                    code: -32602,
+                                    message: `Outil ${toolCallName} non trouvé`
+                                }
+                            });
+                        }
+                        const apiKey = session.apiKey;
+                        if (!apiKey) {
+                            return res.json({
+                                jsonrpc: "2.0",
+                                id: message.id,
+                                error: {
+                                    code: -32002,
+                                    message: "Clé API non configurée pour cette session"
+                                }
+                            });
+                        }
+                        const result = await tool.execute(toolArgs, apiKey);
+                        return res.json({
+                            jsonrpc: "2.0",
+                            id: message.id,
+                            result: {
+                                content: [{
+                                        type: "text",
+                                        text: typeof result === 'string' ? result : JSON.stringify(result, null, 2)
+                                    }]
+                            }
+                        });
+                    }
+                    catch (toolError) {
+                        console.error(`❌ Erreur exécution outil ${toolCallName}:`, toolError);
+                        return res.json({
+                            jsonrpc: "2.0",
+                            id: message.id,
+                            error: {
+                                code: -32603,
+                                message: `Erreur lors de l'exécution de l'outil: ${toolError instanceof Error ? toolError.message : 'Erreur inconnue'}`
+                            }
+                        });
+                    }
+                default:
+                    return res.json({
+                        jsonrpc: "2.0",
+                        id: message.id || null,
+                        error: {
+                            code: -32601,
+                            message: `Méthode ${message.method} non supportée`
+                        }
+                    });
+            }
         }
         catch (error) {
             console.error('❌ Erreur message MCP:', error);
             res.status(500).json({
-                success: false,
-                error: error instanceof Error ? error.message : 'Erreur lors du traitement du message'
+                jsonrpc: "2.0",
+                id: req.body?.id || null,
+                error: {
+                    code: -32603,
+                    message: error instanceof Error ? error.message : 'Erreur lors du traitement du message'
+                }
             });
         }
     }

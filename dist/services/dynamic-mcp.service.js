@@ -40,6 +40,10 @@ export class DynamicMcpService {
             if (!dbSession) {
                 throw new Error(`Session ${toolName} non trouvée en base de données`);
             }
+            const apiKey = await McpService.getSessionApiKey(userId, toolName);
+            if (!apiKey) {
+                throw new Error(`Clé API non trouvée pour l'outil ${toolName}`);
+            }
             const server = new Server({
                 name: config.name,
                 version: config.version,
@@ -47,13 +51,12 @@ export class DynamicMcpService {
             }, {
                 capabilities: { tools: {} }
             });
-            let apiKey = '';
             this.setupServerHandlers(server, config.tools, () => apiKey);
             const activeSession = {
                 sessionId,
                 userId,
                 toolName,
-                apiKey: '',
+                apiKey: apiKey,
                 server,
                 createdAt: new Date()
             };
@@ -135,6 +138,9 @@ export class DynamicMcpService {
     }
     getActiveSession(sessionId) {
         return this.activeSessions.get(sessionId);
+    }
+    getToolConfig(toolName) {
+        return this.toolConfigs.get(toolName.toLowerCase());
     }
     removeSession(sessionId) {
         const session = this.activeSessions.get(sessionId);

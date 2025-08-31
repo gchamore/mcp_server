@@ -1,5 +1,4 @@
 import { prisma } from '../lib/prisma.js';
-import bcrypt from 'bcryptjs';
 
 export interface McpSessionData {
   userId: string;
@@ -8,15 +7,13 @@ export interface McpSessionData {
 }
 
 export class McpService {
-  private static readonly ENCRYPTION_ROUNDS = 12;
-
   /**
    * Créer ou mettre à jour une session MCP
    */
   static async createOrUpdateSession(sessionData: McpSessionData) {
     try {
-      // Chiffrer la clé d'accès pour la sécurité
-      const encryptedAccessKey = await bcrypt.hash(sessionData.accessKey, this.ENCRYPTION_ROUNDS);
+      // Stocker la clé d'accès en clair (la DB est sécurisée)
+      // Pour une sécurité supplémentaire en production, utilisez le chiffrement au niveau DB
 
       // Utiliser upsert pour créer ou mettre à jour
       const session = await prisma.mcpSession.upsert({
@@ -27,13 +24,13 @@ export class McpService {
           }
         },
         update: {
-          accessKey: encryptedAccessKey,
+          accessKey: sessionData.accessKey,
           updatedAt: new Date()
         },
         create: {
           userId: sessionData.userId,
           toolName: sessionData.toolName,
-          accessKey: encryptedAccessKey
+          accessKey: sessionData.accessKey
         },
         select: {
           id: true,
@@ -165,10 +162,35 @@ export class McpService {
         return false;
       }
 
-      return await bcrypt.compare(accessKey, session.accessKey);
+      // Comparaison directe de la clé (non chiffrée)
+      return accessKey === session.accessKey;
     } catch (error) {
       console.error('Erreur lors de la validation de la clé:', error);
       return false;
+    }
+  }
+
+  /**
+   * Récupérer la clé API d'une session
+   */
+  static async getSessionApiKey(userId: string, toolName: string): Promise<string | null> {
+    try {
+      const session = await prisma.mcpSession.findUnique({
+        where: {
+          userId_toolName: {
+            userId,
+            toolName
+          }
+        },
+        select: {
+          accessKey: true
+        }
+      });
+
+      return session?.accessKey || null;
+    } catch (error) {
+      console.error('Erreur lors de la récupération de la clé API:', error);
+      return null;
     }
   }
 }

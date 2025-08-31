@@ -1,9 +1,7 @@
 import { prisma } from '../lib/prisma.js';
-import bcrypt from 'bcryptjs';
 export class McpService {
     static async createOrUpdateSession(sessionData) {
         try {
-            const encryptedAccessKey = await bcrypt.hash(sessionData.accessKey, this.ENCRYPTION_ROUNDS);
             const session = await prisma.mcpSession.upsert({
                 where: {
                     userId_toolName: {
@@ -12,13 +10,13 @@ export class McpService {
                     }
                 },
                 update: {
-                    accessKey: encryptedAccessKey,
+                    accessKey: sessionData.accessKey,
                     updatedAt: new Date()
                 },
                 create: {
                     userId: sessionData.userId,
                     toolName: sessionData.toolName,
-                    accessKey: encryptedAccessKey
+                    accessKey: sessionData.accessKey
                 },
                 select: {
                     id: true,
@@ -127,12 +125,31 @@ export class McpService {
             if (!session) {
                 return false;
             }
-            return await bcrypt.compare(accessKey, session.accessKey);
+            return accessKey === session.accessKey;
         }
         catch (error) {
             console.error('Erreur lors de la validation de la clé:', error);
             return false;
         }
     }
+    static async getSessionApiKey(userId, toolName) {
+        try {
+            const session = await prisma.mcpSession.findUnique({
+                where: {
+                    userId_toolName: {
+                        userId,
+                        toolName
+                    }
+                },
+                select: {
+                    accessKey: true
+                }
+            });
+            return session?.accessKey || null;
+        }
+        catch (error) {
+            console.error('Erreur lors de la récupération de la clé API:', error);
+            return null;
+        }
+    }
 }
-McpService.ENCRYPTION_ROUNDS = 12;

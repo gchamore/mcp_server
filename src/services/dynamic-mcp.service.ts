@@ -69,8 +69,11 @@ export class DynamicMcpService {
         throw new Error(`Session ${toolName} non trouvée en base de données`);
       }
 
-      // Note: La clé API est chiffrée en DB, on devra la déchiffrer ou stocker temporairement
-      // Pour le moment, on va récupérer la clé depuis les headers de la requête
+      // Récupérer la vraie clé API
+      const apiKey = await McpService.getSessionApiKey(userId, toolName);
+      if (!apiKey) {
+        throw new Error(`Clé API non trouvée pour l'outil ${toolName}`);
+      }
       
       // Créer le serveur MCP
       const server = new Server({
@@ -81,9 +84,6 @@ export class DynamicMcpService {
         capabilities: { tools: {} }
       });
 
-      // Nous stockerons la clé API temporairement (en production, utiliser un système plus sécurisé)
-      let apiKey = '';
-
       // Configuration des handlers
       this.setupServerHandlers(server, config.tools, () => apiKey);
 
@@ -92,7 +92,7 @@ export class DynamicMcpService {
         sessionId,
         userId,
         toolName,
-        apiKey: '', // Sera défini lors de la connexion
+        apiKey: apiKey, // Utiliser la vraie clé API
         server,
         createdAt: new Date()
       };
@@ -203,6 +203,13 @@ export class DynamicMcpService {
    */
   getActiveSession(sessionId: string): ActiveMcpSession | undefined {
     return this.activeSessions.get(sessionId);
+  }
+
+  /**
+   * Récupérer la configuration d'un outil
+   */
+  getToolConfig(toolName: string): McpServerConfig | undefined {
+    return this.toolConfigs.get(toolName.toLowerCase());
   }
 
   /**
