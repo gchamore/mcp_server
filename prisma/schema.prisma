@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -20,5 +17,21 @@ model User {
   updatedAt DateTime @updatedAt
   isActive  Boolean  @default(true)
 
+  mcpSessions McpSession[]
+
   @@map("users")
+}
+
+model McpSession {
+  id        String   @id @default(cuid())
+  userId    String
+  toolName  String
+  accessKey String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, toolName])
+  @@map("mcp_sessions")
 }

@@ -57,7 +57,6 @@
                 <p class="user-welcome">Bienvenue, <span class="user-name">Utilisateur</span></p>
             </div>
         </header>
-        
         <main class="dashboard-content">
             <div class="service-description">
                 <h2>Votre plateforme MCP</h2>
@@ -66,7 +65,6 @@
                     conçus pour enrichir vos applications avec des capacités d'IA avancées.
                 </p>
             </div>
-            
             <div class="search-section">
                 <div class="mcp-tools-buttons" style="display: flex; gap: 24px; justify-content: flex-start; align-items: center; margin: 32px 0 24px 0;">
                     <button class="mcp-tool-btn" id="axonautBtn" style="display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px 28px; font-size: 1.1em; font-weight: 500; box-shadow: 0 2px 8px rgba(30,41,59,0.06); cursor: pointer; transition: box-shadow .2s;">
@@ -77,30 +75,24 @@
                         <img src="https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico" alt="Gmail" style="width:32px;height:32px;">
                         <span>Gmail</span>
                     </button>
+                                <style>
+                                @media (min-width: 0px) {
+                                    .mcp-tools-buttons {
+                                        justify-content: center !important;
+                                    }
+                                }
+                                </style>
                 </div>
-
-                <!-- MCP TOOL PAGES (hidden by default) -->
-                <div id="toolPage" class="mcp-tool-page" style="display:none; margin-top:32px; background:#fff; border-radius:16px; box-shadow:0 2px 12px rgba(30,41,59,0.08); padding:40px 32px; max-width:420px;">
-                    <div style="display:flex; align-items:center; gap:18px; margin-bottom:18px;">
-                        <img id="toolLogo" src="" alt="Logo" style="width:48px;height:48px;">
-                        <h2 id="toolTitle" style="margin:0;font-size:1.5em;font-weight:600;color:#1e293b;"></h2>
-                    </div>
-                    <div id="toolDesc" style="color:#64748b; font-size:1.08em; margin-bottom:32px;"></div>
-                    <button id="toolSetupBtn" style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:14px 32px;font-size:1.1em;font-weight:500;cursor:pointer;box-shadow:0 2px 8px rgba(30,41,59,0.06);">Setup</button>
+                <div class="dashboard-actions" style="margin-top: 32px;">
+                    <button id="logoutBtn" class="logout-btn">
+                        <span class="button-text">Déconnexion</span>
+                        <div class="button-icon">🚪</div>
+                    </button>
+                    <button id="settingsBtn" class="settings-btn">
+                        <span class="button-text">Paramètres</span>
+                        <div class="button-icon">⚙️</div>
+                    </button>
                 </div>
-                </div>
-            </div>
-            
-            <div class="dashboard-actions">
-                <button id="logoutBtn" class="logout-btn">
-                    <span class="button-text">Déconnexion</span>
-                    <div class="button-icon">🚪</div>
-                </button>
-                
-                <button id="settingsBtn" class="settings-btn">
-                    <span class="button-text">Paramètres</span>
-                    <div class="button-icon">⚙️</div>
-                </button>
             </div>
         </main>
     </div>

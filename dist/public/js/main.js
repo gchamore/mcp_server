@@ -299,6 +299,17 @@ function showDashboard(user) {
     if (userEmailSpan) {
         userEmailSpan.textContent = user.email;
     }
+    // Mettre à jour le nom affiché
+    const userNameSpan = document.querySelector('.user-name');
+    if (userNameSpan) {
+        if (user.firstName && user.lastName) {
+            userNameSpan.textContent = user.firstName + ' ' + user.lastName;
+        } else if (user.firstName) {
+            userNameSpan.textContent = user.firstName;
+        } else {
+            userNameSpan.textContent = user.email;
+        }
+    }
     
     // Vérifier si l'utilisateur est privilégié
     if (window.isPrivilegedUser && window.isPrivilegedUser(user.email)) {

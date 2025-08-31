@@ -1,5 +1,6 @@
 import express from 'express';
 import authRouter from '../auth.js';
+import mcpRouter from '../mcp.js';
 import { config } from '../../config/app.js';
 const router = express.Router();
 router.use((req, res, next) => {
@@ -20,11 +21,13 @@ router.get('/', (req, res) => {
         baseUrl: config.BASE_URL,
         endpoints: {
             auth: '/api/auth',
+            mcp: '/api/mcp',
             health: '/health'
         }
     });
 });
 router.use('/auth', authRouter);
+router.use('/mcp', mcpRouter);
 router.get('/health', (req, res) => {
     res.json({
         success: true,
