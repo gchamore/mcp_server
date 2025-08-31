@@ -1,27 +1,91 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 
-/**
- * Client Axonaut pour interagir avec l'API
- */
+export interface AxonautContact {
+  id: number;
+  name: string;
+  email?: string;
+  phone?: string;
+  company?: {
+    id: number;
+    name: string;
+  };
+}
+
+export interface AxonautCompany {
+  id: number;
+  name: string;
+  email?: string;
+  currency?: string;
+  is_customer?: boolean;
+  is_prospect?: boolean;
+  comments?: string;
+}
+
+export interface AxonautProject {
+  id: number;
+  name: string;
+  description?: string;
+  status?: string;
+  company?: {
+    id: number;
+    name: string;
+  };
+}
+
+export interface AxonautInvoice {
+  id: number;
+  number?: string;
+  date?: string;
+  creation_date?: string;
+  amount?: number;
+  total_amount?: number;
+  pre_tax_amount?: number;
+  status?: string;
+  company?: {
+    id: number;
+    name: string;
+    email?: string;
+  };
+  invoice_lines?: Array<{
+    id: number;
+    product_name?: string;
+    description?: string;
+    quantity?: number;
+    unit_price?: number;
+    total_pre_tax_amount?: number;
+  }>;
+}
+
+export interface AxonautApiResponse<T> {
+  data?: T[];
+  meta?: {
+    current_page: number;
+    total_pages: number;
+    total_count: number;
+  };
+}
+
 export class AxonautClient {
-  private api: AxiosInstance;
+  private client: AxiosInstance;
+  private baseUrl: string;
   private apiKey: string;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, baseUrl: string = 'https://axonaut.com') {
     this.apiKey = apiKey;
-    this.api = axios.create({
-      baseURL: 'https://axonaut.com/api/v2',
+    this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    
+    this.client = axios.create({
+      baseURL: `${this.baseUrl}/api/v2`,
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
+        'userApiKey': apiKey,
         'Accept': 'application/json',
-        'User-Agent': 'MCP-Wesype/1.0'
+        'Content-Type': 'application/json'
       },
       timeout: 30000
     });
 
-    // Intercepteur pour logger les requêtes
-    this.api.interceptors.request.use(
+    // Intercepteur pour les logs
+    this.client.interceptors.request.use(
       (config) => {
         console.log(`🔗 Axonaut API: ${config.method?.toUpperCase()} ${config.url}`);
         return config;
@@ -32,127 +96,277 @@ export class AxonautClient {
       }
     );
 
-    // Intercepteur pour logger les réponses
-    this.api.interceptors.response.use(
+    this.client.interceptors.response.use(
       (response) => {
         console.log(`✅ Axonaut API: ${response.status} ${response.config.url}`);
         return response;
       },
       (error) => {
-        console.error(`❌ Axonaut API Error: ${error.response?.status} ${error.config?.url}`);
+        const url = error.config?.url || 'unknown';
+        const status = error.response?.status || 'unknown';
+        console.error(`❌ Axonaut API Error: ${status} ${url}`);
+        
+        if (error.response?.data) {
+          console.error('Error details:', error.response.data);
+        }
+        
         return Promise.reject(error);
       }
     );
   }
 
   /**
-   * Récupérer les contacts
+   * Test de connexion à l'API Axonaut
    */
-  async getContacts(params: { search?: string; limit?: number; offset?: number } = {}) {
+  async testConnection(): Promise<{ success: boolean; message: string; data?: any }> {
     try {
-      const response = await this.api.get('/contacts', { params });
-      return response.data.data || response.data;
-    } catch (error) {
-      throw new Error(`Erreur lors de la récupération des contacts: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
-    }
-  }
-
-  /**
-   * Créer un nouveau contact
-   */
-  async createContact(contact: {
-    name: string;
-    email: string;
-    phone?: string;
-    company?: string;
-    [key: string]: any;
-  }) {
-    try {
-      const response = await this.api.post('/contacts', contact);
-      return response.data;
-    } catch (error) {
-      throw new Error(`Erreur lors de la création du contact: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
-    }
-  }
-
-  /**
-   * Récupérer un contact par ID
-   */
-  async getContact(contactId: string) {
-    try {
-      const response = await this.api.get(`/contacts/${contactId}`);
-      return response.data;
-    } catch (error) {
-      throw new Error(`Erreur lors de la récupération du contact: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
-    }
-  }
-
-  /**
-   * Mettre à jour un contact
-   */
-  async updateContact(contactId: string, updates: any) {
-    try {
-      const response = await this.api.put(`/contacts/${contactId}`, updates);
-      return response.data;
-    } catch (error) {
-      throw new Error(`Erreur lors de la mise à jour du contact: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
-    }
-  }
-
-  /**
-   * Récupérer les projets
-   */
-  async getProjects(params: { status?: string; limit?: number; offset?: number } = {}) {
-    try {
-      const response = await this.api.get('/projects', { params });
-      return response.data.data || response.data;
-    } catch (error) {
-      throw new Error(`Erreur lors de la récupération des projets: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
-    }
-  }
-
-  /**
-   * Créer un nouveau projet
-   */
-  async createProject(project: {
-    name: string;
-    description?: string;
-    status?: string;
-    [key: string]: any;
-  }) {
-    try {
-      const response = await this.api.post('/projects', project);
-      return response.data;
-    } catch (error) {
-      throw new Error(`Erreur lors de la création du projet: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      const response = await this.client.get('/me');
+      return {
+        success: true,
+        message: 'Connexion à Axonaut réussie',
+        data: response.data
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: `Erreur de connexion: ${error.response?.status || error.message}`,
+        data: error.response?.data
+      };
     }
   }
 
   /**
    * Récupérer les entreprises
    */
-  async getCompanies(params: { search?: string; limit?: number; offset?: number } = {}) {
+  async getCompanies(params?: {
+    limit?: number;
+    page?: number;
+    search?: string;
+  }): Promise<AxonautCompany[]> {
     try {
-      const response = await this.api.get('/companies', { params });
-      return response.data.data || response.data;
-    } catch (error) {
-      throw new Error(`Erreur lors de la récupération des entreprises: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      const queryParams = new URLSearchParams();
+      if (params?.limit) queryParams.append('limit', params.limit.toString());
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.search) queryParams.append('search', params.search);
+
+      const url = `/companies${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const response = await this.client.get<AxonautApiResponse<AxonautCompany>>(url);
+      
+      return Array.isArray(response.data) ? response.data : (response.data.data || []);
+    } catch (error: any) {
+      throw new Error(`Erreur lors de la récupération des entreprises: ${error.message}`);
     }
   }
 
   /**
-   * Tester la connexion API
+   * Créer une nouvelle entreprise
    */
-  async testConnection() {
+  async createCompany(companyData: {
+    name: string;
+    currency?: string;
+    comments?: string;
+    is_customer?: boolean;
+    is_prospect?: boolean;
+    email?: string;
+  }): Promise<AxonautCompany> {
     try {
-      const response = await this.api.get('/me');
-      return {
-        success: true,
-        user: response.data,
-        message: 'Connexion API Axonaut réussie'
-      };
-    } catch (error) {
-      throw new Error(`Test de connexion échoué: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      const response = await this.client.post<AxonautCompany>('/companies', companyData);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(`Erreur lors de la création de l'entreprise: ${error.message}`);
+    }
+  }
+
+  /**
+   * Récupérer une entreprise spécifique
+   */
+  async getCompany(companyId: number): Promise<AxonautCompany> {
+    try {
+      const response = await this.client.get<AxonautCompany>(`/companies/${companyId}`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(`Erreur lors de la récupération de l'entreprise: ${error.message}`);
+    }
+  }
+
+  /**
+   * Récupérer les projets
+   */
+  async getProjects(params?: {
+    limit?: number;
+    page?: number;
+  }): Promise<AxonautProject[]> {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params?.limit) queryParams.append('limit', params.limit.toString());
+      if (params?.page) queryParams.append('page', params.page.toString());
+
+      const url = `/projects${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const response = await this.client.get<AxonautApiResponse<AxonautProject>>(url);
+      
+      return Array.isArray(response.data) ? response.data : (response.data.data || []);
+    } catch (error: any) {
+      throw new Error(`Erreur lors de la récupération des projets: ${error.message}`);
+    }
+  }
+
+  /**
+   * Créer un nouveau projet
+   */
+  async createProject(projectData: {
+    name: string;
+    description?: string;
+    company_id?: number;
+  }): Promise<AxonautProject> {
+    try {
+      const response = await this.client.post<AxonautProject>('/projects', projectData);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(`Erreur lors de la création du projet: ${error.message}`);
+    }
+  }
+
+  /**
+   * Récupérer les factures
+   */
+  async getInvoices(params?: {
+    limit?: number;
+    page?: number;
+    status?: string;
+    company_id?: number;
+  }): Promise<AxonautInvoice[]> {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params?.limit) queryParams.append('limit', params.limit.toString());
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.company_id) queryParams.append('company_id', params.company_id.toString());
+
+      const url = `/invoices${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const response = await this.client.get<AxonautApiResponse<AxonautInvoice>>(url);
+      
+      return Array.isArray(response.data) ? response.data : (response.data.data || []);
+    } catch (error: any) {
+      throw new Error(`Erreur lors de la récupération des factures: ${error.message}`);
+    }
+  }
+
+  /**
+   * Récupérer une facture spécifique
+   */
+  async getInvoice(invoiceId: number): Promise<AxonautInvoice> {
+    try {
+      const response = await this.client.get<AxonautInvoice>(`/invoices/${invoiceId}`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(`Erreur lors de la récupération de la facture: ${error.message}`);
+    }
+  }
+
+  /**
+   * Créer une nouvelle facture
+   */
+  async createInvoice(invoiceData: {
+    company_id: number;
+    date?: string;
+    invoice_lines: Array<{
+      product_name?: string;
+      description?: string;
+      quantity: number;
+      unit_price: number;
+    }>;
+  }): Promise<AxonautInvoice> {
+    try {
+      const response = await this.client.post<AxonautInvoice>('/invoices', invoiceData);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(`Erreur lors de la création de la facture: ${error.message}`);
+    }
+  }
+
+  /**
+   * Récupérer les employés d'une entreprise
+   */
+  async getEmployees(companyId?: number, params?: {
+    limit?: number;
+    page?: number;
+  }): Promise<AxonautContact[]> {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params?.limit) queryParams.append('limit', params.limit.toString());
+      if (params?.page) queryParams.append('page', params.page.toString());
+
+      let url;
+      if (companyId) {
+        url = `/companies/${companyId}/employees${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      } else {
+        url = `/employees${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      }
+
+      const response = await this.client.get<AxonautApiResponse<AxonautContact>>(url);
+      
+      return Array.isArray(response.data) ? response.data : (response.data.data || []);
+    } catch (error: any) {
+      throw new Error(`Erreur lors de la récupération des employés: ${error.message}`);
+    }
+  }
+
+  /**
+   * Créer un nouvel employé
+   */
+  async createEmployee(employeeData: {
+    first_name: string;
+    last_name: string;
+    email?: string;
+    phone?: string;
+    company_id?: number;
+  }): Promise<AxonautContact> {
+    try {
+      const response = await this.client.post<AxonautContact>('/employees', employeeData);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(`Erreur lors de la création de l'employé: ${error.message}`);
+    }
+  }
+
+  /**
+   * Créer un contact/employé
+   */
+  async createContact(contactData: {
+    name: string;
+    email?: string;
+    phone?: string;
+    company_id?: number;
+  }): Promise<AxonautContact> {
+    try {
+      const response = await this.client.post<AxonautContact>('/employees', contactData);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(`Erreur lors de la création du contact: ${error.message}`);
+    }
+  }
+
+  /**
+   * Récupérer les informations du compte
+   */
+  async getAccountInfo(): Promise<any> {
+    try {
+      const response = await this.client.get('/me');
+      return response.data;
+    } catch (error: any) {
+      throw new Error(`Erreur lors de la récupération des informations du compte: ${error.message}`);
+    }
+  }
+
+  /**
+   * Récupérer les utilisateurs du compte
+   */
+  async getUsers(): Promise<any[]> {
+    try {
+      const response = await this.client.get<AxonautApiResponse<any>>('/users');
+      return Array.isArray(response.data) ? response.data : (response.data.data || []);
+    } catch (error: any) {
+      throw new Error(`Erreur lors de la récupération des utilisateurs: ${error.message}`);
     }
   }
 }
