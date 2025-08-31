@@ -2,8 +2,11 @@ import { Request, Response } from 'express';
 import { McpService } from '../services/mcp.service.js';
 import { AuthService } from '../services/auth.service.js';
 import { ApiValidationService } from '../services/api-validation.service.js';
+import { DynamicMcpService } from '../services/dynamic-mcp.service.js';
 
 export class McpController {
+  private static dynamicMcpService = new DynamicMcpService();
+
   /**
    * Créer une nouvelle session MCP
    */
@@ -69,11 +72,35 @@ export class McpController {
 
       console.log(`🔧 Session MCP créée: ${toolName} pour l'utilisateur ${userId}`);
 
-      res.status(201).json({
-        success: true,
-        message: result.message,
-        session: result.session
-      });
+      // Créer automatiquement la session MCP dynamique
+      try {
+        const mcpSessionResult = await McpController.dynamicMcpService.createMcpSession(userId, toolName.toLowerCase());
+        
+        res.status(201).json({
+          success: true,
+          message: result.message,
+          session: result.session,
+          mcpSession: {
+            sessionId: mcpSessionResult.sessionId,
+            url: mcpSessionResult.url,
+            instructions: {
+              title: `URL MCP pour ${toolName}`,
+              description: 'Copiez cette URL dans votre application (Dust AI, etc.)',
+              url: mcpSessionResult.url,
+              note: 'Cette URL vous permet d\'utiliser les outils ' + toolName + ' via MCP'
+            }
+          }
+        });
+      } catch (mcpError) {
+        console.warn('⚠️ Erreur lors de la création de la session MCP automatique:', mcpError);
+        // On retourne quand même un succès car la session DB a été créée
+        res.status(201).json({
+          success: true,
+          message: result.message,
+          session: result.session,
+          warning: 'Session créée mais URL MCP non générée. Vous pouvez la créer manuellement.'
+        });
+      }
 
     } catch (error) {
       console.error('Erreur création session MCP:', error);
@@ -156,10 +183,19 @@ export class McpController {
       }
 
       const hasSession = await McpService.hasToolSession(userId, toolName.toLowerCase());
+      
+      let mcpUrl = null;
+      if (hasSession) {
+        // Récupérer l'URL MCP si elle existe
+        const sessions = await McpService.getUserSessions(userId);
+        const session = sessions.find((s: any) => s.toolName === toolName.toLowerCase());
+        mcpUrl = session?.mcpUrl || null;
+      }
 
       res.json({
         success: true,
         hasSession,
+        mcpUrl,
         toolName: toolName.toLowerCase()
       });
 

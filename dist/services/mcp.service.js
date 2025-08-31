@@ -54,6 +54,7 @@ export class McpService {
                 select: {
                     id: true,
                     toolName: true,
+                    mcpUrl: true,
                     createdAt: true,
                     updatedAt: true
                 },
@@ -98,6 +99,19 @@ export class McpService {
         catch (error) {
             console.error('Erreur lors de la suppression de la session:', error);
             throw new Error('Erreur lors de la suppression de la session');
+        }
+    }
+    static async updateSessionUrl(sessionId, mcpUrl) {
+        try {
+            await prisma.mcpSession.update({
+                where: { id: sessionId },
+                data: { mcpUrl }
+            });
+            return { message: 'URL MCP mise à jour avec succès' };
+        }
+        catch (error) {
+            console.error('Erreur lors de la mise à jour de l\'URL MCP:', error);
+            throw new Error('Erreur lors de la mise à jour de l\'URL MCP');
         }
     }
     static async validateAccessKey(userId, toolName, accessKey) {

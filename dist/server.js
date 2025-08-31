@@ -2,10 +2,12 @@ import express from 'express';
 import { config, setupMiddleware, setupErrorHandling } from './config/app.js';
 import indexRouter from './routes/index.js';
 import apiRouter from './routes/api/index.js';
+import dynamicMcpRouter from './routes/dynamic-mcp.js';
 const app = express();
 setupMiddleware(app);
 app.use('/', indexRouter);
 app.use('/api', apiRouter);
+app.use('/mcp', dynamicMcpRouter);
 setupErrorHandling(app);
 app.listen(config.PORT, () => {
     console.log(`🚀 MCP Wesype Server running on port ${config.PORT}`);

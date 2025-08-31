@@ -113,6 +113,73 @@
             text-align: center;
             font-weight: 600;
         }
+        .mcp-url-section {
+            background: #f0f9ff;
+            border: 2px solid #0ea5e9;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .mcp-url-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0c4a6e;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .mcp-url-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #0ea5e9;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            background: white;
+            color: #1e293b;
+            margin-bottom: 12px;
+        }
+        .mcp-url-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .copy-btn, .dust-btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .copy-btn {
+            background: #0ea5e9;
+            color: white;
+        }
+        .copy-btn:hover {
+            background: #0284c7;
+        }
+        .dust-btn {
+            background: #7c3aed;
+            color: white;
+        }
+        .dust-btn:hover {
+            background: #6d28d9;
+        }
+        .mcp-instructions {
+            background: #fefce8;
+            border: 1px solid #facc15;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+            font-size: 14px;
+            color: #854d0e;
+        }
     </style>
 </head>
 <body style="background:#f8fafc;min-height:100vh;">
@@ -127,6 +194,25 @@
         
         <!-- Statut de configuration -->
         <div id="configStatus" style="display: none;"></div>
+        
+        <!-- Section URL MCP -->
+        <div id="mcpUrlSection" class="mcp-url-section" style="display: none;">
+            <div class="mcp-url-title">
+                🔗 URL MCP pour Dust AI
+            </div>
+            <input type="text" id="mcpUrl" class="mcp-url-input" readonly placeholder="URL MCP sera générée après configuration...">
+            <div class="mcp-url-actions">
+                <button id="copyUrlBtn" class="copy-btn">
+                    📋 Copier l'URL
+                </button>
+                <a href="https://dust.tt" target="_blank" class="dust-btn">
+                    🚀 Ouvrir Dust AI
+                </a>
+            </div>
+            <div class="mcp-instructions">
+                <strong>Instructions:</strong> Copiez cette URL et ajoutez-la dans Dust AI comme nouveau connecteur MCP pour utiliser vos outils Axonaut.
+            </div>
+        </div>
         
         <button id="setupBtn" style="background:#2563eb;color:#fff;border:none;border-radius:10px;padding:16px 38px;font-size:1.15em;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(30,41,59,0.06);">
             Setup
@@ -172,6 +258,9 @@
         const statusMessage = document.getElementById('statusMessage');
         const configStatus = document.getElementById('configStatus');
         const apiKeyInput = document.getElementById('apiKey');
+        const mcpUrlSection = document.getElementById('mcpUrlSection');
+        const mcpUrlInput = document.getElementById('mcpUrl');
+        const copyUrlBtn = document.getElementById('copyUrlBtn');
 
         // Vérifier le statut de configuration au chargement
         checkConfigurationStatus();
@@ -180,6 +269,7 @@
         setupBtn.addEventListener('click', openSetupModal);
         reconfigureBtn.addEventListener('click', openSetupModal);
         cancelBtn.addEventListener('click', closeSetupModal);
+        copyUrlBtn.addEventListener('click', copyMcpUrl);
         setupForm.addEventListener('submit', handleSetupSubmit);
         
         // Fermer la modal en cliquant à l'extérieur
@@ -227,7 +317,8 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.hasSession) {
+                    if (data.hasSession && data.mcpUrl) {
+                        mcpUrlInput.value = data.mcpUrl;
                         showConfiguredStatus();
                     }
                 }
@@ -243,6 +334,27 @@
             
             setupBtn.style.display = 'none';
             reconfigureBtn.style.display = 'inline-block';
+            mcpUrlSection.style.display = 'block';
+        }
+
+        function copyMcpUrl() {
+            const url = mcpUrlInput.value;
+            if (url) {
+                navigator.clipboard.writeText(url).then(() => {
+                    copyUrlBtn.textContent = '✅ Copié!';
+                    setTimeout(() => {
+                        copyUrlBtn.innerHTML = '📋 Copier l\'URL';
+                    }, 2000);
+                }).catch(() => {
+                    // Fallback pour les navigateurs plus anciens
+                    mcpUrlInput.select();
+                    document.execCommand('copy');
+                    copyUrlBtn.textContent = '✅ Copié!';
+                    setTimeout(() => {
+                        copyUrlBtn.innerHTML = '📋 Copier l\'URL';
+                    }, 2000);
+                });
+            }
         }
 
         async function handleSetupSubmit(e) {
@@ -281,6 +393,12 @@
 
                 if (response.ok) {
                     showStatusMessage('Configuration sauvegardée avec succès!', 'success');
+                    
+                    // Afficher l'URL MCP si elle est disponible
+                    if (data.mcpSession && data.mcpSession.url) {
+                        mcpUrlInput.value = data.mcpSession.url;
+                    }
+                    
                     setTimeout(() => {
                         closeSetupModal();
                         showConfiguredStatus();

@@ -1,6 +1,7 @@
 import { McpService } from '../services/mcp.service.js';
 import { AuthService } from '../services/auth.service.js';
 import { ApiValidationService } from '../services/api-validation.service.js';
+import { DynamicMcpService } from '../services/dynamic-mcp.service.js';
 export class McpController {
     static async createSession(req, res) {
         try {
@@ -50,11 +51,33 @@ export class McpController {
                 accessKey
             });
             console.log(`🔧 Session MCP créée: ${toolName} pour l'utilisateur ${userId}`);
-            res.status(201).json({
-                success: true,
-                message: result.message,
-                session: result.session
-            });
+            try {
+                const mcpSessionResult = await McpController.dynamicMcpService.createMcpSession(userId, toolName.toLowerCase());
+                res.status(201).json({
+                    success: true,
+                    message: result.message,
+                    session: result.session,
+                    mcpSession: {
+                        sessionId: mcpSessionResult.sessionId,
+                        url: mcpSessionResult.url,
+                        instructions: {
+                            title: `URL MCP pour ${toolName}`,
+                            description: 'Copiez cette URL dans votre application (Dust AI, etc.)',
+                            url: mcpSessionResult.url,
+                            note: 'Cette URL vous permet d\'utiliser les outils ' + toolName + ' via MCP'
+                        }
+                    }
+                });
+            }
+            catch (mcpError) {
+                console.warn('⚠️ Erreur lors de la création de la session MCP automatique:', mcpError);
+                res.status(201).json({
+                    success: true,
+                    message: result.message,
+                    session: result.session,
+                    warning: 'Session créée mais URL MCP non générée. Vous pouvez la créer manuellement.'
+                });
+            }
         }
         catch (error) {
             console.error('Erreur création session MCP:', error);
@@ -118,9 +141,16 @@ export class McpController {
                 });
             }
             const hasSession = await McpService.hasToolSession(userId, toolName.toLowerCase());
+            let mcpUrl = null;
+            if (hasSession) {
+                const sessions = await McpService.getUserSessions(userId);
+                const session = sessions.find((s) => s.toolName === toolName.toLowerCase());
+                mcpUrl = session?.mcpUrl || null;
+            }
             res.json({
                 success: true,
                 hasSession,
+                mcpUrl,
                 toolName: toolName.toLowerCase()
             });
         }
@@ -201,3 +231,4 @@ export class McpController {
         }
     }
 }
+McpController.dynamicMcpService = new DynamicMcpService();

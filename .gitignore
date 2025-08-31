@@ -18,6 +18,23 @@ node_modules/
 .DS_Store
 Thumbs.db
 
+# Fichiers temporaires et de sauvegarde
+*.tmp
+*.backup
+*.old
+*.bak
+*~
+
+# Fichiers de compilation TypeScript inutiles
+dist/types/*.js
+dist/public/
+
+# Fichiers d'éditeur
+.vscode/
+.idea/
+*.swp
+*.swo
+
 # IDE
 .vscode/
 .idea/

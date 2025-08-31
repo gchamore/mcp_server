@@ -65,7 +65,7 @@ export class McpService {
   }
 
   /**
-   * Récupérer les sessions d'un utilisateur
+   * Récupérer les sessions d'un utilisateur avec l'URL MCP
    */
   static async getUserSessions(userId: string) {
     try {
@@ -74,6 +74,7 @@ export class McpService {
         select: {
           id: true,
           toolName: true,
+          mcpUrl: true,
           createdAt: true,
           updatedAt: true
         },
@@ -126,6 +127,23 @@ export class McpService {
     } catch (error) {
       console.error('Erreur lors de la suppression de la session:', error);
       throw new Error('Erreur lors de la suppression de la session');
+    }
+  }
+
+  /**
+   * Mettre à jour l'URL MCP d'une session
+   */
+  static async updateSessionUrl(sessionId: string, mcpUrl: string) {
+    try {
+      await prisma.mcpSession.update({
+        where: { id: sessionId },
+        data: { mcpUrl }
+      });
+
+      return { message: 'URL MCP mise à jour avec succès' };
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de l\'URL MCP:', error);
+      throw new Error('Erreur lors de la mise à jour de l\'URL MCP');
     }
   }
 
