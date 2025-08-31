@@ -57,7 +57,6 @@
                 <p class="user-welcome">Bienvenue, <span class="user-name">Utilisateur</span></p>
             </div>
         </header>
-        
         <main class="dashboard-content">
             <div class="service-description">
                 <h2>Votre plateforme MCP</h2>
@@ -66,24 +65,34 @@
                     conçus pour enrichir vos applications avec des capacités d'IA avancées.
                 </p>
             </div>
-            
             <div class="search-section">
-                <div class="search-container">
-                    <input type="text" id="mcpSearch" placeholder="Rechercher un MCP..." class="search-input">
-                    <button class="search-btn">🔍</button>
+                <div class="mcp-tools-buttons" style="display: flex; gap: 24px; justify-content: flex-start; align-items: center; margin: 32px 0 24px 0;">
+                    <button class="mcp-tool-btn" id="axonautBtn" style="display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px 28px; font-size: 1.1em; font-weight: 500; box-shadow: 0 2px 8px rgba(30,41,59,0.06); cursor: pointer; transition: box-shadow .2s;">
+                        <img src="https://www.axonaut.com/favicon.ico" alt="Axonaut" style="width:32px;height:32px;">
+                        <span>Axonaut</span>
+                    </button>
+                    <button class="mcp-tool-btn" id="gmailBtn" style="display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px 28px; font-size: 1.1em; font-weight: 500; box-shadow: 0 2px 8px rgba(30,41,59,0.06); cursor: pointer; transition: box-shadow .2s;">
+                        <img src="https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico" alt="Gmail" style="width:32px;height:32px;">
+                        <span>Gmail</span>
+                    </button>
+                                <style>
+                                @media (min-width: 0px) {
+                                    .mcp-tools-buttons {
+                                        justify-content: center !important;
+                                    }
+                                }
+                                </style>
                 </div>
-            </div>
-            
-            <div class="dashboard-actions">
-                <button id="logoutBtn" class="logout-btn">
-                    <span class="button-text">Déconnexion</span>
-                    <div class="button-icon">🚪</div>
-                </button>
-                
-                <button id="settingsBtn" class="settings-btn">
-                    <span class="button-text">Paramètres</span>
-                    <div class="button-icon">⚙️</div>
-                </button>
+                <div class="dashboard-actions" style="margin-top: 32px;">
+                    <button id="logoutBtn" class="logout-btn">
+                        <span class="button-text">Déconnexion</span>
+                        <div class="button-icon">🚪</div>
+                    </button>
+                    <button id="settingsBtn" class="settings-btn">
+                        <span class="button-text">Paramètres</span>
+                        <div class="button-icon">⚙️</div>
+                    </button>
+                </div>
             </div>
         </main>
     </div>

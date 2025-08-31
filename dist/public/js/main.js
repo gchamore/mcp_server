@@ -9,6 +9,62 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeModals();
     initializeForms();
     checkAuthStatus();
+
+    // MCP TOOLS BUTTONS - Show tool page in-app
+    const MCP_TOOLS = {
+        axonaut: {
+            logo: 'https://www.axonaut.com/favicon.ico',
+            name: 'Axonaut',
+            desc: 'Synchronisez vos données Axonaut pour une gestion intelligente avec MCP Wesype.'
+        },
+        gmail: {
+            logo: 'https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico',
+            name: 'Gmail',
+            desc: 'Connectez votre boîte Gmail pour automatiser vos emails avec MCP Wesype.'
+        }
+    };
+    const axonautBtn = document.getElementById('axonautBtn');
+    const gmailBtn = document.getElementById('gmailBtn');
+    const toolPage = document.getElementById('toolPage');
+    const toolLogo = document.getElementById('toolLogo');
+    const toolTitle = document.getElementById('toolTitle');
+    const toolDesc = document.getElementById('toolDesc');
+    const toolSetupBtn = document.getElementById('toolSetupBtn');
+    function showToolPage(toolKey) {
+        const tool = MCP_TOOLS[toolKey];
+        if (!tool) return;
+        // Masquer tout le dashboard sauf la page tool
+        const dashboardContent = document.querySelector('.dashboard-content');
+        if (dashboardContent) dashboardContent.style.display = 'none';
+        if (toolPage) {
+            toolLogo.src = tool.logo;
+            toolTitle.textContent = `MCP ${tool.name} Wesype`;
+            toolDesc.textContent = tool.desc;
+            toolPage.style.display = 'block';
+        }
+    }
+
+    // Permet de revenir au dashboard (optionnel, à ajouter si besoin)
+    window.showDashboardContent = function() {
+        const dashboardContent = document.querySelector('.dashboard-content');
+        if (dashboardContent) dashboardContent.style.display = '';
+        if (toolPage) toolPage.style.display = 'none';
+    };
+    if (axonautBtn) {
+        axonautBtn.addEventListener('click', function() {
+            window.location.href = '/axonaut.html';
+        });
+    }
+    if (gmailBtn) {
+        gmailBtn.addEventListener('click', function() {
+            window.location.href = '/gmail.html';
+        });
+    }
+    if (toolSetupBtn) {
+        toolSetupBtn.addEventListener('click', function() {
+            // Setup action à venir
+        });
+    }
     
     console.log('⚡ Application initialisée');
 });
