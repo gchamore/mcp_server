@@ -7,6 +7,51 @@
     <link rel="stylesheet" href="/css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        body {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .main-container {
+            max-width: 520px;
+            margin: 32px auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 4px 32px rgba(30, 41, 59, 0.08);
+            padding: 40px 36px;
+            border: 1px solid rgba(226, 232, 240, 0.6);
+        }
+        
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .header img {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #334155;
+            letter-spacing: -0.025em;
+        }
+        
+        .description {
+            color: #64748b;
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+        
         .setup-modal {
             display: none;
             position: fixed;
@@ -14,181 +59,320 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.6);
             z-index: 1000;
+            backdrop-filter: blur(4px);
         }
+        
         .setup-modal-content {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             background: white;
-            border-radius: 18px;
-            padding: 32px;
-            max-width: 500px;
+            border-radius: 20px;
+            padding: 36px;
+            max-width: 480px;
             width: 90%;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(226, 232, 240, 0.6);
         }
+        
         .setup-form {
             margin-top: 24px;
         }
+        
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
+        
         .form-group label {
             display: block;
             font-weight: 600;
-            color: #1e293b;
+            color: #334155;
             margin-bottom: 8px;
+            font-size: 0.875rem;
         }
+        
         .form-group input {
             width: 100%;
-            padding: 12px 16px;
+            padding: 14px 16px;
             border: 2px solid #e2e8f0;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 16px;
             font-family: 'Inter', sans-serif;
-            transition: border-color 0.2s;
-            background: white;
-            color: #1e293b;
+            transition: all 0.2s ease;
+            background: #fafafa;
+            color: #334155;
         }
+        
         .form-group input:focus {
             outline: none;
-            border-color: #2563eb;
+            border-color: #1e3a8a;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
         }
+        
         .form-group input::placeholder {
             color: #94a3b8;
         }
+        
         .btn-group {
             display: flex;
             gap: 12px;
-            margin-top: 24px;
+            margin-top: 28px;
         }
+        
         .btn {
             flex: 1;
-            padding: 12px 24px;
+            padding: 14px 24px;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
+        
         .btn-primary {
-            background: #2563eb;
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
             color: white;
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
         }
+        
         .btn-primary:hover {
-            background: #1d4ed8;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(30, 58, 138, 0.4);
         }
+        
         .btn-secondary {
-            background: #f1f5f9;
+            background: #f8fafc;
             color: #64748b;
+            border: 2px solid #e2e8f0;
         }
+        
         .btn-secondary:hover {
-            background: #e2e8f0;
+            background: #f1f5f9;
+            border-color: #cbd5e1;
         }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+        
+        .btn-danger:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+        }
+        
         .status-message {
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 16px;
+            padding: 14px 18px;
+            border-radius: 12px;
+            margin-bottom: 20px;
             font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
+        
         .status-success {
-            background: #dcfce7;
+            background: #f0fdf4;
             color: #166534;
             border: 1px solid #bbf7d0;
         }
+        
         .status-error {
             background: #fef2f2;
             color: #dc2626;
             border: 1px solid #fecaca;
         }
+        
         .configured-status {
-            background: #dcfce7;
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
             color: #166534;
-            padding: 16px;
-            border-radius: 10px;
-            margin-bottom: 24px;
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 28px;
             text-align: center;
             font-weight: 600;
-        }
-        .mcp-url-section {
-            background: #f0f9ff;
-            border: 2px solid #0ea5e9;
-            border-radius: 12px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-        .mcp-url-title {
-            font-size: 18px;
-            font-weight: 700;
-            color: #0c4a6e;
-            margin-bottom: 12px;
+            border: 1px solid #bbf7d0;
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: center;
+            gap: 10px;
         }
-        .mcp-url-input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #0ea5e9;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
+        
+        .mcp-url-section {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 24px;
+        }
+        
+        .mcp-url-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .mcp-url-display {
             background: white;
-            color: #1e293b;
-            margin-bottom: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+            font-size: 13px;
+            color: #475569;
+            word-break: break-all;
+            line-height: 1.4;
         }
+        
         .mcp-url-actions {
             display: flex;
             gap: 12px;
             flex-wrap: wrap;
+            justify-content: center;
         }
+        
         .copy-btn, .dust-btn {
-            padding: 10px 16px;
+            padding: 12px 20px;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+            font-size: 14px;
         }
+        
         .copy-btn {
-            background: #0ea5e9;
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
             color: white;
+            box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3);
         }
+        
         .copy-btn:hover {
-            background: #0284c7;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.4);
         }
+        
         .dust-btn {
-            background: #7c3aed;
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
             color: white;
+            box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3);
         }
+        
         .dust-btn:hover {
-            background: #6d28d9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.4);
         }
+        
         .mcp-instructions {
-            background: #fefce8;
-            border: 1px solid #facc15;
-            border-radius: 8px;
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border: 1px solid #f59e0b;
+            border-radius: 12px;
             padding: 16px;
             margin-top: 16px;
             font-size: 14px;
-            color: #854d0e;
+            color: #92400e;
+            line-height: 1.5;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 32px;
+        }
+        
+        .setup-btn {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 16px 32px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .setup-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(30, 58, 138, 0.4);
+        }
+        
+        .delete-btn {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 24px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .delete-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+        
+        @media (max-width: 640px) {
+            .main-container {
+                margin: 16px;
+                padding: 28px 24px;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .mcp-url-actions {
+                flex-direction: column;
+                align-items: center;
+            }
         }
     </style>
 </head>
-<body style="background:#f8fafc;min-height:100vh;">
-    <div class="container" style="max-width:480px;margin:48px auto 0 auto;background:#fff;border-radius:18px;box-shadow:0 2px 16px rgba(30,41,59,0.08);padding:48px 32px;">
-        <div style="display:flex;align-items:center;gap:18px;margin-bottom:18px;">
-            <img src="https://www.axonaut.com/favicon.ico" alt="Axonaut" style="width:56px;height:56px;">
-            <h1 style="margin:0;font-size:2em;font-weight:700;color:#1e293b;">MCP Axonaut Wesype</h1>
+<<body>
+    <div class="main-container">
+        <div class="header">
+            <img src="https://www.axonaut.com/favicon.ico" alt="Axonaut">
+            <h1>MCP Axonaut Wesype</h1>
         </div>
-        <div style="color:#64748b;font-size:1.15em;margin-bottom:36px;">
+        
+        <div class="description">
             Synchronisez vos données Axonaut pour une gestion intelligente avec MCP Wesype.
         </div>
         
@@ -198,15 +382,15 @@
         <!-- Section URL MCP -->
         <div id="mcpUrlSection" class="mcp-url-section" style="display: none;">
             <div class="mcp-url-title">
-                🔗 URL MCP pour Dust AI
+                URL MCP pour Dust AI
             </div>
-            <input type="text" id="mcpUrl" class="mcp-url-input" readonly placeholder="URL MCP sera générée après configuration...">
+            <div id="mcpUrl" class="mcp-url-display"></div>
             <div class="mcp-url-actions">
                 <button id="copyUrlBtn" class="copy-btn">
-                    📋 Copier l'URL
+                    Copier l'URL
                 </button>
                 <a href="https://dust.tt" target="_blank" class="dust-btn">
-                    🚀 Ouvrir Dust AI
+                    Ouvrir Dust AI
                 </a>
             </div>
             <div class="mcp-instructions">
@@ -214,20 +398,22 @@
             </div>
         </div>
         
-        <button id="setupBtn" style="background:#2563eb;color:#fff;border:none;border-radius:10px;padding:16px 38px;font-size:1.15em;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(30,41,59,0.06);">
-            Setup
-        </button>
-        
-        <button id="reconfigureBtn" style="display:none;background:#64748b;color:#fff;border:none;border-radius:10px;padding:16px 38px;font-size:1.15em;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(30,41,59,0.06);margin-left:12px;">
-            Reconfigurer
-        </button>
+        <div class="action-buttons">
+            <button id="setupBtn" class="setup-btn">
+                Configuration
+            </button>
+            
+            <button id="deleteBtn" class="delete-btn" style="display:none;">
+                Supprimer
+            </button>
+        </div>
     </div>
 
     <!-- Modal de configuration -->
     <div id="setupModal" class="setup-modal">
         <div class="setup-modal-content">
-            <h2 style="margin:0 0 8px 0;font-size:1.5em;color:#1e293b;">Configuration Axonaut</h2>
-            <p style="color:#64748b;margin:0 0 24px 0;">Entrez votre clé API Axonaut pour connecter votre compte.</p>
+            <h2 style="margin:0 0 8px 0;font-size:1.5em;color:#334155;font-weight:700;">Configuration Axonaut</h2>
+            <p style="color:#64748b;margin:0 0 24px 0;line-height:1.5;">Entrez votre clé API Axonaut pour connecter votre compte.</p>
             
             <div id="statusMessage" style="display:none;"></div>
             
@@ -245,21 +431,37 @@
         </div>
     </div>
 
+    <!-- Modal de confirmation de suppression -->
+    <div id="deleteModal" class="setup-modal">
+        <div class="setup-modal-content">
+            <h2 style="margin:0 0 8px 0;font-size:1.5em;color:#dc2626;font-weight:700;">Confirmer la suppression</h2>
+            <p style="color:#64748b;margin:0 0 24px 0;line-height:1.5;">Êtes-vous sûr de vouloir supprimer la configuration Axonaut ? Cette action est irréversible.</p>
+            
+            <div class="btn-group">
+                <button type="button" id="cancelDeleteBtn" class="btn btn-secondary">Annuler</button>
+                <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Supprimer</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Configuration
         const TOOL_NAME = 'axonaut';
         
         // Éléments DOM
         const setupBtn = document.getElementById('setupBtn');
-        const reconfigureBtn = document.getElementById('reconfigureBtn');
+        const deleteBtn = document.getElementById('deleteBtn');
         const setupModal = document.getElementById('setupModal');
+        const deleteModal = document.getElementById('deleteModal');
         const setupForm = document.getElementById('setupForm');
         const cancelBtn = document.getElementById('cancelBtn');
+        const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
         const statusMessage = document.getElementById('statusMessage');
         const configStatus = document.getElementById('configStatus');
         const apiKeyInput = document.getElementById('apiKey');
         const mcpUrlSection = document.getElementById('mcpUrlSection');
-        const mcpUrlInput = document.getElementById('mcpUrl');
+        const mcpUrlDisplay = document.getElementById('mcpUrl');
         const copyUrlBtn = document.getElementById('copyUrlBtn');
 
         // Vérifier le statut de configuration au chargement
@@ -267,15 +469,23 @@
 
         // Event listeners
         setupBtn.addEventListener('click', openSetupModal);
-        reconfigureBtn.addEventListener('click', openSetupModal);
+        deleteBtn.addEventListener('click', openDeleteModal);
         cancelBtn.addEventListener('click', closeSetupModal);
+        cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+        confirmDeleteBtn.addEventListener('click', handleDeleteSession);
         copyUrlBtn.addEventListener('click', copyMcpUrl);
         setupForm.addEventListener('submit', handleSetupSubmit);
         
-        // Fermer la modal en cliquant à l'extérieur
+        // Fermer les modales en cliquant à l'extérieur
         setupModal.addEventListener('click', (e) => {
             if (e.target === setupModal) {
                 closeSetupModal();
+            }
+        });
+
+        deleteModal.addEventListener('click', (e) => {
+            if (e.target === deleteModal) {
+                closeDeleteModal();
             }
         });
 
@@ -291,14 +501,30 @@
             hideStatusMessage();
         }
 
+        function openDeleteModal() {
+            deleteModal.style.display = 'block';
+        }
+
+        function closeDeleteModal() {
+            deleteModal.style.display = 'none';
+        }
+
         function showStatusMessage(message, type) {
-            statusMessage.textContent = message;
+            statusMessage.innerHTML = `${message}`;
             statusMessage.className = `status-message status-${type}`;
             statusMessage.style.display = 'block';
         }
 
         function hideStatusMessage() {
             statusMessage.style.display = 'none';
+        }
+
+        function getStatusIcon(type) {
+            switch(type) {
+                case 'success': return '';
+                case 'error': return '';
+                default: return '';
+            }
         }
 
         async function checkConfigurationStatus() {
@@ -318,7 +544,7 @@
                 if (response.ok) {
                     const data = await response.json();
                     if (data.hasSession && data.mcpUrl) {
-                        mcpUrlInput.value = data.mcpUrl;
+                        mcpUrlDisplay.textContent = data.mcpUrl;
                         showConfiguredStatus();
                     }
                 }
@@ -328,32 +554,97 @@
         }
 
         function showConfiguredStatus() {
-            configStatus.innerHTML = '✅ Axonaut est configuré et connecté';
+            configStatus.innerHTML = 'Axonaut est configuré et connecté';
             configStatus.className = 'configured-status';
             configStatus.style.display = 'block';
             
             setupBtn.style.display = 'none';
-            reconfigureBtn.style.display = 'inline-block';
+            deleteBtn.style.display = 'inline-flex';
             mcpUrlSection.style.display = 'block';
         }
 
+        function hideConfiguredStatus() {
+            configStatus.style.display = 'none';
+            setupBtn.style.display = 'inline-flex';
+            deleteBtn.style.display = 'none';
+            mcpUrlSection.style.display = 'none';
+        }
+
         function copyMcpUrl() {
-            const url = mcpUrlInput.value;
+            const url = mcpUrlDisplay.textContent;
             if (url) {
                 navigator.clipboard.writeText(url).then(() => {
-                    copyUrlBtn.textContent = '✅ Copié!';
+                    copyUrlBtn.innerHTML = 'Copié!';
                     setTimeout(() => {
-                        copyUrlBtn.innerHTML = '📋 Copier l\'URL';
+                        copyUrlBtn.innerHTML = 'Copier l\'URL';
                     }, 2000);
                 }).catch(() => {
                     // Fallback pour les navigateurs plus anciens
-                    mcpUrlInput.select();
+                    const textArea = document.createElement('textarea');
+                    textArea.value = url;
+                    document.body.appendChild(textArea);
+                    textArea.select();
                     document.execCommand('copy');
-                    copyUrlBtn.textContent = '✅ Copié!';
+                    document.body.removeChild(textArea);
+                    copyUrlBtn.innerHTML = 'Copié!';
                     setTimeout(() => {
-                        copyUrlBtn.innerHTML = '📋 Copier l\'URL';
+                        copyUrlBtn.innerHTML = 'Copier l\'URL';
                     }, 2000);
                 });
+            }
+        }
+
+        async function handleDeleteSession() {
+            const confirmBtn = document.getElementById('confirmDeleteBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = 'Suppression...';
+
+            try {
+                const token = localStorage.getItem('authToken');
+                if (!token) {
+                    window.location.href = '/';
+                    return;
+                }
+
+                const response = await fetch(`/api/mcp/sessions/${TOOL_NAME}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    // Fermer la modal
+                    closeDeleteModal();
+                    
+                    // Masquer le statut configuré
+                    hideConfiguredStatus();
+                    
+                    // Afficher un message de succès temporaire
+                    const tempMessage = document.createElement('div');
+                    tempMessage.className = 'status-message status-success';
+                    tempMessage.innerHTML = 'Configuration supprimée avec succès';
+                    tempMessage.style.marginBottom = '20px';
+                    
+                    const container = document.querySelector('.main-container');
+                    container.insertBefore(tempMessage, container.firstChild);
+                    
+                    setTimeout(() => {
+                        if (tempMessage.parentNode) {
+                            tempMessage.parentNode.removeChild(tempMessage);
+                        }
+                    }, 3000);
+                    
+                } else {
+                    const data = await response.json();
+                    alert('Erreur lors de la suppression: ' + (data.error || 'Erreur inconnue'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur de connexion lors de la suppression');
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = 'Supprimer';
             }
         }
 
@@ -368,7 +659,7 @@
 
             const saveBtn = document.getElementById('saveBtn');
             saveBtn.disabled = true;
-            saveBtn.textContent = 'Sauvegarde...';
+            saveBtn.innerHTML = 'Sauvegarde...';
 
             try {
                 const token = localStorage.getItem('authToken');
@@ -396,7 +687,7 @@
                     
                     // Afficher l'URL MCP si elle est disponible
                     if (data.mcpSession && data.mcpSession.url) {
-                        mcpUrlInput.value = data.mcpSession.url;
+                        mcpUrlDisplay.textContent = data.mcpSession.url;
                     }
                     
                     setTimeout(() => {
@@ -411,7 +702,7 @@
                 showStatusMessage('Erreur de connexion', 'error');
             } finally {
                 saveBtn.disabled = false;
-                saveBtn.textContent = 'Sauvegarder';
+                saveBtn.innerHTML = 'Sauvegarder';
             }
         }
     </script>

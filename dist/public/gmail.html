@@ -6,17 +6,99 @@
     <title>MCP Gmail Wesype</title>
     <link rel="stylesheet" href="/css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .main-container {
+            max-width: 520px;
+            margin: 32px auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 4px 32px rgba(30, 41, 59, 0.08);
+            padding: 40px 36px;
+            border: 1px solid rgba(226, 232, 240, 0.6);
+        }
+        
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .header img {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #334155;
+            letter-spacing: -0.025em;
+        }
+        
+        .description {
+            color: #64748b;
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+        
+        .setup-btn {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 16px 32px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .setup-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(30, 58, 138, 0.4);
+        }
+        
+        @media (max-width: 640px) {
+            .main-container {
+                margin: 16px;
+                padding: 28px 24px;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
 </head>
-<body style="background:#f8fafc;min-height:100vh;">
-    <div class="container" style="max-width:480px;margin:48px auto 0 auto;background:#fff;border-radius:18px;box-shadow:0 2px 16px rgba(30,41,59,0.08);padding:48px 32px;">
-        <div style="display:flex;align-items:center;gap:18px;margin-bottom:18px;">
-            <img src="https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico" alt="Gmail" style="width:56px;height:56px;">
-            <h1 style="margin:0;font-size:2em;font-weight:700;color:#1e293b;">MCP Gmail Wesype</h1>
+<body>
+    <div class="main-container">
+        <div class="header">
+            <img src="https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico" alt="Gmail">
+            <h1>MCP Gmail Wesype</h1>
         </div>
-        <div style="color:#64748b;font-size:1.15em;margin-bottom:36px;">
+        
+        <div class="description">
             Connectez votre boîte Gmail pour automatiser vos emails avec MCP Wesype.
         </div>
-        <button style="background:#2563eb;color:#fff;border:none;border-radius:10px;padding:16px 38px;font-size:1.15em;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(30,41,59,0.06);">Setup</button>
+        
+        <button class="setup-btn">
+            Configuration
+        </button>
     </div>
 </body>
 </html>
