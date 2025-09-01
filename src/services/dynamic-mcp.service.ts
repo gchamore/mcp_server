@@ -15,6 +15,7 @@ import { McpService } from './mcp.service.js';
 export class DynamicMcpService {
   private static instance: DynamicMcpService;
   private activeSessions: Map<string, ActiveMcpSession> = new Map();
+  private isInitialized: boolean = false;
   
   /**
    * Singleton pattern
@@ -24,6 +25,78 @@ export class DynamicMcpService {
       DynamicMcpService.instance = new DynamicMcpService();
     }
     return DynamicMcpService.instance;
+  }
+
+  /**
+   * Initialiser le service et recréer les sessions existantes
+   */
+  async initialize(): Promise<void> {
+    if (this.isInitialized) return;
+    
+    try {
+      console.log('🔄 Initialisation du service MCP et reconstruction des sessions...');
+      
+      // Récupérer toutes les sessions de la DB avec des URLs MCP
+      const existingSessions = await McpService.getAllSessionsWithUrls();
+      
+      for (const dbSession of existingSessions) {
+        if (dbSession.mcpUrl) {
+          // Extraire sessionId de l'URL
+          const urlParts = dbSession.mcpUrl.split('/');
+          const sessionId = urlParts[urlParts.length - 2]; // avant le toolName
+          
+          console.log(`🔧 Reconstruction de la session ${sessionId} pour ${dbSession.toolName}`);
+          
+          try {
+            await this.recreateSession(sessionId, dbSession.userId, dbSession.toolName, dbSession.accessKey);
+          } catch (error) {
+            console.error(`❌ Erreur lors de la reconstruction de la session ${sessionId}:`, error);
+            // Continuer avec les autres sessions
+          }
+        }
+      }
+      
+      this.isInitialized = true;
+      console.log(`✅ Service MCP initialisé avec ${this.activeSessions.size} sessions actives`);
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'initialisation du service MCP:', error);
+    }
+  }
+
+  /**
+   * Recréer une session existante
+   */
+  private async recreateSession(sessionId: string, userId: string, toolName: string, apiKey: string): Promise<void> {
+    const config = this.toolConfigs.get(toolName);
+    if (!config) {
+      throw new Error(`Configuration non trouvée pour ${toolName}`);
+    }
+
+    // Créer le serveur MCP
+    const server = new Server({
+      name: config.name,
+      version: config.version,
+      description: config.description
+    }, {
+      capabilities: { tools: {} }
+    });
+
+    // Configuration des handlers
+    this.setupServerHandlers(server, config.tools, () => apiKey);
+
+    // Créer la session active
+    const activeSession: ActiveMcpSession = {
+      sessionId,
+      userId,
+      toolName,
+      apiKey,
+      server,
+      createdAt: new Date()
+    };
+
+    this.activeSessions.set(sessionId, activeSession);
+    console.log(`✅ Session ${sessionId} reconstruite pour ${toolName}`);
   }
 
   /**
@@ -40,11 +113,23 @@ export class DynamicMcpService {
   ]);
 
   /**
-   * Créer une nouvelle session MCP pour un utilisateur
+   * Créer une nouvelle session MCP ou récupérer une existante
    */
   async createMcpSession(userId: string, toolName: string): Promise<{ sessionId: string; url: string }> {
     try {
-      console.log(`🔨 Création d'une session MCP ${toolName} pour l'utilisateur ${userId}`);
+      // S'assurer que le service est initialisé
+      await this.initialize();
+      
+      console.log(`🔨 Création/récupération d'une session MCP ${toolName} pour l'utilisateur ${userId}`);
+      
+      // Vérifier si une session active existe déjà pour cet utilisateur/outil
+      const existingSessionId = this.findExistingSession(userId, toolName);
+      if (existingSessionId) {
+        const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+        const mcpUrl = `${baseUrl}/mcp/${existingSessionId}/${toolName}`;
+        console.log(`♻️ Session existante trouvée: ${existingSessionId}`);
+        return { sessionId: existingSessionId, url: mcpUrl };
+      }
       
       // Vérifier que l'utilisateur a une session DB pour cet outil
       const hasSession = await McpService.hasToolSession(userId, toolName);
@@ -62,14 +147,6 @@ export class DynamicMcpService {
       const sessionId = uuidv4();
       
       // Récupérer la clé API depuis la base de données
-      const dbSessions = await McpService.getUserSessions(userId);
-      const dbSession = dbSessions.find((s: any) => s.toolName === toolName);
-      
-      if (!dbSession) {
-        throw new Error(`Session ${toolName} non trouvée en base de données`);
-      }
-
-      // Récupérer la vraie clé API
       const apiKey = await McpService.getSessionApiKey(userId, toolName);
       if (!apiKey) {
         throw new Error(`Clé API non trouvée pour l'outil ${toolName}`);
@@ -92,7 +169,7 @@ export class DynamicMcpService {
         sessionId,
         userId,
         toolName,
-        apiKey: apiKey, // Utiliser la vraie clé API
+        apiKey,
         server,
         createdAt: new Date()
       };
@@ -104,7 +181,12 @@ export class DynamicMcpService {
       const mcpUrl = `${baseUrl}/mcp/${sessionId}/${toolName}`;
 
       // Mettre à jour la session en base avec l'URL MCP
-      await McpService.updateSessionUrl(dbSession.id, mcpUrl);
+      const dbSessions = await McpService.getUserSessions(userId);
+      const dbSession = dbSessions.find((s: any) => s.toolName === toolName);
+      
+      if (dbSession) {
+        await McpService.updateSessionUrl(dbSession.id, mcpUrl);
+      }
 
       console.log(`✅ Session MCP créée: ${sessionId} - URL: ${mcpUrl}`);
 
@@ -117,6 +199,18 @@ export class DynamicMcpService {
       console.error('❌ Erreur lors de la création de la session MCP:', error);
       throw error;
     }
+  }
+
+  /**
+   * Trouver une session active existante pour un utilisateur/outil
+   */
+  private findExistingSession(userId: string, toolName: string): string | null {
+    for (const [sessionId, session] of this.activeSessions) {
+      if (session.userId === userId && session.toolName === toolName) {
+        return sessionId;
+      }
+    }
+    return null;
   }
 
   /**
@@ -178,13 +272,34 @@ export class DynamicMcpService {
   }
 
   /**
-   * Créer une connexion SSE pour une session
+   * Créer une connexion SSE pour une session (avec auto-reconstruction si nécessaire)
    */
   async createSSEConnection(sessionId: string, toolName: string, res: any, apiKey: string): Promise<void> {
     try {
-      const session = this.activeSessions.get(sessionId);
+      // S'assurer que le service est initialisé
+      await this.initialize();
+      
+      let session = this.activeSessions.get(sessionId);
+      
+      // Si la session n'existe pas en mémoire, tenter de la reconstruire
       if (!session) {
-        throw new Error(`Session ${sessionId} non trouvée`);
+        console.log(`🔄 Session ${sessionId} non trouvée en mémoire, tentative de reconstruction...`);
+        
+        // Rechercher la session en base
+        const dbSessions = await McpService.getAllSessionsWithUrls();
+        const dbSession = dbSessions.find(s => 
+          s.mcpUrl && s.mcpUrl.includes(sessionId) && s.toolName === toolName
+        );
+        
+        if (dbSession) {
+          await this.recreateSession(sessionId, dbSession.userId, toolName, dbSession.accessKey);
+          session = this.activeSessions.get(sessionId);
+          console.log(`✅ Session ${sessionId} reconstruite avec succès`);
+        }
+      }
+      
+      if (!session) {
+        throw new Error(`Session ${sessionId} non trouvée et impossible à reconstruire`);
       }
 
       if (session.toolName !== toolName) {
@@ -205,10 +320,35 @@ export class DynamicMcpService {
   }
 
   /**
-   * Récupérer une session active
+   * Récupérer une session active (avec auto-reconstruction si nécessaire)
    */
-  getActiveSession(sessionId: string): ActiveMcpSession | undefined {
-    return this.activeSessions.get(sessionId);
+  async getActiveSession(sessionId: string): Promise<ActiveMcpSession | undefined> {
+    // S'assurer que le service est initialisé
+    await this.initialize();
+    
+    let session = this.activeSessions.get(sessionId);
+    
+    // Si la session n'existe pas en mémoire, tenter de la reconstruire
+    if (!session) {
+      console.log(`🔄 Session ${sessionId} non trouvée, tentative de reconstruction...`);
+      
+      const dbSessions = await McpService.getAllSessionsWithUrls();
+      const dbSession = dbSessions.find(s => 
+        s.mcpUrl && s.mcpUrl.includes(sessionId)
+      );
+      
+      if (dbSession) {
+        try {
+          await this.recreateSession(sessionId, dbSession.userId, dbSession.toolName, dbSession.accessKey);
+          session = this.activeSessions.get(sessionId);
+          console.log(`✅ Session ${sessionId} reconstruite`);
+        } catch (error) {
+          console.error(`❌ Erreur reconstruction session ${sessionId}:`, error);
+        }
+      }
+    }
+    
+    return session;
   }
 
   /**

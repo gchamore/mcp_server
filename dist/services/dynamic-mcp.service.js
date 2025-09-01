@@ -7,6 +7,7 @@ import { McpService } from './mcp.service.js';
 export class DynamicMcpService {
     constructor() {
         this.activeSessions = new Map();
+        this.isInitialized = false;
         this.toolConfigs = new Map([
             ['axonaut', {
                     name: 'axonaut-mcp-server',
@@ -23,9 +24,67 @@ export class DynamicMcpService {
         }
         return DynamicMcpService.instance;
     }
+    async initialize() {
+        if (this.isInitialized)
+            return;
+        try {
+            console.log('🔄 Initialisation du service MCP et reconstruction des sessions...');
+            const existingSessions = await McpService.getAllSessionsWithUrls();
+            for (const dbSession of existingSessions) {
+                if (dbSession.mcpUrl) {
+                    const urlParts = dbSession.mcpUrl.split('/');
+                    const sessionId = urlParts[urlParts.length - 2];
+                    console.log(`🔧 Reconstruction de la session ${sessionId} pour ${dbSession.toolName}`);
+                    try {
+                        await this.recreateSession(sessionId, dbSession.userId, dbSession.toolName, dbSession.accessKey);
+                    }
+                    catch (error) {
+                        console.error(`❌ Erreur lors de la reconstruction de la session ${sessionId}:`, error);
+                    }
+                }
+            }
+            this.isInitialized = true;
+            console.log(`✅ Service MCP initialisé avec ${this.activeSessions.size} sessions actives`);
+        }
+        catch (error) {
+            console.error('❌ Erreur lors de l\'initialisation du service MCP:', error);
+        }
+    }
+    async recreateSession(sessionId, userId, toolName, apiKey) {
+        const config = this.toolConfigs.get(toolName);
+        if (!config) {
+            throw new Error(`Configuration non trouvée pour ${toolName}`);
+        }
+        const server = new Server({
+            name: config.name,
+            version: config.version,
+            description: config.description
+        }, {
+            capabilities: { tools: {} }
+        });
+        this.setupServerHandlers(server, config.tools, () => apiKey);
+        const activeSession = {
+            sessionId,
+            userId,
+            toolName,
+            apiKey,
+            server,
+            createdAt: new Date()
+        };
+        this.activeSessions.set(sessionId, activeSession);
+        console.log(`✅ Session ${sessionId} reconstruite pour ${toolName}`);
+    }
     async createMcpSession(userId, toolName) {
         try {
-            console.log(`🔨 Création d'une session MCP ${toolName} pour l'utilisateur ${userId}`);
+            await this.initialize();
+            console.log(`🔨 Création/récupération d'une session MCP ${toolName} pour l'utilisateur ${userId}`);
+            const existingSessionId = this.findExistingSession(userId, toolName);
+            if (existingSessionId) {
+                const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+                const mcpUrl = `${baseUrl}/mcp/${existingSessionId}/${toolName}`;
+                console.log(`♻️ Session existante trouvée: ${existingSessionId}`);
+                return { sessionId: existingSessionId, url: mcpUrl };
+            }
             const hasSession = await McpService.hasToolSession(userId, toolName);
             if (!hasSession) {
                 throw new Error(`Aucune session trouvée pour l'outil ${toolName}. Veuillez d'abord configurer votre clé API.`);
@@ -35,11 +94,6 @@ export class DynamicMcpService {
                 throw new Error(`Outil ${toolName} non supporté`);
             }
             const sessionId = uuidv4();
-            const dbSessions = await McpService.getUserSessions(userId);
-            const dbSession = dbSessions.find((s) => s.toolName === toolName);
-            if (!dbSession) {
-                throw new Error(`Session ${toolName} non trouvée en base de données`);
-            }
             const apiKey = await McpService.getSessionApiKey(userId, toolName);
             if (!apiKey) {
                 throw new Error(`Clé API non trouvée pour l'outil ${toolName}`);
@@ -56,14 +110,18 @@ export class DynamicMcpService {
                 sessionId,
                 userId,
                 toolName,
-                apiKey: apiKey,
+                apiKey,
                 server,
                 createdAt: new Date()
             };
             this.activeSessions.set(sessionId, activeSession);
             const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
             const mcpUrl = `${baseUrl}/mcp/${sessionId}/${toolName}`;
-            await McpService.updateSessionUrl(dbSession.id, mcpUrl);
+            const dbSessions = await McpService.getUserSessions(userId);
+            const dbSession = dbSessions.find((s) => s.toolName === toolName);
+            if (dbSession) {
+                await McpService.updateSessionUrl(dbSession.id, mcpUrl);
+            }
             console.log(`✅ Session MCP créée: ${sessionId} - URL: ${mcpUrl}`);
             return {
                 sessionId,
@@ -74,6 +132,14 @@ export class DynamicMcpService {
             console.error('❌ Erreur lors de la création de la session MCP:', error);
             throw error;
         }
+    }
+    findExistingSession(userId, toolName) {
+        for (const [sessionId, session] of this.activeSessions) {
+            if (session.userId === userId && session.toolName === toolName) {
+                return sessionId;
+            }
+        }
+        return null;
     }
     setupServerHandlers(server, tools, getApiKey) {
         server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -123,9 +189,20 @@ export class DynamicMcpService {
     }
     async createSSEConnection(sessionId, toolName, res, apiKey) {
         try {
-            const session = this.activeSessions.get(sessionId);
+            await this.initialize();
+            let session = this.activeSessions.get(sessionId);
             if (!session) {
-                throw new Error(`Session ${sessionId} non trouvée`);
+                console.log(`🔄 Session ${sessionId} non trouvée en mémoire, tentative de reconstruction...`);
+                const dbSessions = await McpService.getAllSessionsWithUrls();
+                const dbSession = dbSessions.find(s => s.mcpUrl && s.mcpUrl.includes(sessionId) && s.toolName === toolName);
+                if (dbSession) {
+                    await this.recreateSession(sessionId, dbSession.userId, toolName, dbSession.accessKey);
+                    session = this.activeSessions.get(sessionId);
+                    console.log(`✅ Session ${sessionId} reconstruite avec succès`);
+                }
+            }
+            if (!session) {
+                throw new Error(`Session ${sessionId} non trouvée et impossible à reconstruire`);
             }
             if (session.toolName !== toolName) {
                 throw new Error(`L'outil ${toolName} ne correspond pas à la session ${sessionId}`);
@@ -140,8 +217,25 @@ export class DynamicMcpService {
             throw error;
         }
     }
-    getActiveSession(sessionId) {
-        return this.activeSessions.get(sessionId);
+    async getActiveSession(sessionId) {
+        await this.initialize();
+        let session = this.activeSessions.get(sessionId);
+        if (!session) {
+            console.log(`🔄 Session ${sessionId} non trouvée, tentative de reconstruction...`);
+            const dbSessions = await McpService.getAllSessionsWithUrls();
+            const dbSession = dbSessions.find(s => s.mcpUrl && s.mcpUrl.includes(sessionId));
+            if (dbSession) {
+                try {
+                    await this.recreateSession(sessionId, dbSession.userId, dbSession.toolName, dbSession.accessKey);
+                    session = this.activeSessions.get(sessionId);
+                    console.log(`✅ Session ${sessionId} reconstruite`);
+                }
+                catch (error) {
+                    console.error(`❌ Erreur reconstruction session ${sessionId}:`, error);
+                }
+            }
+        }
+        return session;
     }
     getToolConfig(toolName) {
         return this.toolConfigs.get(toolName.toLowerCase());

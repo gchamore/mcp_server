@@ -193,4 +193,40 @@ export class McpService {
       return null;
     }
   }
+
+  /**
+   * Récupérer toutes les sessions avec URLs MCP pour reconstruction
+   */
+  static async getAllSessionsWithUrls() {
+    try {
+      const sessions = await prisma.mcpSession.findMany({
+        where: {
+          mcpUrl: {
+            not: null
+          }
+        },
+        select: {
+          id: true,
+          userId: true,
+          toolName: true,
+          accessKey: true,
+          mcpUrl: true,
+          createdAt: true,
+          updatedAt: true,
+          user: {
+            select: {
+              email: true,
+              isActive: true
+            }
+          }
+        }
+      });
+
+      // Filtrer seulement les utilisateurs actifs
+      return sessions.filter(session => session.user.isActive);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des sessions avec URLs:', error);
+      return [];
+    }
+  }
 }

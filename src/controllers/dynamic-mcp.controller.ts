@@ -119,8 +119,8 @@ export class DynamicMcpController {
       
       console.log(`📨 Message MCP reçu pour ${sessionId}/${toolName}:`, message);
       
-      // Vérifier que la session existe
-      const session = DynamicMcpController.mcpService.getActiveSession(sessionId);
+      // Vérifier que la session existe (avec auto-reconstruction)
+      const session = await DynamicMcpController.mcpService.getActiveSession(sessionId);
       if (!session) {
         return res.status(404).json({
           jsonrpc: "2.0",
@@ -198,6 +198,23 @@ export class DynamicMcpController {
           
           try {
             const toolConfig = DynamicMcpController.mcpService.getToolConfig(toolName);
+            if (!toolConfig) {
+              return res.json({
+                jsonrpc: "2.0",
+                id: message.id,
+                error: { code: -32602, message: "Configuration d'outil non trouvée" }
+              });
+            }
+
+            // Récupérer la session active (avec auto-reconstruction)
+            const session = await DynamicMcpController.mcpService.getActiveSession(sessionId);
+            if (!session) {
+              return res.json({
+                jsonrpc: "2.0",
+                id: message.id,
+                error: { code: -32602, message: "Session non trouvée ou non reconstructible" }
+              });
+            }
             const tool = toolConfig?.tools.find((t: any) => t.name === toolCallName);
             
             if (!tool) {
@@ -280,7 +297,7 @@ export class DynamicMcpController {
     try {
       const { sessionId, toolName } = req.params;
 
-      const session = DynamicMcpController.mcpService.getActiveSession(sessionId);
+      const session = await DynamicMcpController.mcpService.getActiveSession(sessionId);
       if (!session) {
         return res.status(404).json({
           success: false,
@@ -338,7 +355,7 @@ export class DynamicMcpController {
       const decoded = AuthService.verifyToken(token);
       const userId = decoded.userId;
 
-      const session = DynamicMcpController.mcpService.getActiveSession(sessionId);
+      const session = await DynamicMcpController.mcpService.getActiveSession(sessionId);
       if (!session) {
         return res.status(404).json({
           success: false,
