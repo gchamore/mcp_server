@@ -430,13 +430,13 @@ async function handleDeleteAccount() {
         // Réactiver le bouton
         if (deleteBtn) {
             deleteBtn.disabled = false;
-            deleteBtn.innerHTML = '<span class="button-text">Supprimer le compte</span><div class="button-icon">🗑️</div>';
+            deleteBtn.innerHTML = '<span class="button-text">Supprimer le compte</span><div class="button-icon"></div>';
         }
     }
 }
 
 function handleAdminPanel() {
-    console.log('👑 Ouverture panneau admin...');
+    console.log('Ouverture panneau admin...');
     closeModal('settingsModal');
     openModal('adminModal');
 }
