@@ -4,20 +4,6 @@ export class AuthController {
     static async register(req, res) {
         try {
             const { email, password, firstName, lastName } = req.body;
-            if (!email || !password) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Email et mot de passe requis',
-                    code: 'MISSING_FIELDS'
-                });
-            }
-            if (password.length < 6) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Le mot de passe doit contenir au moins 6 caractères',
-                    code: 'PASSWORD_TOO_SHORT'
-                });
-            }
             const result = await AuthService.registerUser({
                 email,
                 password,
@@ -45,13 +31,6 @@ export class AuthController {
     static async login(req, res) {
         try {
             const { email, password } = req.body;
-            if (!email || !password) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Email et mot de passe requis',
-                    code: 'MISSING_FIELDS'
-                });
-            }
             const result = await AuthService.loginUser({ email, password });
             console.log(`🔑 Connexion réussie: ${email} sur ${config.BASE_URL} à ${new Date().toISOString()}`);
             res.json({

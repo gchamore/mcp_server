@@ -1,8 +1,9 @@
 import express from 'express';
 import { AuthController } from '../controllers/auth.controller.js';
+import { validateEmail, validatePassword, validateRegistration, rateLimit } from '../middleware/validation.js';
 const router = express.Router();
-router.post('/register', AuthController.register);
-router.post('/login', AuthController.login);
+router.post('/register', rateLimit(5, 300000), validateEmail, validatePassword, validateRegistration, AuthController.register);
+router.post('/login', rateLimit(10, 300000), validateEmail, validatePassword, AuthController.login);
 router.get('/profile', AuthController.getProfile);
 router.post('/logout', AuthController.logout);
 router.delete('/account', AuthController.deleteAccount);

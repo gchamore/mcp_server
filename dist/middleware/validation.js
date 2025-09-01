@@ -3,14 +3,16 @@ export function validateEmail(req, res, next) {
     if (!email) {
         return res.status(400).json({
             success: false,
-            error: 'Email requis'
+            error: 'Email requis',
+            code: 'MISSING_EMAIL'
         });
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
         return res.status(400).json({
             success: false,
-            error: 'Format d\'email invalide'
+            error: 'Format d\'email invalide',
+            code: 'INVALID_EMAIL_FORMAT'
         });
     }
     next();
@@ -20,13 +22,15 @@ export function validatePassword(req, res, next) {
     if (!password) {
         return res.status(400).json({
             success: false,
-            error: 'Mot de passe requis'
+            error: 'Mot de passe requis',
+            code: 'MISSING_PASSWORD'
         });
     }
-    if (password.length < 8) {
+    if (password.length < 6) {
         return res.status(400).json({
             success: false,
-            error: 'Le mot de passe doit contenir au moins 8 caractères'
+            error: 'Le mot de passe doit contenir au moins 6 caractères',
+            code: 'PASSWORD_TOO_SHORT'
         });
     }
     next();
@@ -36,13 +40,15 @@ export function validateRegistration(req, res, next) {
     if (!firstName || !lastName) {
         return res.status(400).json({
             success: false,
-            error: 'Prénom et nom requis'
+            error: 'Prénom et nom requis',
+            code: 'MISSING_NAMES'
         });
     }
     if (firstName.length < 2 || lastName.length < 2) {
         return res.status(400).json({
             success: false,
-            error: 'Le prénom et le nom doivent contenir au moins 2 caractères'
+            error: 'Le prénom et le nom doivent contenir au moins 2 caractères',
+            code: 'NAMES_TOO_SHORT'
         });
     }
     next();

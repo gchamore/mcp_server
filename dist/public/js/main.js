@@ -285,7 +285,7 @@ function checkAuthStatus() {
 }
 
 function showDashboard(user) {
-    console.log('📊 Affichage dashboard pour:', user.email);
+    console.log('Affichage dashboard pour:', user.email);
     
     // Masquer la landing page
     const landingPage = document.getElementById('landingPage');

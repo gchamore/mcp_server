@@ -1,15 +1,27 @@
 import express from 'express';
 import { McpController } from '../controllers/mcp.controller.js';
+import { rateLimit } from '../middleware/validation.js';
 
 const router = express.Router();
 
-// Routes pour les sessions MCP
-router.post('/sessions', McpController.createSession);
+// Routes pour les sessions MCP avec rate limiting
+router.post('/sessions', 
+  rateLimit(20, 300000), // 20 créations de sessions par 5 minutes
+  McpController.createSession
+);
+
 router.get('/sessions', McpController.getSessions);
 router.get('/sessions/:toolName/check', McpController.checkToolSession);
-router.delete('/sessions/:toolName', McpController.deleteSession);
 
-// Route pour valider une clé API
-router.post('/validate', McpController.validateApiKey);
+router.delete('/sessions/:toolName', 
+  rateLimit(10, 60000), // 10 suppressions par minute
+  McpController.deleteSession
+);
+
+// Route pour valider une clé API avec rate limiting
+router.post('/validate',
+  rateLimit(15, 300000), // 15 validations par 5 minutes
+  McpController.validateApiKey
+);
 
 export default router;

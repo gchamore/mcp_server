@@ -3,7 +3,6 @@ import { config, setupMiddleware, setupErrorHandling } from './config/app.js';
 import indexRouter from './routes/index.js';
 import apiRouter from './routes/api/index.js';
 import dynamicMcpRouter from './routes/dynamic-mcp.js';
-import { validateEmail, validatePassword, validateRegistration, rateLimit } from './middleware/validation.js';
 
 const app = express();
 
