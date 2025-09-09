@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { McpTool, McpServerConfig, ActiveMcpSession } from '../types/mcp.types.js';
 import { AxonautTools } from '../tools/axonaut.tools.js';
 import { McpService } from './mcp.service.js';
+import { EncryptionService } from './encryption.service.js';
 
 /**
  * Service pour gérer les serveurs MCP dynamiques
@@ -48,7 +49,9 @@ export class DynamicMcpService {
           console.log(`🔧 Reconstruction de la session ${sessionId} pour ${dbSession.toolName}`);
           
           try {
-            await this.recreateSession(sessionId, dbSession.userId, dbSession.toolName, dbSession.accessKey);
+            // Déchiffrer la clé API avant de recréer la session
+            const decryptedApiKey = EncryptionService.decrypt(dbSession.accessKey);
+            await this.recreateSession(sessionId, dbSession.userId, dbSession.toolName, decryptedApiKey);
           } catch (error) {
             console.error(`❌ Erreur lors de la reconstruction de la session ${sessionId}:`, error);
             // Continuer avec les autres sessions
@@ -292,7 +295,9 @@ export class DynamicMcpService {
         );
         
         if (dbSession) {
-          await this.recreateSession(sessionId, dbSession.userId, toolName, dbSession.accessKey);
+          // Déchiffrer la clé API avant de recréer la session
+          const decryptedApiKey = EncryptionService.decrypt(dbSession.accessKey);
+          await this.recreateSession(sessionId, dbSession.userId, toolName, decryptedApiKey);
           session = this.activeSessions.get(sessionId);
           console.log(`✅ Session ${sessionId} reconstruite avec succès`);
         }
@@ -339,7 +344,9 @@ export class DynamicMcpService {
       
       if (dbSession) {
         try {
-          await this.recreateSession(sessionId, dbSession.userId, dbSession.toolName, dbSession.accessKey);
+          // Déchiffrer la clé API avant de recréer la session
+          const decryptedApiKey = EncryptionService.decrypt(dbSession.accessKey);
+          await this.recreateSession(sessionId, dbSession.userId, dbSession.toolName, decryptedApiKey);
           session = this.activeSessions.get(sessionId);
           console.log(`✅ Session ${sessionId} reconstruite`);
         } catch (error) {

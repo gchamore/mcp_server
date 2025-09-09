@@ -61,21 +61,44 @@ export function logError(err, req, res, next) {
 const requestCounts = new Map();
 export function rateLimit(maxRequests = 10, windowMs = 60000) {
     return (req, res, next) => {
-        const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+        const identifier = `${req.ip}-${req.headers['user-agent']?.substring(0, 50) || 'unknown'}`;
         const now = Date.now();
-        let clientData = requestCounts.get(clientIp);
-        if (!clientData || now > clientData.resetTime) {
-            clientData = { count: 1, resetTime: now + windowMs };
-            requestCounts.set(clientIp, clientData);
+        const userRequest = requestCounts.get(identifier);
+        if (!userRequest) {
+            requestCounts.set(identifier, {
+                count: 1,
+                resetTime: now + windowMs,
+                firstRequest: now
+            });
             return next();
         }
-        if (clientData.count >= maxRequests) {
+        if (now > userRequest.resetTime) {
+            requestCounts.set(identifier, {
+                count: 1,
+                resetTime: now + windowMs,
+                firstRequest: now
+            });
+            return next();
+        }
+        if (userRequest.count >= maxRequests) {
+            const remainingTime = Math.ceil((userRequest.resetTime - now) / 1000);
+            console.warn(`⚠️  Rate limit dépassé pour ${req.ip}: ${userRequest.count}/${maxRequests} requêtes`);
             return res.status(429).json({
                 success: false,
-                error: 'Trop de requêtes, veuillez réessayer plus tard'
+                error: `Trop de requêtes. Réessayez dans ${remainingTime} secondes.`,
+                code: 'RATE_LIMIT_EXCEEDED',
+                retryAfter: remainingTime,
+                limit: maxRequests,
+                remaining: 0
             });
         }
-        clientData.count++;
+        userRequest.count++;
+        requestCounts.set(identifier, userRequest);
+        res.set({
+            'X-RateLimit-Limit': maxRequests.toString(),
+            'X-RateLimit-Remaining': (maxRequests - userRequest.count).toString(),
+            'X-RateLimit-Reset': new Date(userRequest.resetTime).toISOString()
+        });
         next();
     };
 }

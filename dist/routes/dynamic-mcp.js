@@ -1,14 +1,16 @@
 import express from 'express';
 import { DynamicMcpController } from '../controllers/dynamic-mcp.controller.js';
+import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { rateLimit } from '../middleware/validation.js';
 const router = express.Router();
-router.post('/create-session', DynamicMcpController.createMcpSession);
-router.get('/:sessionId/:toolName/sse', DynamicMcpController.handleSSEConnection);
-router.post('/:sessionId/:toolName/messages', DynamicMcpController.handleMcpMessages);
+router.post('/create-session', requireAuth, rateLimit(10, 300000), DynamicMcpController.createMcpSession);
+router.get('/:sessionId/:toolName/sse', rateLimit(30, 60000), DynamicMcpController.handleSSEConnection);
+router.post('/:sessionId/:toolName/messages', rateLimit(100, 60000), DynamicMcpController.handleMcpMessages);
 router.get('/:sessionId/:toolName', DynamicMcpController.getSessionInfo);
-router.post('/:sessionId/:toolName', DynamicMcpController.handleMcpMessages);
-router.delete('/sessions/:sessionId', DynamicMcpController.deleteSession);
-router.get('/admin/stats', DynamicMcpController.getStats);
-router.post('/admin/cleanup', DynamicMcpController.cleanup);
+router.post('/:sessionId/:toolName', rateLimit(50, 60000), DynamicMcpController.handleMcpMessages);
+router.delete('/sessions/:sessionId', requireAuth, rateLimit(20, 300000), DynamicMcpController.deleteSession);
+router.get('/admin/stats', requireAuth, requireAdmin, DynamicMcpController.getStats);
+router.post('/admin/cleanup', requireAuth, requireAdmin, rateLimit(5, 300000), DynamicMcpController.cleanup);
 router.get('/health', (req, res) => {
     res.json({
         success: true,

@@ -15,8 +15,15 @@ export interface UserLoginData {
 }
 
 export class AuthService {
-  private static readonly JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
+  private static readonly JWT_SECRET = process.env.JWT_SECRET || (() => {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_SECRET must be set in production environment');
+    }
+    console.warn('⚠️  Using fallback JWT secret - UNSAFE for production!');
+    return 'dev-fallback-secret-key-' + Math.random().toString(36);
+  })();
   private static readonly SALT_ROUNDS = 12;
+  private static readonly TOKEN_EXPIRY = '7d';
 
   static async registerUser(userData: UserRegistrationData) {
     try {
@@ -138,9 +145,17 @@ export class AuthService {
 
   private static generateToken(userId: string): string {
     return jwt.sign(
-      { userId },
+      { 
+        userId,
+        iat: Math.floor(Date.now() / 1000),
+        type: 'access'
+      },
       this.JWT_SECRET,
-      { expiresIn: '7d' }
+      { 
+        expiresIn: this.TOKEN_EXPIRY,
+        issuer: 'mcp-wesype',
+        audience: 'mcp-wesype-users'
+      }
     );
   }
 

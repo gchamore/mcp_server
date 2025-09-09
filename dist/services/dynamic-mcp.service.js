@@ -4,6 +4,7 @@ import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprot
 import { v4 as uuidv4 } from 'uuid';
 import { AxonautTools } from '../tools/axonaut.tools.js';
 import { McpService } from './mcp.service.js';
+import { EncryptionService } from './encryption.service.js';
 export class DynamicMcpService {
     constructor() {
         this.activeSessions = new Map();
@@ -36,7 +37,8 @@ export class DynamicMcpService {
                     const sessionId = urlParts[urlParts.length - 2];
                     console.log(`🔧 Reconstruction de la session ${sessionId} pour ${dbSession.toolName}`);
                     try {
-                        await this.recreateSession(sessionId, dbSession.userId, dbSession.toolName, dbSession.accessKey);
+                        const decryptedApiKey = EncryptionService.decrypt(dbSession.accessKey);
+                        await this.recreateSession(sessionId, dbSession.userId, dbSession.toolName, decryptedApiKey);
                     }
                     catch (error) {
                         console.error(`❌ Erreur lors de la reconstruction de la session ${sessionId}:`, error);
@@ -196,7 +198,8 @@ export class DynamicMcpService {
                 const dbSessions = await McpService.getAllSessionsWithUrls();
                 const dbSession = dbSessions.find(s => s.mcpUrl && s.mcpUrl.includes(sessionId) && s.toolName === toolName);
                 if (dbSession) {
-                    await this.recreateSession(sessionId, dbSession.userId, toolName, dbSession.accessKey);
+                    const decryptedApiKey = EncryptionService.decrypt(dbSession.accessKey);
+                    await this.recreateSession(sessionId, dbSession.userId, toolName, decryptedApiKey);
                     session = this.activeSessions.get(sessionId);
                     console.log(`✅ Session ${sessionId} reconstruite avec succès`);
                 }
@@ -226,7 +229,8 @@ export class DynamicMcpService {
             const dbSession = dbSessions.find(s => s.mcpUrl && s.mcpUrl.includes(sessionId));
             if (dbSession) {
                 try {
-                    await this.recreateSession(sessionId, dbSession.userId, dbSession.toolName, dbSession.accessKey);
+                    const decryptedApiKey = EncryptionService.decrypt(dbSession.accessKey);
+                    await this.recreateSession(sessionId, dbSession.userId, dbSession.toolName, decryptedApiKey);
                     session = this.activeSessions.get(sessionId);
                     console.log(`✅ Session ${sessionId} reconstruite`);
                 }

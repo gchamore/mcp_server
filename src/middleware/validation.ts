@@ -86,31 +86,65 @@ export function logError(err: Error, req: Request, res: Response, next: NextFunc
 }
 
 /**
- * Middleware de limitation du taux de requêtes (simple)
+ * Middleware de limitation du taux de requêtes (amélioré)
  */
-const requestCounts = new Map<string, { count: number; resetTime: number }>();
+const requestCounts = new Map<string, { count: number; resetTime: number; firstRequest: number }>();
 
 export function rateLimit(maxRequests: number = 10, windowMs: number = 60000) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+    // Utiliser IP + User-Agent pour identifier l'utilisateur de manière plus précise
+    const identifier = `${req.ip}-${req.headers['user-agent']?.substring(0, 50) || 'unknown'}`;
     const now = Date.now();
     
-    let clientData = requestCounts.get(clientIp);
+    const userRequest = requestCounts.get(identifier);
     
-    if (!clientData || now > clientData.resetTime) {
-      clientData = { count: 1, resetTime: now + windowMs };
-      requestCounts.set(clientIp, clientData);
+    if (!userRequest) {
+      // Première requête de cet utilisateur
+      requestCounts.set(identifier, { 
+        count: 1, 
+        resetTime: now + windowMs,
+        firstRequest: now
+      });
       return next();
     }
     
-    if (clientData.count >= maxRequests) {
+    if (now > userRequest.resetTime) {
+      // Fenêtre expirée, reset
+      requestCounts.set(identifier, { 
+        count: 1, 
+        resetTime: now + windowMs,
+        firstRequest: now
+      });
+      return next();
+    }
+    
+    if (userRequest.count >= maxRequests) {
+      // Limite atteinte
+      const remainingTime = Math.ceil((userRequest.resetTime - now) / 1000);
+      
+      console.warn(`⚠️  Rate limit dépassé pour ${req.ip}: ${userRequest.count}/${maxRequests} requêtes`);
+      
       return res.status(429).json({
         success: false,
-        error: 'Trop de requêtes, veuillez réessayer plus tard'
+        error: `Trop de requêtes. Réessayez dans ${remainingTime} secondes.`,
+        code: 'RATE_LIMIT_EXCEEDED',
+        retryAfter: remainingTime,
+        limit: maxRequests,
+        remaining: 0
       });
     }
     
-    clientData.count++;
+    // Incrémenter le compteur
+    userRequest.count++;
+    requestCounts.set(identifier, userRequest);
+    
+    // Ajouter des headers informatifs
+    res.set({
+      'X-RateLimit-Limit': maxRequests.toString(),
+      'X-RateLimit-Remaining': (maxRequests - userRequest.count).toString(),
+      'X-RateLimit-Reset': new Date(userRequest.resetTime).toISOString()
+    });
+    
     next();
   };
 }

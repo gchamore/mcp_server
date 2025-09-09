@@ -13,18 +13,9 @@ export class McpController {
   static async createSession(req: Request, res: Response) {
     try {
       const { toolName, accessKey } = req.body;
-      const authHeader = req.headers.authorization;
-
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({
-          success: false,
-          error: 'Token d\'authentification requis'
-        });
-      }
-
-      const token = authHeader.split(' ')[1];
-      const decoded = AuthService.verifyToken(token);
-      const userId = decoded.userId;
+      
+      // Utiliser req.user fourni par le middleware requireAuth
+      const userId = req.user!.userId;
 
       // Vérifier que l'utilisateur existe
       const user = await AuthService.getUserById(userId);

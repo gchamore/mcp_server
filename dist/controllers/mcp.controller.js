@@ -6,16 +6,7 @@ export class McpController {
     static async createSession(req, res) {
         try {
             const { toolName, accessKey } = req.body;
-            const authHeader = req.headers.authorization;
-            if (!authHeader || !authHeader.startsWith('Bearer ')) {
-                return res.status(401).json({
-                    success: false,
-                    error: 'Token d\'authentification requis'
-                });
-            }
-            const token = authHeader.split(' ')[1];
-            const decoded = AuthService.verifyToken(token);
-            const userId = decoded.userId;
+            const userId = req.user.userId;
             const user = await AuthService.getUserById(userId);
             if (!user) {
                 return res.status(401).json({

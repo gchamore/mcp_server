@@ -4,6 +4,7 @@ import indexRouter from './routes/index.js';
 import apiRouter from './routes/api/index.js';
 import dynamicMcpRouter from './routes/dynamic-mcp.js';
 import { DynamicMcpService } from './services/dynamic-mcp.service.js';
+import { McpService } from './services/mcp.service.js';
 
 const app = express();
 
@@ -32,6 +33,10 @@ app.listen(config.PORT, async () => {
   
   // Initialiser le service MCP pour reconstruire les sessions existantes
   try {
+    // D'abord, migrer les clés non chiffrées
+    await McpService.migrateUnencryptedKeys();
+    
+    // Ensuite, initialiser le service MCP
     const mcpService = DynamicMcpService.getInstance();
     await mcpService.initialize();
     console.log(`✅ Service MCP initialisé avec succès`);

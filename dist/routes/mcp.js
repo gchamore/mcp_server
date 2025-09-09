@@ -1,10 +1,11 @@
 import express from 'express';
 import { McpController } from '../controllers/mcp.controller.js';
 import { rateLimit } from '../middleware/validation.js';
+import { requireAuth } from '../middleware/auth.js';
 const router = express.Router();
-router.post('/sessions', rateLimit(20, 300000), McpController.createSession);
-router.get('/sessions', McpController.getSessions);
-router.get('/sessions/:toolName/check', McpController.checkToolSession);
-router.delete('/sessions/:toolName', rateLimit(10, 60000), McpController.deleteSession);
-router.post('/validate', rateLimit(15, 300000), McpController.validateApiKey);
+router.post('/sessions', requireAuth, rateLimit(20, 300000), McpController.createSession);
+router.get('/sessions', requireAuth, McpController.getSessions);
+router.get('/sessions/:toolName/check', requireAuth, McpController.checkToolSession);
+router.delete('/sessions/:toolName', requireAuth, rateLimit(10, 60000), McpController.deleteSession);
+router.post('/validate', requireAuth, rateLimit(15, 300000), McpController.validateApiKey);
 export default router;

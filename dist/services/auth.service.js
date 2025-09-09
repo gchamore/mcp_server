@@ -100,7 +100,15 @@ export class AuthService {
         }
     }
     static generateToken(userId) {
-        return jwt.sign({ userId }, this.JWT_SECRET, { expiresIn: '7d' });
+        return jwt.sign({
+            userId,
+            iat: Math.floor(Date.now() / 1000),
+            type: 'access'
+        }, this.JWT_SECRET, {
+            expiresIn: this.TOKEN_EXPIRY,
+            issuer: 'mcp-wesype',
+            audience: 'mcp-wesype-users'
+        });
     }
     static verifyToken(token) {
         try {
@@ -134,5 +142,12 @@ export class AuthService {
         }
     }
 }
-AuthService.JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
+AuthService.JWT_SECRET = process.env.JWT_SECRET || (() => {
+    if (process.env.NODE_ENV === 'production') {
+        throw new Error('JWT_SECRET must be set in production environment');
+    }
+    console.warn('⚠️  Using fallback JWT secret - UNSAFE for production!');
+    return 'dev-fallback-secret-key-' + Math.random().toString(36);
+})();
 AuthService.SALT_ROUNDS = 12;
+AuthService.TOKEN_EXPIRY = '7d';
