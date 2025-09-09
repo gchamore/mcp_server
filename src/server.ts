@@ -5,6 +5,7 @@ import apiRouter from './routes/api/index.js';
 import dynamicMcpRouter from './routes/dynamic-mcp.js';
 import { DynamicMcpService } from './services/dynamic-mcp.service.js';
 import { McpService } from './services/mcp.service.js';
+import { startConnectionHealthCheck } from './lib/prisma.js';
 
 const app = express();
 
@@ -23,7 +24,7 @@ app.use('/mcp', dynamicMcpRouter);
 // Configuration de la gestion d'erreurs (doit être en dernier)
 setupErrorHandling(app);
 
-// Démarrage du serveur avec initialisation du service MCP
+// Démarrage du serveur avec initialisation des services
 app.listen(config.PORT, async () => {
   console.log(`MCP Wesype Server running on port ${config.PORT}`);
   console.log(`Environment: ${config.NODE_ENV}`);
@@ -31,7 +32,11 @@ app.listen(config.PORT, async () => {
   console.log(`Platform: ${config.isRailway ? 'Railway' : 'Local'}`);
   console.log(`Database: ${config.DATABASE_URL ? 'Connected' : 'Not configured'}`);
   
-  // Initialiser le service MCP pour reconstruire les sessions existantes
+  // Démarrer la surveillance de la connexion DB
+  startConnectionHealthCheck();
+  console.log(`✅ Surveillance de la connexion DB activée`);
+  
+  // Initialiser les services MCP
   try {
     // D'abord, migrer les clés non chiffrées
     await McpService.migrateUnencryptedKeys();

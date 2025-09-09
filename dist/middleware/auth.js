@@ -18,7 +18,7 @@ export function requireAuth(req, res, next) {
             });
         }
         const decoded = AuthService.verifyToken(token);
-        req.user = {
+        req.mcpUser = {
             userId: decoded.userId,
             email: '',
         };
@@ -51,14 +51,14 @@ export function requireAuth(req, res, next) {
 }
 export async function requireAdmin(req, res, next) {
     try {
-        if (!req.user) {
+        if (!req.mcpUser) {
             return res.status(401).json({
                 success: false,
                 error: 'Authentification requise',
                 code: 'AUTH_REQUIRED'
             });
         }
-        const user = await AuthService.getUserById(req.user.userId);
+        const user = await AuthService.getUserById(req.mcpUser.userId);
         if (!user) {
             return res.status(401).json({
                 success: false,

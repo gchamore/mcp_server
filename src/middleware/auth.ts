@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service.js';
 
-// Extension de l'interface Request pour inclure user
+// Extension de l'interface Request pour incluer des données utilisateur personnalisées
 declare global {
   namespace Express {
     interface Request {
-      user?: {
+      mcpUser?: {
         userId: string;
         email: string;
         firstName?: string;
@@ -44,7 +44,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     const decoded = AuthService.verifyToken(token);
     
     // Ajouter les informations utilisateur à la requête
-    req.user = {
+    req.mcpUser = {
       userId: decoded.userId,
       email: '', // Sera rempli si nécessaire
     };
@@ -83,7 +83,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
  */
 export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   try {
-    if (!req.user) {
+    if (!req.mcpUser) {
       return res.status(401).json({
         success: false,
         error: 'Authentification requise',
@@ -92,7 +92,7 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
     }
 
     // Récupérer les informations complètes de l'utilisateur
-    const user = await AuthService.getUserById(req.user.userId);
+    const user = await AuthService.getUserById(req.mcpUser.userId);
     
     if (!user) {
       return res.status(401).json({

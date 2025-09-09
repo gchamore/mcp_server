@@ -6,7 +6,7 @@ export class McpController {
     static async createSession(req, res) {
         try {
             const { toolName, accessKey } = req.body;
-            const userId = req.user.userId;
+            const userId = req.mcpUser.userId;
             const user = await AuthService.getUserById(userId);
             if (!user) {
                 return res.status(401).json({

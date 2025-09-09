@@ -1,5 +1,6 @@
 import express from 'express';
 import { AuthController } from '../controllers/auth.controller.js';
+import { OAuthController } from '../controllers/oauth.controller.js';
 import { validateEmail, validatePassword, validateRegistration, rateLimit } from '../middleware/validation.js';
 const router = express.Router();
 router.post('/register', rateLimit(5, 300000), validateEmail, validatePassword, validateRegistration, AuthController.register);
@@ -7,5 +8,8 @@ router.post('/login', rateLimit(10, 300000), validateEmail, validatePassword, Au
 router.get('/profile', AuthController.getProfile);
 router.post('/logout', AuthController.logout);
 router.delete('/account', AuthController.deleteAccount);
+router.get('/google', rateLimit(10, 300000), OAuthController.initiateGoogleAuth);
+router.get('/google/callback', rateLimit(10, 300000), OAuthController.handleGoogleCallback);
+router.get('/oauth/status', OAuthController.getOAuthStatus);
 router.get('/server-info', AuthController.getServerInfo);
 export default router;

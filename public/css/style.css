@@ -115,6 +115,52 @@ body {
   margin: 0 auto;
 }
 
+/* Bouton Google OAuth */
+.google-btn {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  color: #374151;
+  border: 2px solid rgba(55, 65, 81, 0.1);
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.google-btn:hover {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  color: #1f2937;
+  border-color: rgba(55, 65, 81, 0.2);
+  box-shadow: 0 12px 35px -5px rgba(0, 0, 0, 0.15);
+}
+
+.google-btn .button-icon {
+  background: linear-gradient(135deg, #4285f4 0%, #34a853 25%, #fbbc05 50%, #ea4335 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: bold;
+  font-size: 1.2em;
+}
+
+/* Séparateur pour les options d'authentification */
+.auth-separator {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin: 8px 0;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9em;
+}
+
+.auth-separator::before,
+.auth-separator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.auth-separator span {
+  padding: 0 16px;
+}
+
 .auth-button {
   background: linear-gradient(135deg, var(--accent-blue) 0%, #2563eb 100%);
   color: var(--white);
@@ -142,6 +188,31 @@ body {
 .register-btn {
   background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
   box-shadow: 0 8px 25px -5px rgba(74, 222, 128, 0.2);
+}
+
+/* Bouton Google OAuth */
+.google-btn {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  color: #1f2937;
+  border: 2px solid rgba(59, 130, 246, 0.2);
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.google-btn .button-icon {
+  background: linear-gradient(135deg, #4285f4 0%, #34a853 25%, #fbbc05 50%, #ea4335 75%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: bold;
+  font-size: 1.2em;
+}
+
+.google-btn:hover {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e5e7eb 100%);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #111827;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 35px -5px rgba(0, 0, 0, 0.15);
 }
 
 .auth-button::before {

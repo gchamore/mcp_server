@@ -14,8 +14,8 @@ export class McpController {
     try {
       const { toolName, accessKey } = req.body;
       
-      // Utiliser req.user fourni par le middleware requireAuth
-      const userId = req.user!.userId;
+      // Utiliser req.mcpUser fourni par le middleware requireAuth
+      const userId = req.mcpUser!.userId;
 
       // Vérifier que l'utilisateur existe
       const user = await AuthService.getUserById(userId);

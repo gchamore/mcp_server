@@ -49,8 +49,16 @@ export class AuthService {
             if (!user || !user.isActive) {
                 throw new Error('Email ou mot de passe incorrect');
             }
-            const isPasswordValid = await bcrypt.compare(loginData.password, user.password);
-            if (!isPasswordValid) {
+            if (!user.password && user.provider === 'google') {
+                throw new Error('Ce compte utilise l\'authentification Google. Veuillez vous connecter avec Google.');
+            }
+            if (user.password) {
+                const isPasswordValid = await bcrypt.compare(loginData.password, user.password);
+                if (!isPasswordValid) {
+                    throw new Error('Email ou mot de passe incorrect');
+                }
+            }
+            else {
                 throw new Error('Email ou mot de passe incorrect');
             }
             const token = this.generateToken(user.id);
@@ -109,6 +117,9 @@ export class AuthService {
             issuer: 'mcp-wesype',
             audience: 'mcp-wesype-users'
         });
+    }
+    static generatePublicToken(userId) {
+        return this.generateToken(userId);
     }
     static verifyToken(token) {
         try {

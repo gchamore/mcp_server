@@ -10,12 +10,17 @@ datasource db {
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
-  password  String
+  password  String?  // Optionnel maintenant car on peut se connecter via Google
   firstName String?
   lastName  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   isActive  Boolean  @default(true)
+  
+  // Champs pour l'authentification Google OAuth
+  googleId  String?  @unique
+  picture   String?
+  provider  String   @default("local") // 'local' ou 'google'
 
   mcpSessions McpSession[]
 

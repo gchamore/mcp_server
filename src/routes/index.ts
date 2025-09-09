@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import path from 'path';
 import { config } from '../config/app.js';
+import { prisma, withRetry } from '../lib/prisma.js';
 
 const indexRouter = Router();
 
@@ -16,19 +17,38 @@ indexRouter.get('/', (req: Request, res: Response) => {
  * GET /health
  * Endpoint de santé du serveur
  */
-indexRouter.get('/health', (req: Request, res: Response) => {
-  res.json({ 
-    status: 'OK', 
-    service: 'MCP Wesype Server',
-    version: '1.0.0',
-    timestamp: new Date().toISOString(),
-    environment: config.NODE_ENV,
-    uptime: process.uptime(),
-    memory: {
-      used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024)
-    }
-  });
+indexRouter.get('/health', async (req: Request, res: Response) => {
+  try {
+    // Test de connexion à la base de données avec retry
+    await withRetry(async () => {
+      await prisma.$queryRaw`SELECT 1`;
+    });
+    
+    res.json({ 
+      status: 'OK', 
+      service: 'MCP Wesype Server',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+      environment: config.NODE_ENV,
+      database: 'Connected',
+      uptime: process.uptime(),
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024)
+      }
+    });
+  } catch (error) {
+    console.error('❌ Erreur de santé de la DB:', error);
+    res.status(503).json({
+      status: 'ERROR',
+      service: 'MCP Wesype Server',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+      environment: config.NODE_ENV,
+      database: 'Disconnected',
+      error: 'Database connection failed'
+    });
+  }
 });
 
 /**

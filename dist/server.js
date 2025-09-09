@@ -5,6 +5,7 @@ import apiRouter from './routes/api/index.js';
 import dynamicMcpRouter from './routes/dynamic-mcp.js';
 import { DynamicMcpService } from './services/dynamic-mcp.service.js';
 import { McpService } from './services/mcp.service.js';
+import { startConnectionHealthCheck } from './lib/prisma.js';
 const app = express();
 setupMiddleware(app);
 app.use('/', indexRouter);
@@ -17,6 +18,8 @@ app.listen(config.PORT, async () => {
     console.log(`URL: ${config.BASE_URL}`);
     console.log(`Platform: ${config.isRailway ? 'Railway' : 'Local'}`);
     console.log(`Database: ${config.DATABASE_URL ? 'Connected' : 'Not configured'}`);
+    startConnectionHealthCheck();
+    console.log(`✅ Surveillance de la connexion DB activée`);
     try {
         await McpService.migrateUnencryptedKeys();
         const mcpService = DynamicMcpService.getInstance();

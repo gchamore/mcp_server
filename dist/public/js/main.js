@@ -9,6 +9,10 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeModals();
     initializeForms();
     checkAuthStatus();
+    initializeOAuth();
+    
+    // Vérifier si on revient d'un OAuth callback
+    checkOAuthCallback();
 
     // MCP TOOLS BUTTONS - Show tool page in-app
     const MCP_TOOLS = {
@@ -526,6 +530,89 @@ function showMessage(message, type = 'info') {
             }
         }, 300);
     }, 4000);
+}
+
+// === GESTION OAUTH ===
+async function initializeOAuth() {
+    try {
+        const response = await fetch('/api/auth/oauth/status');
+        const data = await response.json();
+        
+        if (data.success && data.oauth.google.configured) {
+            console.log('✅ Google OAuth configuré');
+            
+            // Afficher le bouton Google
+            const googleBtn = document.getElementById('googleLoginBtn');
+            const separator = document.getElementById('authSeparator');
+            
+            if (googleBtn) {
+                googleBtn.style.display = 'flex';
+                googleBtn.onclick = () => handleGoogleLogin();
+            }
+            
+            if (separator) {
+                separator.style.display = 'flex';
+            }
+        } else {
+            console.log('ℹ️ Google OAuth non configuré');
+        }
+    } catch (error) {
+        console.error('Erreur lors de la vérification OAuth:', error);
+    }
+}
+
+function handleGoogleLogin() {
+    console.log('🔄 Redirection vers Google OAuth...');
+    window.location.href = '/api/auth/google';
+}
+
+function checkOAuthCallback() {
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    if (urlParams.get('oauth_success') === 'true') {
+        const token = urlParams.get('token');
+        const userStr = urlParams.get('user');
+        
+        if (token && userStr) {
+            try {
+                const user = JSON.parse(decodeURIComponent(userStr));
+                
+                // Sauvegarder le token
+                localStorage.setItem('authToken', token);
+                localStorage.setItem('user', JSON.stringify(user));
+                
+                // Nettoyer l'URL
+                window.history.replaceState({}, document.title, '/');
+                
+                // Afficher le dashboard
+                showDashboard(user);
+                showMessage('Connexion Google réussie !', 'success');
+                
+                console.log('✅ Connexion OAuth réussie:', user.email);
+            } catch (error) {
+                console.error('Erreur lors du traitement du callback OAuth:', error);
+                showMessage('Erreur lors de la connexion Google', 'error');
+            }
+        }
+    } else if (urlParams.get('error')) {
+        const error = urlParams.get('error');
+        let errorMessage = 'Erreur de connexion Google';
+        
+        switch (error) {
+            case 'oauth_failed':
+                errorMessage = 'Échec de l\'authentification Google';
+                break;
+            case 'oauth_error':
+                errorMessage = 'Erreur lors de la connexion Google';
+                break;
+        }
+        
+        showMessage(errorMessage, 'error');
+        console.error('❌ Erreur OAuth:', error);
+        
+        // Nettoyer l'URL
+        window.history.replaceState({}, document.title, '/');
+    }
 }
 
 console.log('⚡ JavaScript principal chargé et prêt !');

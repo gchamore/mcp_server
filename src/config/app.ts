@@ -2,6 +2,9 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import session from 'express-session';
+import passport from 'passport';
+import { OAuthService } from '../services/oauth.service.js';
 
 // Configuration pour ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -40,6 +43,36 @@ export const config = {
 };
 
 export function setupMiddleware(app: express.Application) {
+  // Configuration des sessions Express (nécessaire pour Passport)
+  if (!process.env.SESSION_SECRET && isProduction) {
+    throw new Error('SESSION_SECRET must be set in production environment');
+  }
+  
+  app.use(session({
+    secret: process.env.SESSION_SECRET || (() => {
+      if (isProduction) {
+        throw new Error('SESSION_SECRET must be set in production environment');
+      }
+      console.warn('⚠️  Using fallback session secret - UNSAFE for production!');
+      return 'dev-fallback-session-secret-' + Math.random().toString(36);
+    })(),
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: isProduction, // HTTPS en production
+      maxAge: 24 * 60 * 60 * 1000 // 24 heures
+    }
+  }));
+
+  // Initialisation de Passport
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  // Initialiser OAuth Service de manière asynchrone
+  OAuthService.initializePassport().catch(error => {
+    console.warn('⚠️  Échec de l\'initialisation OAuth:', error.message);
+  });
+
   // Middleware pour servir les fichiers statiques
   app.use(express.static(path.join(__dirname, '../../public')));
   
