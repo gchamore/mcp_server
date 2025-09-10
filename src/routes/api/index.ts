@@ -1,6 +1,7 @@
 import express from 'express';
 import authRouter from '../auth.js';
 import mcpRouter from '../mcp.js';
+import passwordRouter from '../password.js';
 import { config } from '../../config/app.js';
 
 const router = express.Router();
@@ -31,6 +32,7 @@ router.get('/', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       mcp: '/api/mcp',
+      password: '/api/password',
       health: '/health'
     }
   });
@@ -41,6 +43,9 @@ router.use('/auth', authRouter);
 
 // Routes MCP
 router.use('/mcp', mcpRouter);
+
+// Routes de gestion des mots de passe
+router.use('/password', passwordRouter);
 
 // Route de santé de l'API
 router.get('/health', (req, res) => {

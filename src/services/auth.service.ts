@@ -134,7 +134,10 @@ export class AuthService {
           firstName: true,
           lastName: true,
           createdAt: true,
+          updatedAt: true,
           isActive: true,
+          provider: true,
+          password: true,
         }
       });
 

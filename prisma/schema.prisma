@@ -23,6 +23,7 @@ model User {
   provider  String   @default("local") // 'local' ou 'google'
 
   mcpSessions McpSession[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
 }
@@ -40,4 +41,17 @@ model McpSession {
 
   @@unique([userId, toolName])
   @@map("mcp_sessions")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
 }

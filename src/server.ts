@@ -5,6 +5,8 @@ import apiRouter from './routes/api/index.js';
 import dynamicMcpRouter from './routes/dynamic-mcp.js';
 import { DynamicMcpService } from './services/dynamic-mcp.service.js';
 import { McpService } from './services/mcp.service.js';
+import { EmailService } from './services/email.service.js';
+import { PasswordService } from './services/password.service.js';
 import { startConnectionHealthCheck } from './lib/prisma.js';
 
 const app = express();
@@ -35,6 +37,31 @@ app.listen(config.PORT, async () => {
   // Démarrer la surveillance de la connexion DB
   startConnectionHealthCheck();
   console.log(`✅ Surveillance de la connexion DB activée`);
+  
+  // Initialiser le service d'email
+  try {
+    await EmailService.initialize();
+    const emailStatus = EmailService.getStatus();
+    if (emailStatus.configured) {
+      console.log(`✅ Service d'email initialisé (${emailStatus.provider})`);
+    } else {
+      console.log(`⚠️  Service d'email non configuré`);
+    }
+  } catch (error) {
+    console.error(`❌ Erreur lors de l'initialisation du service email:`, error);
+  }
+  
+  // Démarrer le nettoyage périodique des tokens de réinitialisation (toutes les heures)
+  setInterval(async () => {
+    try {
+      const cleanedCount = await PasswordService.cleanupExpiredTokens();
+      if (cleanedCount > 0) {
+        console.log(`🧹 ${cleanedCount} tokens de réinitialisation expirés nettoyés`);
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors du nettoyage des tokens:', error);
+    }
+  }, 60 * 60 * 1000); // 1 heure
   
   // Initialiser les services MCP
   try {

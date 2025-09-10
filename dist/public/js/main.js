@@ -126,6 +126,9 @@ function initializeButtons() {
     if (adminPanelBtn) {
         adminPanelBtn.addEventListener('click', handleAdminPanel);
     }
+    
+    // Gestion du changement de mot de passe
+    initializePasswordManagement();
 }
 
 // === GESTION DES MODALES ===
@@ -331,6 +334,9 @@ function showDashboard(user) {
                 adminBtn.style.display = '';
             }
         }
+    
+    // Charger les informations de mot de passe
+    loadPasswordInfo();
 }
 
 function showLandingPage() {
@@ -612,6 +618,133 @@ function checkOAuthCallback() {
         
         // Nettoyer l'URL
         window.history.replaceState({}, document.title, '/');
+    }
+}
+
+// === GESTION DES MOTS DE PASSE ===
+function initializePasswordManagement() {
+    const changePasswordBtn = document.getElementById('changePasswordBtn');
+    const passwordChangeForm = document.getElementById('passwordChangeForm');
+    const changePasswordForm = document.getElementById('changePasswordForm');
+    const cancelPasswordChange = document.getElementById('cancelPasswordChange');
+    const passwordInfo = document.getElementById('passwordInfo');
+    
+    if (changePasswordBtn) {
+        changePasswordBtn.addEventListener('click', function() {
+            passwordChangeForm.style.display = passwordChangeForm.style.display === 'none' ? 'block' : 'none';
+        });
+    }
+    
+    if (cancelPasswordChange) {
+        cancelPasswordChange.addEventListener('click', function() {
+            passwordChangeForm.style.display = 'none';
+            changePasswordForm.reset();
+        });
+    }
+    
+    if (changePasswordForm) {
+        changePasswordForm.addEventListener('submit', handlePasswordChange);
+    }
+}
+
+async function loadPasswordInfo() {
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+        
+        const response = await fetch('/api/password/info', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            const changePasswordBtn = document.getElementById('changePasswordBtn');
+            const passwordInfo = document.getElementById('passwordInfo');
+            
+            if (data.passwordInfo.canChangePassword) {
+                changePasswordBtn.style.display = 'block';
+                passwordInfo.style.display = 'none';
+            } else {
+                changePasswordBtn.style.display = 'none';
+                
+                let infoText = '';
+                if (data.passwordInfo.provider === 'google') {
+                    infoText = 'Vous êtes connecté via Google. La gestion du mot de passe se fait via votre compte Google.';
+                } else if (!data.passwordInfo.hasPassword) {
+                    infoText = 'Aucun mot de passe défini pour ce compte.';
+                } else {
+                    infoText = 'Modification du mot de passe non disponible pour ce type de compte.';
+                }
+                
+                passwordInfo.textContent = infoText;
+                passwordInfo.style.display = 'block';
+            }
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des infos mot de passe:', error);
+    }
+}
+
+async function handlePasswordChange(event) {
+    event.preventDefault();
+    
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPasswordChange').value;
+    const confirmPassword = document.getElementById('confirmNewPassword').value;
+    
+    // Vérifications côté client
+    if (newPassword !== confirmPassword) {
+        showMessage('Les nouveaux mots de passe ne correspondent pas', 'error');
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        showMessage('Le nouveau mot de passe doit contenir au moins 6 caractères', 'error');
+        return;
+    }
+    
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            showMessage('Vous devez être connecté pour changer votre mot de passe', 'error');
+            return;
+        }
+        
+        const response = await fetch('/api/password/change', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                currentPassword,
+                newPassword,
+                confirmPassword
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showMessage(data.message, 'success');
+            
+            // Réinitialiser le formulaire et le masquer
+            document.getElementById('changePasswordForm').reset();
+            document.getElementById('passwordChangeForm').style.display = 'none';
+            
+            // Fermer la modale des paramètres après un délai
+            setTimeout(() => {
+                closeModal('settingsModal');
+            }, 2000);
+        } else {
+            showMessage(data.error || 'Erreur lors du changement de mot de passe', 'error');
+        }
+    } catch (error) {
+        console.error('Erreur changement mot de passe:', error);
+        showMessage('Erreur de connexion', 'error');
     }
 }
 

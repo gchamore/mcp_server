@@ -5,6 +5,8 @@ import apiRouter from './routes/api/index.js';
 import dynamicMcpRouter from './routes/dynamic-mcp.js';
 import { DynamicMcpService } from './services/dynamic-mcp.service.js';
 import { McpService } from './services/mcp.service.js';
+import { EmailService } from './services/email.service.js';
+import { PasswordService } from './services/password.service.js';
 import { startConnectionHealthCheck } from './lib/prisma.js';
 const app = express();
 setupMiddleware(app);
@@ -20,6 +22,30 @@ app.listen(config.PORT, async () => {
     console.log(`Database: ${config.DATABASE_URL ? 'Connected' : 'Not configured'}`);
     startConnectionHealthCheck();
     console.log(`✅ Surveillance de la connexion DB activée`);
+    try {
+        await EmailService.initialize();
+        const emailStatus = EmailService.getStatus();
+        if (emailStatus.configured) {
+            console.log(`✅ Service d'email initialisé (${emailStatus.provider})`);
+        }
+        else {
+            console.log(`⚠️  Service d'email non configuré`);
+        }
+    }
+    catch (error) {
+        console.error(`❌ Erreur lors de l'initialisation du service email:`, error);
+    }
+    setInterval(async () => {
+        try {
+            const cleanedCount = await PasswordService.cleanupExpiredTokens();
+            if (cleanedCount > 0) {
+                console.log(`🧹 ${cleanedCount} tokens de réinitialisation expirés nettoyés`);
+            }
+        }
+        catch (error) {
+            console.error('❌ Erreur lors du nettoyage des tokens:', error);
+        }
+    }, 60 * 60 * 1000);
     try {
         await McpService.migrateUnencryptedKeys();
         const mcpService = DynamicMcpService.getInstance();

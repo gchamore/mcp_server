@@ -14,6 +14,14 @@ indexRouter.get('/', (req: Request, res: Response) => {
 });
 
 /**
+ * GET /reset-password
+ * Page de réinitialisation de mot de passe
+ */
+indexRouter.get('/reset-password', (req: Request, res: Response) => {
+  res.sendFile(path.join(config.__dirname, '../../public/reset-password.html'));
+});
+
+/**
  * GET /health
  * Endpoint de santé du serveur
  */

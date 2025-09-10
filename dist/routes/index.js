@@ -6,6 +6,9 @@ const indexRouter = Router();
 indexRouter.get('/', (req, res) => {
     res.sendFile(path.join(config.__dirname, '../../public/index.html'));
 });
+indexRouter.get('/reset-password', (req, res) => {
+    res.sendFile(path.join(config.__dirname, '../../public/reset-password.html'));
+});
 indexRouter.get('/health', async (req, res) => {
     try {
         await withRetry(async () => {

@@ -102,3 +102,60 @@ export function rateLimit(maxRequests = 10, windowMs = 60000) {
         next();
     };
 }
+export function validatePasswordReset(req, res, next) {
+    const { token, newPassword, confirmPassword } = req.body;
+    if (!token) {
+        return res.status(400).json({
+            success: false,
+            error: 'Token requis',
+            code: 'MISSING_TOKEN'
+        });
+    }
+    if (!newPassword || !confirmPassword) {
+        return res.status(400).json({
+            success: false,
+            error: 'Nouveau mot de passe et confirmation requis',
+            code: 'MISSING_FIELDS'
+        });
+    }
+    if (newPassword !== confirmPassword) {
+        return res.status(400).json({
+            success: false,
+            error: 'Les mots de passe ne correspondent pas',
+            code: 'PASSWORD_MISMATCH'
+        });
+    }
+    if (newPassword.length < 6) {
+        return res.status(400).json({
+            success: false,
+            error: 'Le mot de passe doit contenir au moins 6 caractères',
+            code: 'PASSWORD_TOO_SHORT'
+        });
+    }
+    next();
+}
+export function validatePasswordChange(req, res, next) {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        return res.status(400).json({
+            success: false,
+            error: 'Mot de passe actuel, nouveau mot de passe et confirmation requis',
+            code: 'MISSING_FIELDS'
+        });
+    }
+    if (newPassword !== confirmPassword) {
+        return res.status(400).json({
+            success: false,
+            error: 'Les nouveaux mots de passe ne correspondent pas',
+            code: 'PASSWORD_MISMATCH'
+        });
+    }
+    if (newPassword.length < 6) {
+        return res.status(400).json({
+            success: false,
+            error: 'Le nouveau mot de passe doit contenir au moins 6 caractères',
+            code: 'PASSWORD_TOO_SHORT'
+        });
+    }
+    next();
+}
