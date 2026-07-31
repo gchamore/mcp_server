@@ -9,6 +9,7 @@ import {
   type SelectHTMLAttributes,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { IconCheck, IconClose, IconCopy } from './icons';
 import type { ConnectionStatus, ConnectorStatus } from '../lib/types';
 
 /** Briques d'interface réutilisables. Aucune dépendance UI externe. */
@@ -181,21 +182,25 @@ export function Spinner({ label = 'Chargement…' }: { label?: string }) {
 }
 
 export function EmptyState({
-  icon = '📭',
+  icon,
   title,
   description,
   action,
 }: {
-  icon?: string;
+  /** Icône vectorielle. Volontairement pas une chaîne : les émojis changent
+   *  d'aspect selon l'OS et trahissent une interface non dessinée. */
+  icon?: ReactNode;
   title: string;
   description?: string;
   action?: ReactNode;
 }) {
   return (
     <div className="empty-state">
-      <span className="empty-state__icon" aria-hidden="true">
-        {icon}
-      </span>
+      {icon && (
+        <span className="empty-state__icon" aria-hidden="true">
+          {icon}
+        </span>
+      )}
       <strong>{title}</strong>
       {description && <p className="text-sm">{description}</p>}
       {action}
@@ -260,7 +265,7 @@ export function Modal({ open, title, onClose, children, footer, wide }: ModalPro
         <div className="modal__header">
           <h2 id={titleId}>{title}</h2>
           <button type="button" className="modal__close" onClick={onClose} aria-label="Fermer">
-            ×
+            <IconClose size={18} />
           </button>
         </div>
         {children}
@@ -340,7 +345,8 @@ export function CopyField({ value, label }: { value: string; label?: string }) {
       <div className="code-block">
         <span className="code-block__value">{value}</span>
         <Button size="sm" variant="secondary" onClick={copy} aria-label="Copier">
-          {copied ? 'Copié ✓' : 'Copier'}
+          {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+          {copied ? 'Copié' : 'Copier'}
         </Button>
       </div>
     </div>

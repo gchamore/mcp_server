@@ -1,3 +1,4 @@
+import { IconClose } from './icons';
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
 /**
@@ -65,7 +66,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               onClick={() => dismiss(toast.id)}
               aria-label="Fermer la notification"
             >
-              ×
+              <IconClose size={14} />
             </button>
           </div>
         ))}

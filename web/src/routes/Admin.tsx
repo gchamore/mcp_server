@@ -13,6 +13,7 @@ import {
   Modal,
   Spinner,
 } from '../components/ui';
+import { IconChart, IconInbox, IconLink, IconSearch } from '../components/icons';
 import { formatDateTime, formatNumber, formatPercent, timeAgo } from '../lib/format';
 
 /** Panneau d'administration : usage de la plateforme et gestion des comptes. */
@@ -125,7 +126,7 @@ function McpClients() {
 
       {(data?.clients.length ?? 0) === 0 ? (
         <EmptyState
-          icon="🔗"
+          icon={<IconLink size={22} />}
           title="Aucun client connecté"
           description="Collez l’URL d’un connecteur dans Claude ou Dust : le client apparaîtra ici après son premier enregistrement."
         />
@@ -310,7 +311,7 @@ function Overview() {
       <section className="stack">
         <h2>Activité récente</h2>
         {data.recentActivity.length === 0 ? (
-          <EmptyState icon="🗒️" title="Aucune activité enregistrée" />
+          <EmptyState icon={<IconInbox size={22} />} title="Aucune activité enregistrée" />
         ) : (
           <div className="table-scroll">
             <table className="table">
@@ -368,7 +369,7 @@ function Users() {
     <div className="stack">
       <div className="search" style={{ maxWidth: '360px' }}>
         <span className="search__icon" aria-hidden="true">
-          ⌕
+          <IconSearch size={15} />
         </span>
         <Input
           type="search"
@@ -500,7 +501,7 @@ function Usage() {
         <Spinner />
       ) : !data || data.tools.length === 0 ? (
         <EmptyState
-          icon="📊"
+          icon={<IconChart size={22} />}
           title="Aucun appel sur la période"
           description="Les statistiques apparaîtront dès qu’un assistant utilisera un outil."
         />

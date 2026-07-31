@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { ConnectorCard } from '../components/ConnectorCard';
 import { EmptyState, Input, Spinner } from '../components/ui';
+import { IconSearch } from '../components/icons';
 import { pluralize } from '../lib/format';
 import { useAuth } from '../state/auth';
 
@@ -57,7 +58,7 @@ export function Catalog() {
         <div className="row">
           <div className="search">
             <span className="search__icon" aria-hidden="true">
-              ⌕
+              <IconSearch size={15} />
             </span>
             <Input
               type="search"
@@ -96,7 +97,7 @@ export function Catalog() {
         <Spinner />
       ) : connectors.length === 0 ? (
         <EmptyState
-          icon="🔍"
+          icon={<IconSearch size={22} />}
           title="Aucun connecteur ne correspond"
           description="Essayez un autre terme, ou retirez le filtre de catégorie."
         />

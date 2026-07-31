@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { Alert, Button, Field, Input, Select } from './ui';
+import { IconExternal } from './icons';
 import type { CredentialField, Connector } from '../lib/types';
 
 /**
@@ -83,7 +84,7 @@ export function CredentialForm({
             <span>{connector.auth.instructions}</span>
             {connector.auth.docsUrl && (
               <a href={connector.auth.docsUrl} target="_blank" rel="noreferrer noopener">
-                Documentation {connector.name} ↗
+                Documentation {connector.name} <IconExternal size={12} />
               </a>
             )}
           </div>

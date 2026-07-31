@@ -459,18 +459,6 @@ pre,
   margin-inline: auto;
 }
 
-/* Halo froid, décentré : évite la symétrie molle d'un dégradé centré. */
-.hero::before {
-  content: '';
-  position: absolute;
-  inset: -30% -10% auto -10%;
-  height: 130%;
-  z-index: -2;
-  background:
-    radial-gradient(55rem 38rem at 18% 8%, rgb(77 163 255 / 0.16), transparent 62%),
-    radial-gradient(45rem 32rem at 88% 92%, rgb(77 163 255 / 0.07), transparent 60%);
-}
-
 /* Trame technique, très basse opacité : lisible seulement de près. */
 .hero::after {
   content: '';
@@ -636,8 +624,13 @@ pre,
   border-top-color: var(--accent);
 }
 .card--interactive:hover .card__arrow {
-  transform: translateX(4px);
+  display: grid;
   color: var(--accent);
+  transition: transform var(--t);
+}
+.card:hover .card__arrow,
+a:hover > * > .card__arrow {
+  transform: translateX(4px);
 }
 
 .card__header {
@@ -888,9 +881,9 @@ pre,
   inset-inline-start: 0.85rem;
   top: 50%;
   transform: translateY(-50%);
+  display: grid;
   color: var(--text-faint);
   pointer-events: none;
-  font-size: 0.95rem;
 }
 
 /* --- 10. Badges, pastilles, filtres ------------------------------------- */
@@ -1157,8 +1150,13 @@ pre,
   color: var(--text-muted);
 }
 .empty-state__icon {
-  font-size: 1.6rem;
-  opacity: 0.4;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  color: var(--text-faint);
 }
 
 .spinner {
@@ -1325,6 +1323,192 @@ pre,
   line-height: 1.5;
 }
 
+
+
+/* Étapes et appel à l'action de la page d'accueil ------------------------- */
+
+.step {
+  display: grid;
+  gap: var(--s3);
+  align-content: start;
+  padding: var(--s6) var(--s5);
+  background: var(--surface);
+  transition: background var(--t);
+}
+.step:hover {
+  background: var(--surface-2);
+}
+.step__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--s3);
+  border-bottom: 1px solid var(--line);
+  color: var(--accent);
+}
+.step__n {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  color: var(--text-faint);
+}
+
+/**
+ * Bandeau final. Le dégradé part du bord gauche : une lumière rasante, plutôt
+ * qu'un fond centré qui ferait « encart promotionnel ».
+ */
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s5);
+  padding: var(--s7) var(--s6);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background:
+    linear-gradient(100deg, rgb(77 163 255 / 0.12), transparent 52%),
+    var(--surface);
+}
+.cta h2 {
+  max-width: 20ch;
+}
+
+/* --- 17. Matière : grain, lumière, profondeur ---------------------------- */
+
+/**
+ * Grain.
+ *
+ * Une surface parfaitement lisse trahit le rendu logiciel. Un bruit à 3,5 %
+ * d'opacité, fixe par rapport au viewport, casse les aplats et les dégradés :
+ * on ne le voit pas, on le sent. C'est ce qui empêche les grands aplats noirs
+ * de « banding » sur les écrans 8 bits.
+ */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/**
+ * Halo suivant le curseur. Grand, très diffus, en `screen` : il éclaircit
+ * sans teinter, comme une source lumineuse derrière la page.
+ */
+.cursor-glow {
+  position: fixed;
+  z-index: 0;
+  width: 620px;
+  height: 620px;
+  margin: -310px 0 0 -310px;
+  pointer-events: none;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  background: radial-gradient(circle, rgb(77 163 255 / 0.09), transparent 62%);
+}
+
+/**
+ * Chute de lumière sur les grands titres.
+ *
+ * Blanc en haut, légèrement éteint en bas : le texte semble éclairé par le
+ * dessus. Rien à voir avec le dégradé arc-en-ciel qui signe les gabarits —
+ * ici la teinte ne change pas, seule la luminance décroît.
+ */
+.display {
+  background: linear-gradient(180deg, #ffffff 12%, #a8b2ba 96%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Aurore lente en fond de héros : dérive de 24 s, jamais au premier plan. */
+.aurora {
+  position: absolute;
+  inset: -25%;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(38rem 26rem at 22% 26%, rgb(77 163 255 / 0.2), transparent 60%),
+    radial-gradient(32rem 24rem at 78% 68%, rgb(120 90 255 / 0.1), transparent 62%),
+    radial-gradient(26rem 20rem at 58% 12%, rgb(61 220 151 / 0.06), transparent 60%);
+  filter: blur(28px);
+  animation: drift 24s ease-in-out infinite alternate;
+}
+
+@keyframes drift {
+  from {
+    transform: translate3d(-2%, -1%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(3%, 2%, 0) scale(1.08);
+  }
+}
+
+/* Filet lumineux en haut de section : marque la césure sans trait dur. */
+.section--lit {
+  position: relative;
+}
+.section--lit::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-line) 22%, transparent 78%);
+}
+
+/* Liens de texte : soulignement qui balaie de gauche à droite. */
+.link-sweep {
+  position: relative;
+  color: var(--text);
+}
+.link-sweep::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform var(--t);
+}
+.link-sweep:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/**
+ * Carte dont le filet supérieur se trace au survol.
+ *
+ * Le dégradé part de la couleur de marque du service : assez pour identifier,
+ * trop bref pour rompre la monochromie de l'ensemble.
+ */
+.card--interactive::after {
+  background: linear-gradient(90deg, var(--accent), transparent 70%);
+  height: 1px;
+  border: 0;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 420ms var(--ease);
+  inset: 0 0 auto 0;
+}
+.card--interactive:hover::after {
+  transform: scaleX(1);
+}
+
+/* Le contenu doit passer au-dessus du halo. */
+.hero__content,
+.section {
+  position: relative;
+  z-index: 1;
+}
+
 /* --- 16. Écrans pleine page (auth, consentement) ------------------------ */
 
 .auth-layout {
@@ -1368,7 +1552,7 @@ pre,
   gap: var(--s5);
 }
 
-/* --- 16. Adaptations ---------------------------------------------------- */
+/* --- 18. Adaptations ---------------------------------------------------- */
 
 @media (max-width: 860px) {
   .topbar__inner {

@@ -14,6 +14,7 @@ import {
   Modal,
   Spinner,
 } from '../components/ui';
+import { IconArrowRight, IconExternal } from '../components/icons';
 import { pluralize, timeAgo } from '../lib/format';
 import { useAuth } from '../state/auth';
 
@@ -115,7 +116,7 @@ export function ConnectorDetail() {
                 <>
                   <span aria-hidden="true">·</span>
                   <a href={connector.docsUrl} target="_blank" rel="noreferrer noopener">
-                    Documentation ↗
+                    Documentation <IconExternal size={12} />
                   </a>
                 </>
               )}
@@ -181,7 +182,9 @@ export function ConnectorDetail() {
                 </span>
                 <div className="card__footer">
                   <span>{pluralize(connection.endpoints.length, 'point d’accès')}</span>
-                  <span aria-hidden="true">→</span>
+                  <span className="card__arrow" aria-hidden="true">
+                    <IconArrowRight size={14} />
+                  </span>
                 </div>
               </Link>
             ))}

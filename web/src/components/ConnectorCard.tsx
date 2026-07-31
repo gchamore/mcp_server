@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Badge, ConnectorStatusBadge } from './ui';
+import { IconArrowRight } from './icons';
 import { pluralize } from '../lib/format';
 import type { Connector } from '../lib/types';
 
@@ -57,7 +58,7 @@ export function ConnectorCard({
           </Badge>
         ) : (
           <span className="card__arrow" aria-hidden="true">
-            →
+            <IconArrowRight size={14} />
           </span>
         )}
       </div>

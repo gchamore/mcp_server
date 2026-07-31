@@ -14,6 +14,7 @@ import {
   Modal,
   Spinner,
 } from '../components/ui';
+import { IconPlug } from '../components/icons';
 import { formatDateTime, pluralize, timeAgo } from '../lib/format';
 import type { Connection } from '../lib/types';
 
@@ -44,7 +45,7 @@ export function Connections() {
 
       {connections.length === 0 ? (
         <EmptyState
-          icon="🔌"
+          icon={<IconPlug size={22} />}
           title="Aucune connexion pour l’instant"
           description="Parcourez le catalogue et branchez votre premier outil métier."
           action={
