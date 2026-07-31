@@ -1,3 +1,20 @@
+// ---------------------------------------------------------------------------
+// MCP Wesype — schéma de données
+//
+// Modèle mental :
+//   User        : un compte de la plateforme.
+//   Session     : une session de navigation (cookie httpOnly, token opaque).
+//   Connection  : les identifiants d'un utilisateur pour UN connecteur
+//                 (« j'ai branché mon compte Axonaut »). Les identifiants sont
+//                 stockés chiffrés (AES-256-GCM) dans `credentials`.
+//   McpEndpoint : une URL MCP révocable pointant vers une Connection. C'est ce
+//                 qu'on colle dans Claude / Dust / ChatGPT.
+//
+// Le catalogue des connecteurs n'est PAS en base : il est défini dans le code
+// (src/connectors/*) et découvert au démarrage. Ajouter un MCP = ajouter un
+// dossier, aucune migration nécessaire.
+// ---------------------------------------------------------------------------
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,51 +24,313 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String?  // Optionnel maintenant car on peut se connecter via Google
-  firstName String?
-  lastName  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  isActive  Boolean  @default(true)
-  
-  // Champs pour l'authentification Google OAuth
-  googleId  String?  @unique
-  picture   String?
-  provider  String   @default("local") // 'local' ou 'google'
+enum Role {
+  USER
+  ADMIN
+}
 
-  mcpSessions McpSession[]
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACTIVE
+  ERROR
+}
+
+/// Comment un accès MCP résout la connexion à utiliser lors d'un appel.
+enum McpAccessMode {
+  /// Chaque utilisateur du client IA se sert de SA propre connexion.
+  /// Le tout premier appel d'un utilisateur non encore raccordé déclenche
+  /// son propre parcours d'autorisation.
+  INDIVIDUAL
+  /// Tout le monde passe par la connexion choisie lors de la configuration.
+  /// C'est le mode « compte de service » : pratique en équipe, mais chaque
+  /// appel est attribué au compte de la personne qui a fait le réglage.
+  SHARED
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  passwordHash String?
+  firstName    String?
+  lastName     String?
+  avatarUrl    String?
+  role         Role         @default(USER)
+  provider     AuthProvider @default(LOCAL)
+  googleId     String?      @unique
+  isActive     Boolean      @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  sessions            Session[]
+  connections         Connection[]
   passwordResetTokens PasswordResetToken[]
+  auditLogs           AuditLog[]
+  mcpAccesses         McpAccess[]
+  oauthGrants         OAuthGrant[]
+  oauthTokens         OAuthToken[]
 
   @@map("users")
 }
 
-model McpSession {
-  id        String   @id @default(cuid())
-  userId    String
-  toolName  String
-  accessKey String
-  mcpUrl    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  lastSeenAt DateTime @default(now())
+  userAgent  String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, toolName])
-  @@map("mcp_sessions")
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Connection {
+  id             String           @id @default(cuid())
+  userId         String
+  /// Identifiant du connecteur dans le registre code (ex. "axonaut").
+  connectorId    String
+  /// Permet plusieurs comptes du même service pour un même utilisateur.
+  label          String           @default("Compte principal")
+  /// JSON chiffré (AES-256-GCM) contenant les champs d'authentification.
+  credentials    String
+  status         ConnectionStatus @default(PENDING)
+  statusMessage  String?
+  /// Libellé du compte distant renvoyé par le connecteur (ex. raison sociale).
+  accountLabel   String?
+  lastVerifiedAt DateTime?
+  lastUsedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoints   McpEndpoint[]
+  calls       ToolInvocation[]
+  sharedFor   McpAccess[]
+  oauthGrants OAuthGrant[]
+
+  @@unique([userId, connectorId, label])
+  @@index([userId])
+  @@index([connectorId])
+  @@map("connections")
+}
+
+model McpEndpoint {
+  id           String    @id @default(cuid())
+  connectionId String
+  /// SHA-256 du token : sert à la recherche indexée lors d'un appel MCP.
+  tokenHash    String    @unique
+  /// Token chiffré (AES-256-GCM). Permet de réafficher l'URL à son propriétaire
+  /// authentifié : l'utilisateur colle cette URL dans plusieurs clients IA et
+  /// la perdre imposerait de tout reconfigurer. Le chiffrement est le même que
+  /// pour les identifiants tiers — une fuite de la base seule ne donne rien.
+  tokenEncrypted String
+  /// 6 derniers caractères du token, pour l'affichage ("…f3a91c").
+  tokenHint    String
+  name         String    @default("Point d'accès")
+  lastUsedAt   DateTime?
+  callCount    Int       @default(0)
+  expiresAt    DateTime?
+  revokedAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  connection Connection       @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  calls      ToolInvocation[]
+
+  @@index([connectionId])
+  @@map("mcp_endpoints")
+}
+
+/// Journal d'usage des outils MCP : alimente les statistiques et le débogage.
+/// Purgé automatiquement au-delà de la fenêtre de rétention (src/jobs).
+model ToolInvocation {
+  id           String   @id @default(cuid())
+  connectionId String
+  endpointId   String?
+  connectorId  String
+  toolName     String
+  success      Boolean
+  durationMs   Int
+  errorCode    String?
+  createdAt    DateTime @default(now())
+
+  connection Connection   @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  endpoint   McpEndpoint? @relation(fields: [endpointId], references: [id], onDelete: SetNull)
+
+  @@index([connectionId, createdAt])
+  @@index([connectorId, createdAt])
+  @@index([createdAt])
+  @@map("tool_invocations")
 }
 
 model PasswordResetToken {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  token     String   @unique
+  tokenHash String    @unique
   expiresAt DateTime
-  used      Boolean  @default(false)
-  createdAt DateTime @default(now())
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+  @@index([expiresAt])
   @@map("password_reset_tokens")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  targetType String?
+  targetId   String?
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+//  Serveur d'autorisation OAuth 2.1 (spécification MCP « Authorization »)
+//
+//  C'est ce qui permet à un client IA (Claude, Dust, ChatGPT) de se connecter
+//  en collant une simple URL : il découvre nos métadonnées, s'enregistre tout
+//  seul, ouvre un navigateur pour le consentement, et obtient un jeton.
+//  Plus aucun secret à copier-coller.
+//
+//  Ne pas confondre avec `AuthProvider.GOOGLE` : là, Wesype est CLIENT de
+//  Google pour connecter l'utilisateur au site. Ici, Wesype est SERVEUR
+//  d'autorisation pour les clients IA.
+// ---------------------------------------------------------------------------
+
+/// Client MCP enregistré, en général via l'enregistrement dynamique (RFC 7591).
+model OAuthClient {
+  id               String   @id @default(cuid())
+  clientId         String   @unique
+  /// Chiffré (AES-256-GCM). Nul pour un client public — le cas courant, issu de
+  /// l'enregistrement dynamique, où PKCE tient lieu d'authentification.
+  ///
+  /// Chiffré et non haché : le SDK compare le secret en clair renvoyé par le
+  /// magasin de clients, il faut donc pouvoir le restituer. Le compromis est le
+  /// même que pour les identifiants tiers — une fuite de la base seule ne donne
+  /// rien sans la clé de chiffrement.
+  clientSecretEncrypted String?
+  /// true si le client a été créé à la main par un administrateur (mode
+  /// « Static OAuth » de Dust), false s'il s'est enregistré tout seul.
+  isStatic         Boolean  @default(false)
+  name             String
+  redirectUris     String[]
+  grantTypes       String[]
+  scopes           String[]
+  /// L'enregistrement dynamique est ouvert : on trace donc l'origine.
+  registeredFromIp String?
+  lastUsedAt       DateTime?
+  createdAt        DateTime @default(now())
+
+  accesses McpAccess[]
+  grants   OAuthGrant[]
+  tokens   OAuthToken[]
+
+  @@map("oauth_clients")
+}
+
+/// Configuration d'un connecteur pour un client MCP donné.
+///
+/// Créée au premier consentement : la personne qui branche le serveur choisit
+/// le mode. Les autorisations suivantes du même client réutilisent ce réglage,
+/// ce qui rend le comportement prévisible pour toute l'équipe.
+model McpAccess {
+  id            String        @id @default(cuid())
+  oauthClientId String
+  connectorId   String
+  mode          McpAccessMode
+  /// Qui a réalisé la configuration initiale.
+  ownerId       String
+  /// Renseigné uniquement en mode SHARED : la connexion imposée à tous.
+  connectionId  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  client     OAuthClient @relation(fields: [oauthClientId], references: [id], onDelete: Cascade)
+  owner      User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  connection Connection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  @@unique([oauthClientId, connectorId])
+  @@index([connectorId])
+  @@map("mcp_accesses")
+}
+
+/// Code d'autorisation à usage unique (durée de vie très courte).
+model OAuthGrant {
+  id                  String   @id @default(cuid())
+  codeHash            String   @unique
+  oauthClientId       String
+  userId              String
+  connectorId         String
+  /// Connexion retenue au moment du consentement (mode individuel).
+  connectionId        String?
+  redirectUri         String
+  codeChallenge       String
+  codeChallengeMethod String   @default("S256")
+  scopes              String[]
+  /// Indicateur de ressource RFC 8707, vérifié à l'échange.
+  resource            String?
+  expiresAt           DateTime
+  usedAt              DateTime?
+  createdAt           DateTime @default(now())
+
+  client     OAuthClient @relation(fields: [oauthClientId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  connection Connection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  @@index([expiresAt])
+  @@map("oauth_grants")
+}
+
+enum OAuthTokenType {
+  ACCESS
+  REFRESH
+}
+
+/// Jetons d'accès et de rafraîchissement, stockés hachés.
+model OAuthToken {
+  id            String         @id @default(cuid())
+  tokenHash     String         @unique
+  type          OAuthTokenType
+  oauthClientId String
+  userId        String
+  connectorId   String
+  connectionId  String?
+  scopes        String[]
+  resource      String?
+  /// Relie un jeton d'accès au jeton de rafraîchissement qui l'a produit,
+  /// afin de tout révoquer d'un bloc.
+  familyId      String
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  lastUsedAt    DateTime?
+  createdAt     DateTime       @default(now())
+
+  client OAuthClient @relation(fields: [oauthClientId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, connectorId])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("oauth_tokens")
 }

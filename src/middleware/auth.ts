@@ -1,127 +1,63 @@
-import { Request, Response, NextFunction } from 'express';
-import { AuthService } from '../services/auth.service.js';
+import type { Request, RequestHandler } from 'express';
+import { forbidden, unauthenticated } from '../core/errors.js';
+import { readSessionToken, resolveSession } from '../modules/auth/session.service.js';
 
-// Extension de l'interface Request pour incluer des données utilisateur personnalisées
-declare global {
-  namespace Express {
-    interface Request {
-      mcpUser?: {
-        userId: string;
-        email: string;
-        firstName?: string;
-        lastName?: string;
-      };
-    }
-  }
+async function attachSession(req: Request): Promise<void> {
+  if (req.currentUser) return;
+
+  const token = readSessionToken(req);
+  if (!token) return;
+
+  const session = await resolveSession(token);
+  if (!session) return;
+
+  req.currentUser = {
+    userId: session.userId,
+    sessionId: session.sessionId,
+    email: session.email,
+    role: session.role,
+  };
 }
 
-/**
- * Middleware d'authentification JWT
- */
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+/** Résout la session si un cookie/bearer est présent, sans jamais échouer. */
+export const optionalAuth: RequestHandler = async (req, _res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        error: 'Token d\'authentification requis',
-        code: 'MISSING_AUTH_TOKEN'
-      });
-    }
-
-    const token = authHeader.substring(7); // Remove "Bearer "
-    
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        error: 'Token manquant',
-        code: 'EMPTY_TOKEN'
-      });
-    }
-
-    // Vérifier le token
-    const decoded = AuthService.verifyToken(token);
-    
-    // Ajouter les informations utilisateur à la requête
-    req.mcpUser = {
-      userId: decoded.userId,
-      email: '', // Sera rempli si nécessaire
-    };
-
+    await attachSession(req);
     next();
   } catch (error) {
-    console.error('Erreur authentification:', error);
-    
-    if (error instanceof Error) {
-      if (error.message.includes('expired')) {
-        return res.status(401).json({
-          success: false,
-          error: 'Token expiré',
-          code: 'TOKEN_EXPIRED'
-        });
-      }
-      if (error.message.includes('invalid')) {
-        return res.status(401).json({
-          success: false,
-          error: 'Token invalide',
-          code: 'INVALID_TOKEN'
-        });
-      }
-    }
-    
-    return res.status(401).json({
-      success: false,
-      error: 'Erreur d\'authentification',
-      code: 'AUTH_ERROR'
-    });
+    next(error);
   }
-}
+};
 
-/**
- * Middleware pour vérifier les permissions d'admin
- */
-export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
+/** Exige une session valide. */
+export const requireAuth: RequestHandler = async (req, _res, next) => {
   try {
-    if (!req.mcpUser) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentification requise',
-        code: 'AUTH_REQUIRED'
-      });
+    await attachSession(req);
+    if (!req.currentUser) {
+      next(unauthenticated());
+      return;
     }
-
-    // Récupérer les informations complètes de l'utilisateur
-    const user = await AuthService.getUserById(req.mcpUser.userId);
-    
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Utilisateur non trouvé',
-        code: 'USER_NOT_FOUND'
-      });
-    }
-
-    // Vérifier si l'utilisateur est admin (vous devrez adapter selon votre logique)
-    const isAdmin = user.email === 'gregoire.chamorel@outlook.fr' || 
-                    user.email === 'admin@wesype.com' ||
-                    user.email === 'dev@wesype.com';
-
-    if (!isAdmin) {
-      return res.status(403).json({
-        success: false,
-        error: 'Permissions administrateur requises',
-        code: 'ADMIN_REQUIRED'
-      });
-    }
-
     next();
   } catch (error) {
-    console.error('Erreur vérification admin:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'Erreur interne',
-      code: 'INTERNAL_ERROR'
-    });
+    next(error);
   }
+};
+
+/** Exige le rôle ADMIN. Le rôle vit en base, pas dans une liste d'e-mails codée en dur. */
+export const requireAdmin: RequestHandler = (req, _res, next) => {
+  if (!req.currentUser) {
+    next(unauthenticated());
+    return;
+  }
+  if (req.currentUser.role !== 'ADMIN') {
+    next(forbidden('Droits administrateur requis'));
+    return;
+  }
+  next();
+};
+
+/** Raccourci typé pour les handlers placés derrière `requireAuth`. */
+export function auth(req: Request): Express.SessionUser {
+  if (!req.currentUser) throw unauthenticated();
+  return req.currentUser;
 }

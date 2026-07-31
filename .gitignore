@@ -1,40 +1,40 @@
-# Credentials et tokens
+# Dépendances
+node_modules/
+
+# Build
+dist/
+web/dist/
+*.tsbuildinfo
+
+# Environnement & secrets
+.env
+.env.*
+!.env.example
 credentials.json
 token.json
 tokens/
 *.token
+*.pem
 
-# Variables d'environnement
-.env
-.env.local
-.env.production
-
-# Dépendances
-node_modules/
-# dist/ - Commenté pour Railway deployment
+# Logs
 *.log
+npm-debug.log*
+
+# Tests
+coverage/
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Fichiers temporaires et de sauvegarde
-*.tmp
-*.backup
-*.old
-*.bak
-*~
-
-# Fichiers de compilation TypeScript inutiles
-dist/types/*.js
-dist/public/
-
-# Fichiers d'éditeur
+# Éditeurs
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# IDE
-.vscode/
-.idea/
+# Temporaires
+*.tmp
+*.bak
+*.old
+*~
