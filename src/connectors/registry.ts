@@ -248,9 +248,3 @@ export function describeCredentials(
     };
   });
 }
-
-/** Réinitialise le registre — utilisé par les tests uniquement. */
-export function resetRegistryForTests(): void {
-  registry.clear();
-  loaded = false;
-}

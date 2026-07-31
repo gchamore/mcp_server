@@ -14,7 +14,7 @@ const INTERVAL_MS = 60 * 60 * 1000; // toutes les heures
 
 let timer: NodeJS.Timeout | null = null;
 
-export async function runCleanup(): Promise<void> {
+async function runCleanup(): Promise<void> {
   const now = new Date();
   const invocationCutoff = new Date(
     now.getTime() - env.ttl.toolInvocationRetentionDays * 24 * 60 * 60 * 1000,

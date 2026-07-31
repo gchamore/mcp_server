@@ -149,10 +149,10 @@ function ConnectionCard({
   return (
     <article className="card stack">
       <div className="row row--between" style={{ alignItems: 'flex-start' }}>
-        <div className="row" style={{ gap: 'var(--space-3)', alignItems: 'flex-start' }}>
+        <div className="row" style={{ gap: 'var(--s3)', alignItems: 'flex-start' }}>
           <img className="connector-icon" src={connection.connector.icon} alt="" />
           <div className="stack stack--tight">
-            <div className="row" style={{ gap: 'var(--space-2)' }}>
+            <div className="row" style={{ gap: 'var(--s2)' }}>
               <strong>{connection.connector.name}</strong>
               <span className="text-muted">·</span>
               <span className="text-muted">{connection.label}</span>
@@ -248,7 +248,7 @@ function ConnectionCard({
         <summary className="text-muted" style={{ cursor: 'pointer' }}>
           Identifiants enregistrés et outils disponibles
         </summary>
-        <div className="stack" style={{ marginTop: 'var(--space-3)' }}>
+        <div className="stack" style={{ marginTop: 'var(--s3)' }}>
           <ul className="stack stack--tight" style={{ listStyle: 'none', padding: 0 }}>
             {connection.credentials.map((credential) => (
               <li key={credential.key} className="row row--between">

@@ -19,7 +19,7 @@ export function Layout() {
             <span className="brand__mark" aria-hidden="true">
               W
             </span>
-            MCP&nbsp;Wesype
+            Wesype
           </Link>
 
           {user && (
@@ -28,7 +28,7 @@ export function Layout() {
                 Catalogue
               </NavLink>
               <NavLink to="/connexions" className="nav-link">
-                Mes connexions
+                Connexions
               </NavLink>
               {isAdmin && (
                 <NavLink to="/administration" className="nav-link">
@@ -41,29 +41,28 @@ export function Layout() {
           <div className="topbar__spacer" />
 
           {user ? (
-            <div className="row">
-              <Link to="/parametres" className="nav-link" title={user.email}>
-                <span className="row" style={{ gap: 'var(--space-2)' }}>
-                  <span
-                    className="brand__mark"
-                    style={{ background: 'var(--bg-sunken)', color: 'var(--text-muted)' }}
-                    aria-hidden="true"
-                  >
-                    {initials(user.firstName, user.lastName, user.email)}
-                  </span>
-                  <span className="truncate" style={{ maxWidth: '12ch' }}>
-                    {user.firstName ?? user.email}
-                  </span>
+            <div className="row" style={{ gap: 'var(--s2)' }}>
+              <Link
+                to="/parametres"
+                className="row"
+                title={user.email}
+                style={{ gap: 'var(--s2)' }}
+              >
+                <span className="brand__mark" aria-hidden="true">
+                  {initials(user.firstName, user.lastName, user.email)}
+                </span>
+                <span className="truncate text-sm text-muted" style={{ maxWidth: '14ch' }}>
+                  {user.firstName ?? user.email}
                 </span>
               </Link>
               <Button size="sm" variant="ghost" onClick={() => void logout()}>
-                Déconnexion
+                Quitter
               </Button>
             </div>
           ) : (
-            <div className="row">
+            <div className="row" style={{ gap: 'var(--s2)' }}>
               <Link to="/connexion" className="btn btn--ghost btn--sm">
-                Se connecter
+                Connexion
               </Link>
               <Link to="/inscription" className="btn btn--primary btn--sm">
                 Créer un compte

@@ -46,10 +46,3 @@ export const logger = pino({
 });
 
 export type Logger = typeof logger;
-
-/** Masque un secret pour l'affichage : "sk_live_abcd1234" → "sk_l…1234". */
-export function maskSecret(value: string | null | undefined): string {
-  if (!value) return '';
-  if (value.length <= 8) return '…';
-  return `${value.slice(0, 4)}…${value.slice(-4)}`;
-}

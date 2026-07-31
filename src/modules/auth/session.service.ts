@@ -13,7 +13,7 @@ import { prisma } from '../../core/prisma.js';
  * Le coût est une requête indexée par appel authentifié.
  */
 
-export const SESSION_COOKIE = 'wsp_session';
+const SESSION_COOKIE = 'wsp_session';
 
 const SESSION_TTL_MS = env.ttl.sessionDays * 24 * 60 * 60 * 1000;
 /** On ne réécrit `lastSeenAt` que toutes les 15 min, pour éviter une écriture par requête. */

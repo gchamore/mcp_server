@@ -67,7 +67,7 @@ function requireOAuthConfig(connector: AnyConnector) {
   return { config, app };
 }
 
-export function connectorRedirectUri(connectorId: string): string {
+function connectorRedirectUri(connectorId: string): string {
   return `${env.baseUrl}/api/connections/oauth/${connectorId}/callback`;
 }
 

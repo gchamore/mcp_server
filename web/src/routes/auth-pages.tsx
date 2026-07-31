@@ -23,7 +23,7 @@ function AuthShell({
     <div className="auth-layout">
       <div className="auth-card stack">
         <div className="stack stack--tight">
-          <Link to="/" className="brand" style={{ marginBottom: 'var(--space-2)' }}>
+          <Link to="/" className="brand" style={{ marginBottom: 'var(--s2)' }}>
             <span className="brand__mark" aria-hidden="true">
               W
             </span>
@@ -217,7 +217,7 @@ export function Register() {
       <GoogleButton label="S’inscrire avec Google" />
 
       <form className="stack" onSubmit={submit} noValidate>
-        <div className="row" style={{ gap: 'var(--space-3)', flexWrap: 'nowrap' }}>
+        <div className="row" style={{ gap: 'var(--s3)', flexWrap: 'nowrap' }}>
           <Field label="Prénom">
             {(props) => (
               <Input

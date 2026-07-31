@@ -25,7 +25,7 @@ export type ResolvedEndpoint = {
   credentials: Credentials;
 };
 
-export function buildEndpointUrl(connectorId: string, token: string): string {
+function buildEndpointUrl(connectorId: string, token: string): string {
   return `${env.baseUrl}/mcp/${connectorId}/${token}`;
 }
 
@@ -138,11 +138,4 @@ export function recordToolInvocation(input: {
     .catch((error: unknown) => {
       logger.warn({ err: error }, "Journalisation d'un appel d'outil échouée");
     });
-}
-
-export async function revokeEndpoint(endpointId: string): Promise<void> {
-  await prisma.mcpEndpoint.update({
-    where: { id: endpointId },
-    data: { revokedAt: new Date() },
-  });
 }

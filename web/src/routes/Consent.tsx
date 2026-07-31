@@ -110,17 +110,16 @@ export function Consent() {
               <button
                 key={entry.id}
                 type="button"
-                className="card card--interactive"
-                style={{ padding: 'var(--space-3)' }}
+                className="option"
                 onClick={() => setPickedConnectorId(entry.id)}
               >
-                <div className="row" style={{ gap: 'var(--space-3)' }}>
+                <span className="row" style={{ gap: 'var(--s3)', flexWrap: 'nowrap' }}>
                   <img className="connector-icon" src={entry.icon} alt="" />
-                  <div className="stack stack--tight">
-                    <strong className="text-sm">{entry.name}</strong>
-                    <span className="text-xs text-muted">{entry.tagline}</span>
-                  </div>
-                </div>
+                  <span className="stack stack--tight">
+                    <span className="option__title">{entry.name}</span>
+                    <span className="option__desc">{entry.tagline}</span>
+                  </span>
+                </span>
               </button>
             ))}
           </div>
@@ -163,7 +162,7 @@ export function Consent() {
   return (
     <Shell>
       <div className="stack">
-        <div className="row" style={{ gap: 'var(--space-3)', alignItems: 'flex-start' }}>
+        <div className="row" style={{ gap: 'var(--s3)', alignItems: 'flex-start' }}>
           <img className="connector-icon connector-icon--lg" src={connector.icon} alt="" />
           <div className="stack stack--tight">
             <h1 style={{ fontSize: '1.35rem' }}>
@@ -310,7 +309,7 @@ export function Consent() {
             <summary className="text-muted" style={{ cursor: 'pointer' }}>
               Autorisations demandées à {connector.name}
             </summary>
-            <ul className="text-xs mono" style={{ marginTop: 'var(--space-2)' }}>
+            <ul className="text-xs mono" style={{ marginTop: 'var(--s2)' }}>
               {data.scopes.map((scope) => (
                 <li key={scope}>{scope}</li>
               ))}
@@ -360,22 +359,14 @@ function ModeOption({
   description: string;
 }) {
   return (
-    <button
-      type="button"
-      className="card card--interactive"
-      aria-pressed={selected}
-      onClick={onSelect}
-      style={{
-        padding: 'var(--space-3)',
-        borderColor: selected ? 'var(--accent)' : 'var(--border)',
-        background: selected ? 'var(--accent-soft)' : 'var(--bg-raised)',
-      }}
-    >
-      <div className="row" style={{ gap: 'var(--space-2)' }}>
-        <span aria-hidden="true">{selected ? '◉' : '○'}</span>
-        <strong className="text-sm">{title}</strong>
-      </div>
-      <span className="text-xs text-muted">{description}</span>
+    <button type="button" className="option" aria-pressed={selected} onClick={onSelect}>
+      <span className="option__title">
+        <span className="option__marker" aria-hidden="true">
+          {selected ? '◉' : '○'}
+        </span>
+        {title}
+      </span>
+      <span className="option__desc">{description}</span>
     </button>
   );
 }

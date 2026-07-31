@@ -61,12 +61,3 @@ export function initials(firstName?: string | null, lastName?: string | null, em
   if (first || last) return `${first}${last}`.toUpperCase();
   return (email?.[0] ?? '?').toUpperCase();
 }
-
-export function displayName(user: {
-  firstName: string | null;
-  lastName: string | null;
-  email: string;
-}): string {
-  const full = [user.firstName, user.lastName].filter(Boolean).join(' ');
-  return full || user.email;
-}

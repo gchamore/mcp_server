@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import type { Response } from 'express';
 import type {
   AuthorizationParams,
@@ -83,7 +82,7 @@ function safePath(value: string): string | null {
   }
 }
 
-export function encodePendingAuthorization(pending: PendingAuthorization): string {
+function encodePendingAuthorization(pending: PendingAuthorization): string {
   return encryptJson(pending);
 }
 
@@ -381,8 +380,3 @@ function redirectWithError(
 
 /** Durée de vie d'un code d'autorisation, exposée pour le service de consentement. */
 export const authorizationCodeTtlMs = AUTHORIZATION_CODE_TTL_MS;
-
-/** Empreinte PKCE, utilisée par les tests. */
-export function pkceChallenge(verifier: string): string {
-  return createHash('sha256').update(verifier).digest('base64url');
-}

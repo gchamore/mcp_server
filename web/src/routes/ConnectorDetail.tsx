@@ -97,10 +97,10 @@ export function ConnectorDetail() {
       </nav>
 
       <header className="row row--between" style={{ alignItems: 'flex-start' }}>
-        <div className="row" style={{ gap: 'var(--space-4)', alignItems: 'flex-start' }}>
+        <div className="row" style={{ gap: 'var(--s4)', alignItems: 'flex-start' }}>
           <img className="connector-icon connector-icon--lg" src={connector.icon} alt="" />
           <div className="stack stack--tight">
-            <div className="row" style={{ gap: 'var(--space-2)' }}>
+            <div className="row" style={{ gap: 'var(--s2)' }}>
               <h1 style={{ fontSize: '1.75rem' }}>{connector.name}</h1>
               <ConnectorStatusBadge status={connector.status} />
             </div>
@@ -199,7 +199,7 @@ export function ConnectorDetail() {
           {connector.tools.map((tool) => (
             <li key={tool.name} className="tool-item">
               <div className="stack stack--tight" style={{ flex: 1 }}>
-                <div className="row" style={{ gap: 'var(--space-2)' }}>
+                <div className="row" style={{ gap: 'var(--s2)' }}>
                   <strong>{tool.title}</strong>
                   {tool.readOnly ? (
                     <Badge tone="neutral">Lecture</Badge>
