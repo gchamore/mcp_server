@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import { sign, verifySignature } from '../../core/crypto.js';
 import { env } from '../../core/env.js';
 import { badRequest, featureDisabled, upstreamError } from '../../core/errors.js';
+import { assertCookieFits } from '../../core/limits.js';
 
 /**
  * OAuth 2.0 Google — implémentation directe, sans Passport ni session serveur.
@@ -52,8 +53,10 @@ export function beginGoogleAuth(res: Response, returnTo: string | undefined): st
     expiresAt: Date.now() + env.ttl.oauthStateMinutes * 60_000,
   });
   const encoded = Buffer.from(payload).toString('base64url');
+  const cookie = `${encoded}.${sign(encoded)}`;
+  assertCookieFits(STATE_COOKIE, cookie);
 
-  res.cookie(STATE_COOKIE, `${encoded}.${sign(encoded)}`, {
+  res.cookie(STATE_COOKIE, cookie, {
     httpOnly: true,
     secure: env.isProduction,
     sameSite: 'lax',

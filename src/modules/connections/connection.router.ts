@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { recordAudit } from '../../core/audit.js';
+import { MAX_RETURN_TO } from '../../core/limits.js';
 import { auth, requireAuth } from '../../middleware/auth.js';
 import { sensitiveLimiter } from '../../middleware/rate-limit.js';
 import { getBody, getParams, getQuery, validate } from '../../middleware/validate.js';
@@ -26,7 +27,7 @@ export const connectionRouter: Router = Router();
 
 const oauthStartSchema = z.object({
   label: z.string().trim().min(1).max(60).default('Compte principal'),
-  returnTo: z.string().max(512).default('/connexions'),
+  returnTo: z.string().max(MAX_RETURN_TO).default('/connexions'),
 });
 
 const oauthCallbackSchema = z.object({

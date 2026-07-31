@@ -7,6 +7,7 @@ import { connectorOAuthApp, env } from '../../core/env.js';
 import { badRequest, featureDisabled, upstreamError } from '../../core/errors.js';
 import { logger } from '../../core/logger.js';
 import { prisma } from '../../core/prisma.js';
+import { assertCookieFits } from '../../core/limits.js';
 
 /**
  * ===========================================================================
@@ -93,7 +94,10 @@ export function startConnectorOAuth(
   };
 
   const encoded = encryptJson(state);
-  res.cookie(STATE_COOKIE, `${encoded}.${sign(encoded)}`, {
+  const cookie = `${encoded}.${sign(encoded)}`;
+  assertCookieFits(STATE_COOKIE, cookie);
+
+  res.cookie(STATE_COOKIE, cookie, {
     httpOnly: true,
     secure: env.isProduction,
     sameSite: 'lax',

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MAX_RETURN_TO } from '../../core/limits.js';
 
 /**
  * Schémas d'entrée de l'authentification. La politique de mot de passe est
@@ -56,7 +57,9 @@ export const googleCallbackSchema = z.object({
   error: z.string().optional(),
 });
 
-export const googleStartSchema = z.object({ returnTo: z.string().max(512).optional() });
+export const googleStartSchema = z.object({
+  returnTo: z.string().max(MAX_RETURN_TO).optional(),
+});
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
