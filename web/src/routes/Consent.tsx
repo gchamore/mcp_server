@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api, ApiError, connectorOAuthUrl } from '../lib/api';
@@ -6,21 +6,41 @@ import { useAuth } from '../state/auth';
 import { useToast } from '../components/Toast';
 import { Alert, Badge, Button, Spinner } from '../components/ui';
 import { CredentialForm } from '../components/CredentialForm';
-import type { McpAccessMode } from '../lib/types';
+import { IconArrowRight, IconCheck } from '../components/icons';
 
 /**
  * ===========================================================================
  *  Écran de consentement MCP
  * ===========================================================================
  *
- * C'est l'unique page que voit l'utilisateur lorsqu'il colle une URL MCP dans
- * Claude, Dust ou ChatGPT. Le client IA a déjà tout découvert et s'est
- * enregistré tout seul ; il ne reste qu'à dire oui, et à indiquer quel compte
- * utiliser.
+ * L'unique page que voit l'utilisateur lorsqu'il colle une URL MCP dans Claude,
+ * Dust ou ChatGPT. Le client IA a déjà tout découvert et s'est enregistré tout
+ * seul ; il ne reste qu'à dire oui.
  *
- * Quand le connecteur repose sur OAuth (Gmail…) et que l'utilisateur n'a pas
- * encore raccordé son compte, on enchaîne directement sur le fournisseur puis
- * on revient ici : de son point de vue, c'est un seul parcours.
+ * ---------------------------------------------------------------------------
+ * Une seule décision
+ * ---------------------------------------------------------------------------
+ *
+ * Cet écran demandait auparavant « compte individuel ou partagé ». C'était une
+ * question de trop : les plateformes IA la posent déjà au moment où l'on colle
+ * l'URL — Dust parle de « Personal » et « Shared credentials » — et en tirent
+ * elles-mêmes les conséquences. Rien n'empêchait de répondre l'inverse ici, et
+ * les deux modèles se contredisaient en silence.
+ *
+ * Il ne reste donc qu'une chose à faire : autoriser, ou refuser.
+ *
+ * ---------------------------------------------------------------------------
+ * Deux situations, deux formes
+ * ---------------------------------------------------------------------------
+ *
+ * 1. Aucun compte raccordé, connecteur OAuth → le bouton principal *est* le
+ *    départ vers le fournisseur. On voit qui demande quoi, on clique une fois,
+ *    et Google prend le relais. Au retour, l'autorisation est accordée sans
+ *    redemander : le clic initial valait consentement.
+ *
+ * 2. Un compte déjà raccordé → un simple « Autoriser ». Le choix du compte
+ *    n'apparaît que s'il y en a plusieurs — poser une question à une seule
+ *    réponse possible n'informe personne.
  */
 export function Consent() {
   const [searchParams] = useSearchParams();
@@ -28,16 +48,6 @@ export function Consent() {
   const { user, isLoading: authLoading } = useAuth();
   const toast = useToast();
 
-  /**
-   * Choix de l'utilisateur, `null` tant qu'il n'a rien touché.
-   *
-   * Le mode et le compte effectifs sont *déduits* plus bas : ce que
-   * l'utilisateur a choisi s'il a choisi, sinon ce que le serveur impose. Les
-   * recopier dans un état via un effet, comme avant, produisait un rendu avec
-   * les mauvaises valeurs avant de se corriger au suivant — visible sous forme
-   * d'un bouton qui change tout seul juste après l'affichage.
-   */
-  const [modeChoice, setModeChoice] = useState<McpAccessMode | null>(null);
   const [connectionChoice, setConnectionChoice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showCredentialForm, setShowCredentialForm] = useState(false);
@@ -54,9 +64,61 @@ export function Consent() {
     retry: false,
   });
 
-  const mode: McpAccessMode = modeChoice ?? data?.establishedMode ?? 'INDIVIDUAL';
+  /** Compte retenu : celui choisi, celui d'où l'on revient, sinon le premier. */
   const connectionId =
     connectionChoice ?? searchParams.get('compte') ?? data?.connections[0]?.id ?? '';
+
+  const submit = async (decision: 'approve' | 'deny') => {
+    setSubmitting(true);
+    try {
+      const result =
+        decision === 'deny'
+          ? await api.oauth.deny(demande)
+          : await api.oauth.approve({
+              demande,
+              ...(connectionId ? { connectionId } : {}),
+              ...(pickedConnectorId ? { connectorId: pickedConnectorId } : {}),
+            });
+
+      // Retour vers le client IA : navigation complète, ce n'est pas notre domaine.
+      window.location.href = result.redirectTo;
+    } catch (caught) {
+      toast.error(caught instanceof ApiError ? caught.message : 'Autorisation impossible.');
+      setSubmitting(false);
+    }
+  };
+
+  /**
+   * Retour du fournisseur : on termine sans redemander.
+   *
+   * `compte` n'est présent que dans la redirection posée par notre propre
+   * rappel OAuth, après que l'utilisateur a explicitement cliqué pour raccorder
+   * son compte depuis cet écran. Ce clic valait consentement ; le lui redemander
+   * ne lui apprendrait rien et ajouterait un écran à un parcours qui doit en
+   * compter le moins possible.
+   *
+   * Le drapeau empêche de reboucler : sans lui, un échec d'approbation
+   * relancerait la tentative à chaque rendu.
+   */
+  const autoApproved = useRef(false);
+  const revenantDuFournisseur = Boolean(searchParams.get('compte'));
+
+  useEffect(() => {
+    if (autoApproved.current || !revenantDuFournisseur || !data?.connector || !connectionId) return;
+    autoApproved.current = true;
+    void submit('approve');
+    // `submit` est recréé à chaque rendu ; l'inclure relancerait l'effet en boucle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revenantDuFournisseur, data?.connector, connectionId]);
+
+  const submitDeny = async () => {
+    try {
+      const result = await api.oauth.deny(demande);
+      window.location.href = result.redirectTo;
+    } catch {
+      toast.error('Impossible d’annuler la demande.');
+    }
+  };
 
   if (!demande) {
     return (
@@ -68,7 +130,13 @@ export function Consent() {
     );
   }
 
-  if (authLoading) return <Shell><Spinner /></Shell>;
+  if (authLoading) {
+    return (
+      <Shell>
+        <Spinner />
+      </Shell>
+    );
+  }
 
   // Non connecté : on passe par la page de connexion et on revient ici.
   if (!user) {
@@ -76,26 +144,25 @@ export function Consent() {
     return <Navigate to={`/connexion?returnTo=${encodeURIComponent(returnTo)}`} replace />;
   }
 
-  if (isLoading) return <Shell><Spinner /></Shell>;
+  if (isLoading) {
+    return (
+      <Shell>
+        <Spinner />
+      </Shell>
+    );
+  }
 
   if (error || !data) {
     return (
       <Shell>
         <Alert tone="danger">
-          {error instanceof ApiError ? error.message : 'Demande d’autorisation illisible ou expirée.'}
+          {error instanceof ApiError
+            ? error.message
+            : 'Demande d’autorisation illisible ou expirée.'}
         </Alert>
       </Shell>
     );
   }
-
-  const submitDeny = async () => {
-    try {
-      const result = await api.oauth.deny(demande);
-      window.location.href = result.redirectTo;
-    } catch {
-      toast.error('Impossible d’annuler la demande.');
-    }
-  };
 
   // Le client n'a pas dit quel service il veut : on le demande.
   if (!data.connector) {
@@ -140,29 +207,23 @@ export function Consent() {
   }
 
   const { connector } = data;
-  const sharedLocked = data.establishedMode === 'SHARED' && !data.isOwner;
-  const needsAccount = !sharedLocked && !connectionId;
+  const isOAuthConnector = connector.auth.type === 'oauth2';
+  const hasAccount = Boolean(connectionId);
 
-  const submit = async (decision: 'approve' | 'deny') => {
-    setSubmitting(true);
-    try {
-      const result =
-        decision === 'deny'
-          ? await api.oauth.deny(demande)
-          : await api.oauth.approve({
-              demande,
-              ...(data.establishedMode && !data.isOwner ? {} : { mode }),
-              ...(connectionId ? { connectionId } : {}),
-              ...(pickedConnectorId ? { connectorId: pickedConnectorId } : {}),
-            });
-
-      // Retour vers le client IA : navigation complète, ce n'est pas notre domaine.
-      window.location.href = result.redirectTo;
-    } catch (caught) {
-      toast.error(caught instanceof ApiError ? caught.message : 'Autorisation impossible.');
-      setSubmitting(false);
-    }
-  };
+  // Au retour du fournisseur, l'approbation part toute seule : on montre une
+  // attente plutôt qu'un écran de décision qui va disparaître aussitôt.
+  if (revenantDuFournisseur && hasAccount) {
+    return (
+      <Shell>
+        <div className="stack" style={{ alignItems: 'center', textAlign: 'center' }}>
+          <Spinner label="Finalisation de l’autorisation…" />
+          <p className="text-sm text-muted">
+            Compte raccordé. Retour vers {data.client.name}…
+          </p>
+        </div>
+      </Shell>
+    );
+  }
 
   return (
     <Shell>
@@ -170,9 +231,7 @@ export function Consent() {
         <div className="row" style={{ gap: 'var(--s3)', alignItems: 'flex-start' }}>
           <img className="connector-icon connector-icon--lg" src={connector.icon} alt="" />
           <div className="stack stack--tight">
-            <h1 style={{ fontSize: '1.35rem' }}>
-              Autoriser {data.client.name}
-            </h1>
+            <h1 style={{ fontSize: '1.35rem' }}>Autoriser {data.client.name}</h1>
             <p className="text-muted text-sm">
               <strong>{data.client.name}</strong> demande l’accès à vos outils{' '}
               <strong>{connector.name}</strong> via MCP Wesype.
@@ -185,8 +244,7 @@ export function Consent() {
           <ul className="stack stack--tight" style={{ paddingInlineStart: '1.1rem', margin: 0 }}>
             {connector.tools.slice(0, 6).map((tool) => (
               <li key={tool.name} className="text-sm">
-                {tool.title}{' '}
-                {!tool.readOnly && <Badge tone="warning">écriture</Badge>}
+                {tool.title} {!tool.readOnly && <Badge tone="warning">écriture</Badge>}
               </li>
             ))}
           </ul>
@@ -204,81 +262,44 @@ export function Consent() {
           </Alert>
         )}
 
-        {/* Choix du mode : uniquement à la première configuration, ou par son auteur. */}
-        {data.connectorAvailable && (data.establishedMode === null || data.isOwner) ? (
-          <section className="stack stack--tight">
-            <strong className="text-sm">Qui utilisera ce compte ?</strong>
-            <ModeOption
-              selected={mode === 'INDIVIDUAL'}
-              onSelect={() => setModeChoice('INDIVIDUAL')}
-              title="Compte individuel"
-              description="Chaque personne connecte son propre compte. Les actions sont réalisées en son nom."
-            />
-            <ModeOption
-              selected={mode === 'SHARED'}
-              onSelect={() => setModeChoice('SHARED')}
-              title="Compte partagé"
-              description="Tout le monde passe par le compte que vous choisissez ici. Pratique pour une boîte générique, mais toutes les actions lui seront attribuées."
-            />
-          </section>
-        ) : (
-          data.establishedMode && (
-            <Alert tone="info">
-              Ce serveur a été configuré en mode{' '}
-              <strong>
-                {data.establishedMode === 'SHARED' ? 'compte partagé' : 'compte individuel'}
-              </strong>{' '}
-              par la personne qui l’a mis en place.
-            </Alert>
-          )
-        )}
-
-        {/* Sélection du compte à utiliser. */}
-        {data.connectorAvailable && !sharedLocked && (
+        {/* Choix du compte : seulement s'il y en a plusieurs. */}
+        {data.connectorAvailable && data.connections.length > 1 && (
           <section className="stack stack--tight">
             <strong className="text-sm">Compte {connector.name} à utiliser</strong>
+            {data.connections.map((connection) => (
+              <ChoixCompte
+                key={connection.id}
+                selected={connectionId === connection.id}
+                onSelect={() => setConnectionChoice(connection.id)}
+                title={connection.label}
+                description={connection.accountLabel ?? 'Compte raccordé'}
+              />
+            ))}
+          </section>
+        )}
 
-            {data.connections.length > 0 && (
-              <div className="stack stack--tight">
-                {data.connections.map((connection) => (
-                  <ModeOption
-                    key={connection.id}
-                    selected={connectionId === connection.id}
-                    onSelect={() => setConnectionChoice(connection.id)}
-                    title={connection.label}
-                    description={connection.accountLabel ?? 'Compte raccordé'}
-                  />
-                ))}
-              </div>
-            )}
+        {/* Un seul compte : on l'annonce, sans rien demander. */}
+        {data.connectorAvailable && data.connections.length === 1 && (
+          <p className="text-sm text-muted row" style={{ gap: 'var(--s2)' }}>
+            <IconCheck size={14} />
+            Compte utilisé : <strong>{data.connections[0]?.accountLabel ?? data.connections[0]?.label}</strong>
+          </p>
+        )}
 
-            {/* Chaînage : connecteur OAuth non encore raccordé. */}
-            {connector.auth.type === 'oauth2' ? (
-              <a
-                className="btn btn--secondary"
-                href={connectorOAuthUrl(connector.id, {
-                  returnTo: `/autoriser?demande=${encodeURIComponent(demande)}`,
-                  label: data.connections.length === 0 ? 'Compte principal' : `Compte ${data.connections.length + 1}`,
-                })}
-              >
-                {data.connections.length === 0
-                  ? `Connecter mon compte ${connector.name}`
-                  : `Connecter un autre compte ${connector.name}`}
-              </a>
-            ) : showCredentialForm ? (
+        {/* Connecteur à clé API sans compte : le formulaire, sur place. */}
+        {data.connectorAvailable && !isOAuthConnector && data.connections.length === 0 && (
+          <section className="stack stack--tight">
+            {showCredentialForm ? (
               <div className="card">
                 <CredentialForm
                   connector={connector}
-                  submitLabel="Enregistrer ce compte"
+                  submitLabel="Enregistrer et autoriser"
                   onCancel={() => setShowCredentialForm(false)}
                   onSubmit={async (credentials) => {
                     try {
                       const created = await api.connections.create({
                         connectorId: connector.id,
-                        label:
-                          data.connections.length === 0
-                            ? 'Compte principal'
-                            : `Compte ${data.connections.length + 1}`,
+                        label: 'Compte principal',
                         credentials,
                       });
                       setConnectionChoice(created.connection.id);
@@ -294,19 +315,10 @@ export function Consent() {
               </div>
             ) : (
               <Button variant="secondary" onClick={() => setShowCredentialForm(true)}>
-                {data.connections.length === 0
-                  ? `Ajouter ma clé API ${connector.name}`
-                  : 'Ajouter un autre compte'}
+                Renseigner ma clé API {connector.name}
               </Button>
             )}
           </section>
-        )}
-
-        {sharedLocked && data.sharedConnection && (
-          <Alert tone="info">
-            Vous utiliserez le compte partagé <strong>{data.sharedConnection.label}</strong>
-            {data.sharedConnection.accountLabel ? ` (${data.sharedConnection.accountLabel})` : ''}.
-          </Alert>
         )}
 
         {data.scopes.length > 0 && (
@@ -332,27 +344,55 @@ export function Consent() {
           <Button variant="ghost" onClick={() => void submit('deny')} disabled={submitting}>
             Refuser
           </Button>
-          <Button
-            variant="primary"
-            loading={submitting}
-            disabled={!data.connectorAvailable || needsAccount}
-            onClick={() => void submit('approve')}
-          >
-            Autoriser
-          </Button>
+
+          {/*
+            Aucun compte raccordé sur un connecteur OAuth : l'action principale
+            part directement chez le fournisseur. Pas de bouton « Autoriser »
+            grisé accompagné d'un message expliquant pourquoi — l'écran indique
+            la seule chose à faire.
+          */}
+          {data.connectorAvailable && isOAuthConnector && !hasAccount ? (
+            <a
+              className="btn btn--primary"
+              href={connectorOAuthUrl(connector.id, {
+                returnTo: `/autoriser?demande=${encodeURIComponent(demande)}`,
+                label: 'Compte principal',
+              })}
+            >
+              Continuer avec {connector.name}
+              <IconArrowRight size={15} />
+            </a>
+          ) : (
+            <Button
+              variant="primary"
+              loading={submitting}
+              disabled={!data.connectorAvailable || !hasAccount}
+              onClick={() => void submit('approve')}
+            >
+              Autoriser
+            </Button>
+          )}
         </div>
 
-        {needsAccount && data.connectorAvailable && (
-          <p className="text-xs text-muted" style={{ textAlign: 'right' }}>
-            Raccordez d’abord un compte {connector.name} pour pouvoir autoriser.
-          </p>
+        {/* Raccorder un compte supplémentaire : action secondaire, discrète. */}
+        {data.connectorAvailable && isOAuthConnector && hasAccount && (
+          <a
+            className="text-xs text-muted link-sweep"
+            style={{ alignSelf: 'flex-end' }}
+            href={connectorOAuthUrl(connector.id, {
+              returnTo: `/autoriser?demande=${encodeURIComponent(demande)}`,
+              label: `Compte ${data.connections.length + 1}`,
+            })}
+          >
+            Utiliser un autre compte {connector.name}
+          </a>
         )}
       </div>
     </Shell>
   );
 }
 
-function ModeOption({
+function ChoixCompte({
   selected,
   onSelect,
   title,

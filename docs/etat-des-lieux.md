@@ -95,7 +95,7 @@ Utilisateur
 | Transport MCP conforme (Streamable HTTP, SDK officiel) | ✅ |
 | **Serveur d'autorisation OAuth 2.1** : découverte, enregistrement dynamique, PKCE, consentement | ✅ |
 | **Connecteurs OAuth** : contrat, rafraîchissement automatique, révocation propre | ✅ |
-| **Modes individuel / partagé** par couple (client MCP, connecteur) | ✅ |
+| **Individuel / partagé** délégué à la plateforme IA, qui le gère déjà | ✅ |
 | Administration : vue d'ensemble, comptes, statistiques par outil | ✅ |
 | Journal d'audit, purge périodique | ✅ |
 | 3 connecteurs (Axonaut, Brevo, Gmail), 21 outils | ✅ |
@@ -199,7 +199,7 @@ depuis le connecteur.
 | Étape | Contenu | Statut |
 |---|---|---|
 | ~~OAuth2 pour les connecteurs~~ | Contrat `auth.type: 'oauth2'`, rafraîchissement automatique, connecteur Gmail | ✅ fait |
-| ~~Autorisation MCP native (OAuth 2.1)~~ | Découverte, enregistrement dynamique, consentement, modes individuel/partagé | ✅ fait |
+| ~~Autorisation MCP native (OAuth 2.1)~~ | Découverte, enregistrement dynamique, consentement, les trois modes de Dust | ✅ fait |
 | 1 | Google Cloud : activer l'API Gmail, déclarer les scopes et l'URI de redirection | ⏳ à faire chez Google, hors code |
 | 2 | Générateur de connecteurs depuis OpenAPI ([l'étude](generation-de-connecteurs.md)) | Le multiplicateur du catalogue : 1–2 jours → 2–4 h par connecteur |
 | 3 | Intégration continue + base éphémère | À faire avant que le catalogue grossisse |

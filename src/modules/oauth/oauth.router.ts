@@ -26,7 +26,6 @@ const describeSchema = demandeSchema.extend({
 
 const approveSchema = z.object({
   demande: z.string().min(20).max(4000),
-  mode: z.enum(['INDIVIDUAL', 'SHARED']).optional(),
   connectionId: z.string().min(1).max(40).optional(),
   connectorId: z.string().min(1).max(40).optional(),
 });
@@ -56,7 +55,6 @@ oauthRouter.post(
     const pending = decodePendingAuthorization(input.demande);
 
     const redirectTo = await approveAuthorization(pending, userId, {
-      ...(input.mode ? { mode: input.mode } : {}),
       ...(input.connectionId ? { connectionId: input.connectionId } : {}),
       ...(input.connectorId ? { connectorId: input.connectorId } : {}),
     });
@@ -68,7 +66,7 @@ oauthRouter.post(
       ...(pending.connectorId ?? input.connectorId
         ? { targetId: (pending.connectorId ?? input.connectorId) as string }
         : {}),
-      metadata: { clientId: pending.clientId, mode: input.mode ?? null },
+      metadata: { clientId: pending.clientId, connectionId: input.connectionId ?? null },
     });
 
     res.json({ redirectTo });

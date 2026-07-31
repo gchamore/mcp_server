@@ -87,7 +87,7 @@ web/                     Interface React + Vite (SPA)
 | Document | Contenu |
 |---|---|
 | [Ajouter un connecteur](docs/ajouter-un-connecteur.md) | La procédure : un dossier, un fichier, une ligne |
-| [Autorisation OAuth](docs/oauth.md) | Les deux couches OAuth, modes individuel/partagé, mise en service |
+| [Autorisation OAuth](docs/oauth.md) | Les deux couches OAuth, les trois modes de Dust, mise en service |
 | [État des lieux et feuille de route](docs/etat-des-lieux.md) | Ce qui est en place, ce qui manque pour la marketplace |
 | [Générer des connecteurs](docs/generation-de-connecteurs.md) | Étude : génération déterministe depuis OpenAPI |
 

@@ -159,23 +159,49 @@ lieu de faire échouer le démarrage.
 
 ---
 
-## Modes d'accès : individuel ou partagé
+## Individuel ou partagé : ce n'est pas notre question
 
-Le choix est fait à la **première** configuration d'un couple
-(client MCP, connecteur), puis s'impose à tout le monde — pour que le
-comportement reste prévisible dans une équipe. Seule la personne qui a configuré
-peut en changer.
+L'écran de consentement posait autrefois la question. Elle a été retirée, parce
+que les plateformes IA la posent **déjà** au moment où l'on colle l'URL, et en
+tirent elles-mêmes les conséquences.
 
-| Mode | Résolution de la connexion | Quand l'utiliser |
+[Dust](https://docs.dust.tt/docs/personal-vs-workspace-credentials-for-tools-mcp-servers)
+distingue ainsi *Personal credentials* et *Shared credentials* :
+
+| Choix côté Dust | Ce que nous voyons |
+|---|---|
+| **Shared** | Un seul parcours d'autorisation, fait par l'administrateur. Son jeton est ensuite réutilisé pour tout l'espace de travail. |
+| **Personal** | L'administrateur en fait un, puis **chaque** utilisateur fait le sien à sa première utilisation. |
+
+La distinction se réduit donc, de notre côté, à un simple **nombre de parcours
+d'autorisation**. Chaque jeton que nous émettons porte déjà un utilisateur et une
+connexion : les deux comportements en découlent sans qu'on ait à les nommer.
+
+Reposer la question était au mieux redondant, au pire contradictoire — rien
+n'empêchait de répondre « partagé » chez nous après avoir choisi « personnel »
+dans Dust, et les deux modèles se seraient contredits en silence. Le protocole ne
+transmet d'ailleurs aucun indicateur de mode : nous ne pouvons pas le connaître.
+
+Il ne reste donc qu'une décision sur l'écran de consentement : **autoriser ou
+refuser**. Et lorsqu'aucun compte n'est encore raccordé sur un connecteur OAuth,
+le bouton principal part directement chez le fournisseur — au retour,
+l'autorisation est accordée sans redemander, le clic initial valant consentement.
+
+---
+
+## Les trois modes d'authentification de Dust
+
+| Mode Dust | Ce qu'il envoie | Ce qu'il faut chez nous |
 |---|---|---|
-| **INDIVIDUAL** | Chaque utilisateur raccorde son propre compte ; son jeton pointe vers **sa** connexion | Boîtes e-mail, comptes nominatifs. Les actions sont attribuées à chacun. |
-| **SHARED** | Tout le monde passe par la connexion désignée à la configuration | Compte de service, boîte générique. Toutes les actions sont attribuées à ce compte. |
+| **Automatic** | Découverte + enregistrement dynamique (RFC 7591) | Rien : c'est le chemin nominal |
+| **Static OAuth** | `client_id` et `client_secret` saisis à la main | Un client confidentiel pré-enregistré (voir *Client statique*) |
+| **Bearer Token** | Un jeton collé, envoyé en en-tête `Authorization` | Un jeton de point d'accès (`mcp_…`) créé depuis « Mes connexions » |
 
-> **Nuance importante.** Que chaque utilisateur refasse ou non un OAuth ne
-> dépend pas de nous : c'est le **client IA** qui décide. Claude fait une
-> autorisation par utilisateur ; Dust rattache par défaut la connexion à la
-> personne qui l'a enregistrée. Le mode ci-dessus rend le comportement de
-> *notre* côté explicite dans les deux cas.
+Le mode **Bearer Token** est celui qui convient aux connecteurs à clé API, où il
+n'y a rien à négocier : la personne crée son point d'accès, copie le jeton, le
+colle dans Dust. Le serveur accepte ce jeton aussi bien en en-tête que dans le
+chemin d'URL — mêmes droits, même révocation. L'en-tête est même préférable : un
+segment d'URL finit dans les journaux d'accès et les en-têtes `Referer`.
 
 ---
 

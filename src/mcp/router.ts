@@ -71,8 +71,51 @@ const bearerAuthFor = (connectorId: string) =>
     ),
   });
 
+/**
+ * Préfixe des jetons de point d'accès (voir `endpoint.service.ts`).
+ *
+ * Il permet de distinguer, dans un en-tête `Authorization: Bearer`, un jeton de
+ * point d'accès d'un jeton OAuth — les deux transitent au même endroit.
+ */
+const ENDPOINT_TOKEN_PREFIX = 'mcp_';
+
+/**
+ * Jeton de point d'accès présenté en en-tête.
+ *
+ * Dust propose trois modes d'authentification pour un serveur MCP distant :
+ * « Automatic » (OAuth avec enregistrement dynamique), « Static OAuth », et
+ * « Bearer Token » — ce dernier envoie simplement un jeton que l'on colle, en
+ * en-tête `Authorization`.
+ *
+ * C'est le mode qui convient aux connecteurs à clé API, où il n'y a rien à
+ * négocier : la personne crée son point d'accès chez nous, copie le jeton, le
+ * colle dans Dust, et c'est fini. Sans cette prise en charge, ces connecteurs
+ * n'étaient utilisables que via le jeton dans le chemin d'URL — que Dust ne
+ * sait pas produire.
+ *
+ * Aucun élargissement de la surface d'attaque : c'est exactement le jeton de
+ * `/mcp/:connectorId/:token`, avec la même portée et la même révocation. Un
+ * en-tête est même préférable à un segment d'URL, qui se retrouve dans les
+ * journaux d'accès et les en-têtes `Referer`.
+ */
+function endpointTokenFromHeader(req: Request): string | null {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) return null;
+
+  const token = header.slice('Bearer '.length).trim();
+  return token.startsWith(ENDPOINT_TOKEN_PREFIX) ? token : null;
+}
+
 const oauthHandler = async (req: Request, res: Response) => {
   const connectorId = req.params.connectorId as string;
+
+  // Jeton de point d'accès en en-tête : on le traite sans passer par OAuth,
+  // qui répondrait 401 sur un jeton qu'il ne connaît pas.
+  const endpointToken = endpointTokenFromHeader(req);
+  if (endpointToken) {
+    await serve(req, res, await resolveFromUrlToken(endpointToken, connectorId));
+    return;
+  }
 
   // Le middleware est construit par connecteur pour que l'en-tête
   // WWW-Authenticate désigne la bonne ressource.

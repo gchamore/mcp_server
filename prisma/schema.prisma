@@ -41,17 +41,6 @@ enum ConnectionStatus {
 }
 
 /// Comment un accès MCP résout la connexion à utiliser lors d'un appel.
-enum McpAccessMode {
-  /// Chaque utilisateur du client IA se sert de SA propre connexion.
-  /// Le tout premier appel d'un utilisateur non encore raccordé déclenche
-  /// son propre parcours d'autorisation.
-  INDIVIDUAL
-  /// Tout le monde passe par la connexion choisie lors de la configuration.
-  /// C'est le mode « compte de service » : pratique en équipe, mais chaque
-  /// appel est attribué au compte de la personne qui a fait le réglage.
-  SHARED
-}
-
 model User {
   id           String       @id @default(cuid())
   email        String       @unique
@@ -116,7 +105,6 @@ model Connection {
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   endpoints   McpEndpoint[]
   calls       ToolInvocation[]
-  sharedFor   McpAccess[]
   oauthGrants OAuthGrant[]
 
   @@unique([userId, connectorId, label])
@@ -254,21 +242,24 @@ model OAuthClient {
 /// Créée au premier consentement : la personne qui branche le serveur choisit
 /// le mode. Les autorisations suivantes du même client réutilisent ce réglage,
 /// ce qui rend le comportement prévisible pour toute l'équipe.
+/// Trace d'un couple (client MCP, connecteur) déjà autorisé, et de qui l'a mis
+/// en place. Sert à l'administration ; ne décide de rien.
+///
+/// Portait autrefois un mode « individuel / partagé ». Retiré : les plateformes
+/// IA posent déjà la question à l'ajout de l'URL et en tirent les conséquences
+/// (un parcours d'autorisation en partagé, un par personne en individuel). La
+/// connexion effective est portée par le jeton, pas par cette ligne.
 model McpAccess {
-  id            String        @id @default(cuid())
+  id            String   @id @default(cuid())
   oauthClientId String
   connectorId   String
-  mode          McpAccessMode
   /// Qui a réalisé la configuration initiale.
   ownerId       String
-  /// Renseigné uniquement en mode SHARED : la connexion imposée à tous.
-  connectionId  String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  client     OAuthClient @relation(fields: [oauthClientId], references: [id], onDelete: Cascade)
-  owner      User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  connection Connection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  client OAuthClient @relation(fields: [oauthClientId], references: [id], onDelete: Cascade)
+  owner  User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@unique([oauthClientId, connectorId])
   @@index([connectorId])

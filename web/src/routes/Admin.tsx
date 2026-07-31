@@ -161,10 +161,7 @@ function McpClients() {
                     {client.accesses.length === 0
                       ? '—'
                       : client.accesses
-                          .map(
-                            (access) =>
-                              `${access.connectorId} (${access.mode === 'SHARED' ? 'partagé' : 'individuel'})`,
-                          )
+                          .map((access) => `${access.connectorId} · ${access.owner.email}`)
                           .join(', ')}
                   </td>
                   <td>{client._count.tokens}</td>

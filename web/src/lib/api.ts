@@ -8,7 +8,6 @@ import type {
   ConsentView,
   Endpoint,
   McpClient,
-  McpAccessMode,
   UsageStats,
   User,
 } from './types';
@@ -174,7 +173,6 @@ export const api = {
     },
     approve: (body: {
       demande: string;
-      mode?: McpAccessMode;
       connectionId?: string;
       connectorId?: string;
     }) =>

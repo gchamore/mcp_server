@@ -75,7 +75,6 @@ export interface Connector {
   toolCount: number;
 }
 
-export type McpAccessMode = 'INDIVIDUAL' | 'SHARED';
 
 /** Ce que l'écran de consentement doit afficher. */
 export interface ConsentView {
@@ -84,10 +83,7 @@ export interface ConsentView {
   connector: Connector | null;
   /** Renseigné uniquement lorsque `connector` est nul. */
   selectableConnectors: { id: string; name: string; tagline: string; icon: string }[];
-  establishedMode: McpAccessMode | null;
-  isOwner: boolean;
   connections: { id: string; label: string; accountLabel: string | null; status: string }[];
-  sharedConnection: { id: string; label: string; accountLabel: string | null } | null;
   requiresConnectorOAuth: boolean;
   connectorAvailable: boolean;
   scopes: string[];
@@ -179,7 +175,7 @@ export interface McpClient {
   lastUsedAt: string | null;
   createdAt: string;
   _count: { tokens: number };
-  accesses: { connectorId: string; mode: McpAccessMode; owner: { email: string } }[];
+  accesses: { connectorId: string; owner: { email: string } }[];
 }
 
 export interface UsageStats {

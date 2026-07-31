@@ -22,13 +22,20 @@ describe('chiffrement des identifiants', () => {
   it('rejette un texte chiffré altéré (authentification GCM)', () => {
     const payload = encryptJson({ apiKey: 'valeur' });
     const parts = payload.split('.');
-    // On modifie un caractère du texte chiffré.
-    const tampered = [
-      parts[0],
-      parts[1],
-      parts[2],
-      `${parts[3]!.slice(0, -1)}${parts[3]!.at(-1) === 'A' ? 'B' : 'A'}`,
-    ].join('.');
+
+    /**
+     * On inverse un bit du texte chiffré, en base64url **décodé**.
+     *
+     * La version précédente changeait le dernier caractère de la chaîne
+     * base64url. Ce caractère ne porte parfois que deux bits significatifs, le
+     * reste étant du remplissage ignoré au décodage : selon l'IV tiré au sort,
+     * l'altération disparaissait au décodage et le test échouait environ une
+     * fois sur quatre — un faux négatif sur une garantie d'intégrité, ce qu'on
+     * ne peut pas se permettre de laisser passer.
+     */
+    const cipher = Buffer.from(parts[3]!, 'base64url');
+    cipher[0] = cipher[0]! ^ 0x01;
+    const tampered = [parts[0], parts[1], parts[2], cipher.toString('base64url')].join('.');
 
     expect(() => decryptJson(tampered)).toThrow();
   });

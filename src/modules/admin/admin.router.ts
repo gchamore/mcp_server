@@ -181,7 +181,7 @@ adminRouter.get('/mcp-clients', async (_req, res) => {
       createdAt: true,
       _count: { select: { tokens: true } },
       accesses: {
-        select: { connectorId: true, mode: true, owner: { select: { email: true } } },
+        select: { connectorId: true, owner: { select: { email: true } } },
       },
     },
   });

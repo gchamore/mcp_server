@@ -1,19 +1,43 @@
-import type { McpAccessMode } from '@prisma/client';
 import { listConnectors, requireConnector, toSummary } from '../../connectors/registry.js';
 import { generateToken, hashToken } from '../../core/crypto.js';
-import { badRequest, forbidden, notFound } from '../../core/errors.js';
+import { badRequest, notFound } from '../../core/errors.js';
 import { prisma } from '../../core/prisma.js';
 import { isConnectorOAuthReady } from '../connections/connector-oauth.service.js';
 import { authorizationCodeTtlMs, type PendingAuthorization } from './provider.js';
 
 /**
- * Écran de consentement : ce que voit l'utilisateur quand un client IA demande
- * l'accès, et ce qui se passe quand il approuve.
+ * ===========================================================================
+ *  Écran de consentement
+ * ===========================================================================
  *
- * C'est ici que se décide le mode d'accès (individuel ou partagé). Le choix
- * n'est proposé qu'à la **première** configuration d'un couple
- * (client MCP, connecteur) ; ensuite il s'impose à tout le monde, pour que le
- * comportement reste prévisible au sein d'une équipe.
+ * Ce que voit l'utilisateur quand un client IA demande l'accès, et ce qui se
+ * passe quand il approuve.
+ *
+ * ---------------------------------------------------------------------------
+ * Pourquoi on ne demande plus « individuel ou partagé »
+ * ---------------------------------------------------------------------------
+ *
+ * On le demandait ici. C'était une erreur d'analyse : les plateformes IA posent
+ * déjà la question au moment où l'on colle l'URL. Dust distingue « Personal
+ * credentials » et « Shared credentials » à l'ajout de l'outil, et en tire les
+ * conséquences elle-même :
+ *
+ *   • partagé   → un seul parcours d'autorisation, réalisé par l'administrateur ;
+ *                 son jeton est ensuite réutilisé pour tout l'espace de travail ;
+ *   • personnel → l'administrateur en réalise un, puis **chaque** utilisateur
+ *                 réalise le sien à sa première utilisation.
+ *
+ * Autrement dit, la distinction se traduit chez nous par un simple nombre de
+ * parcours d'autorisation. Chaque jeton que nous émettons est déjà lié à un
+ * utilisateur et à une connexion : les deux comportements en découlent sans
+ * qu'on ait à les nommer.
+ *
+ * Reposer la question était donc au mieux redondant, au pire contradictoire —
+ * rien n'empêchait de répondre « partagé » ici après avoir choisi « personnel »
+ * dans Dust, et les deux modèles se seraient contredits en silence.
+ *
+ * Le protocole ne transmet d'ailleurs aucun indicateur de mode : nous ne
+ * pouvons pas le connaître, et nous n'en avons pas besoin.
  */
 
 export type ConsentView = {
@@ -25,14 +49,8 @@ export type ConsentView = {
   connector: ReturnType<typeof toSummary> | null;
   /** Renseigné uniquement lorsque `connector` est nul. */
   selectableConnectors: { id: string; name: string; tagline: string; icon: string }[];
-  /** Mode déjà fixé par une configuration antérieure, sinon null (premier passage). */
-  establishedMode: McpAccessMode | null;
-  /** true si l'utilisateur courant est celui qui a fait la configuration initiale. */
-  isOwner: boolean;
   /** Connexions de l'utilisateur pour ce connecteur. */
   connections: { id: string; label: string; accountLabel: string | null; status: string }[];
-  /** En mode partagé déjà configuré : le compte imposé. */
-  sharedConnection: { id: string; label: string; accountLabel: string | null } | null;
   /** true si l'utilisateur doit d'abord raccorder son compte via OAuth tiers. */
   requiresConnectorOAuth: boolean;
   /** false si l'application OAuth du connecteur n'est pas configurée. */
@@ -63,10 +81,7 @@ export async function describeAuthorization(
         tagline: entry.tagline,
         icon: entry.icon,
       })),
-      establishedMode: null,
-      isOwner: true,
       connections: [],
-      sharedConnection: null,
       requiresConnectorOAuth: false,
       connectorAvailable: true,
       scopes: [],
@@ -75,34 +90,18 @@ export async function describeAuthorization(
 
   const connector = requireConnector(connectorId);
 
-  const access = await prisma.mcpAccess.findUnique({
-    where: {
-      oauthClientId_connectorId: { oauthClientId: client.id, connectorId: connector.id },
-    },
-    include: {
-      connection: { select: { id: true, label: true, accountLabel: true } },
-    },
-  });
-
   const connections = await prisma.connection.findMany({
     where: { userId, connectorId: connector.id },
     select: { id: true, label: true, accountLabel: true, status: true },
     orderBy: { createdAt: 'asc' },
   });
 
-  const sharedAlreadySet = access?.mode === 'SHARED' && access.connection !== null;
-
   return {
     client: { name: client.name, clientId: client.clientId },
     connector: toSummary(connector),
     selectableConnectors: [],
-    establishedMode: access?.mode ?? null,
-    isOwner: access ? access.ownerId === userId : true,
     connections,
-    sharedConnection: access?.connection ?? null,
-    // En mode partagé déjà configuré, l'utilisateur n'a rien à raccorder.
-    requiresConnectorOAuth:
-      !sharedAlreadySet && connections.length === 0 && connector.auth.type === 'oauth2',
+    requiresConnectorOAuth: connections.length === 0 && connector.auth.type === 'oauth2',
     connectorAvailable: isConnectorOAuthReady(connector),
     scopes: connector.auth.type === 'oauth2' ? (connector.auth.oauth?.scopes ?? []) : [],
   };
@@ -111,7 +110,7 @@ export async function describeAuthorization(
 export async function approveAuthorization(
   pending: PendingAuthorization,
   userId: string,
-  choice: { mode?: McpAccessMode; connectionId?: string; connectorId?: string },
+  choice: { connectionId?: string; connectorId?: string },
 ): Promise<string> {
   const connectorId = pending.connectorId ?? choice.connectorId;
   if (!connectorId) {
@@ -122,54 +121,31 @@ export async function approveAuthorization(
   const client = await prisma.oAuthClient.findUnique({ where: { clientId: pending.clientId } });
   if (!client) throw notFound('Client MCP inconnu.');
 
-  const existingAccess = await prisma.mcpAccess.findUnique({
-    where: {
-      oauthClientId_connectorId: { oauthClientId: client.id, connectorId: connector.id },
-    },
-  });
+  /**
+   * Le jeton est lié à la connexion de *cet* utilisateur, toujours.
+   *
+   * C'est ce qui rend les deux modes de Dust corrects sans les distinguer : en
+   * partagé, une seule personne fait ce parcours et son jeton circule ensuite ;
+   * en personnel, chacun fait le sien et obtient le sien.
+   */
+  const connectionId = await requireOwnedConnection(userId, connector.id, choice.connectionId);
 
-  // Détermination du mode, en trois règles simples :
-  //  1. première configuration → l'utilisateur choisit (individuel par défaut) ;
-  //  2. déjà configuré, utilisateur propriétaire → il peut changer d'avis ;
-  //  3. déjà configuré, autre utilisateur → le mode s'impose à lui.
-  const isOwner = !existingAccess || existingAccess.ownerId === userId;
-  const mode: McpAccessMode = !existingAccess
-    ? (choice.mode ?? 'INDIVIDUAL')
-    : isOwner
-      ? (choice.mode ?? existingAccess.mode)
-      : existingAccess.mode;
-
-  if (existingAccess && !isOwner && choice.mode && choice.mode !== existingAccess.mode) {
-    throw forbidden(
-      "Le mode d'accès a été défini par la personne qui a configuré ce serveur. " +
-        'Demandez-lui de le modifier.',
-    );
-  }
-
-  // Quelle connexion ce jeton utilisera-t-il ?
-  //  - partagé et déjà configuré (par quelqu'un d'autre) → la connexion commune ;
-  //  - sinon → celle que l'utilisateur vient de désigner, qui doit lui appartenir.
-  const reuseShared =
-    mode === 'SHARED' &&
-    existingAccess?.mode === 'SHARED' &&
-    existingAccess.connectionId !== null &&
-    !choice.connectionId;
-
-  const connectionId = reuseShared
-    ? (existingAccess.connectionId as string)
-    : await requireOwnedConnection(userId, connector.id, choice.connectionId);
-
+  /**
+   * Trace, et non plus règle.
+   *
+   * On garde la trace du couple (client, connecteur) et de qui l'a mis en place
+   * — c'est ce qu'affiche l'administration. Cette ligne ne décide plus rien :
+   * c'est le jeton qui porte la connexion.
+   */
   await prisma.mcpAccess.upsert({
     where: {
       oauthClientId_connectorId: { oauthClientId: client.id, connectorId: connector.id },
     },
-    update: { mode, connectionId: mode === 'SHARED' ? connectionId : null },
+    update: {},
     create: {
       oauthClientId: client.id,
       connectorId: connector.id,
-      mode,
       ownerId: userId,
-      connectionId: mode === 'SHARED' ? connectionId : null,
     },
   });
 
@@ -181,8 +157,6 @@ export async function approveAuthorization(
       oauthClientId: client.id,
       userId,
       connectorId: connector.id,
-      // En mode partagé, le jeton pointera vers la connexion commune ; en mode
-      // individuel, vers celle de cet utilisateur.
       connectionId,
       redirectUri: pending.redirectUri,
       codeChallenge: pending.codeChallenge,

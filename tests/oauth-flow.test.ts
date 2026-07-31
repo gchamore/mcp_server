@@ -129,9 +129,10 @@ suite('flux OAuth complet', () => {
 
     expect(view.body.client.name).toBe('Client de test');
     expect(view.body.connector.id).toBe('axonaut');
-    // Première configuration : le mode n'est pas encore fixé.
-    expect(view.body.establishedMode).toBeNull();
+    // Aucun compte encore raccordé : l'écran doit orienter vers le fournisseur.
     expect(view.body.connections).toHaveLength(0);
+    // Plus aucune notion de mode n'est exposée : la plateforme IA la gère.
+    expect(view.body).not.toHaveProperty('establishedMode');
 
     // --- Il raccorde son compte Axonaut ---------------------------------
     const connection = await agent
@@ -147,7 +148,7 @@ suite('flux OAuth complet', () => {
     // --- Il approuve, en mode individuel --------------------------------
     const approval = await agent
       .post('/api/oauth/authorization/approve')
-      .send({ demande, mode: 'INDIVIDUAL', connectionId })
+      .send({ demande, connectionId })
       .expect(200);
 
     const redirect = new URL(approval.body.redirectTo);
@@ -214,11 +215,14 @@ suite('flux OAuth complet', () => {
       .send({ jsonrpc: '2.0', id: 3, method: 'tools/list' })
       .expect(401);
 
-    // --- Le mode retenu est mémorisé pour ce client ---------------------
+    // --- La trace de l'autorisation existe ------------------------------
+    // Elle ne décide plus rien : c'est le jeton qui porte la connexion. Elle
+    // sert à l'administration, pour savoir quel client atteint quel connecteur
+    // et qui l'a mis en place.
     const access = await prisma.mcpAccess.findFirst({
       where: { connectorId: 'axonaut', ownerId: userId },
     });
-    expect(access?.mode).toBe('INDIVIDUAL');
+    expect(access).not.toBeNull();
   });
 
   it('rejette un code_verifier qui ne correspond pas (PKCE)', async () => {
@@ -380,7 +384,7 @@ suite('flux OAuth complet', () => {
 
     const approval = await agent
       .post('/api/oauth/authorization/approve')
-      .send({ demande, mode: 'SHARED', connectionId: connection?.id })
+      .send({ demande, connectionId: connection?.id })
       .expect(200);
 
     const code = new URL(approval.body.redirectTo).searchParams.get('code') as string;
@@ -423,12 +427,22 @@ suite('flux OAuth complet', () => {
       .send({ jsonrpc: '2.0', id: 1, method: 'tools/list' })
       .expect(200);
 
-    // Le mode partagé a bien été mémorisé pour ce client.
+    /**
+     * Le jeton porte la connexion — c'est ce qui rend les deux modes de Dust
+     * corrects sans qu'on ait à les distinguer. Un jeton unique, réutilisé par
+     * tout un espace de travail, donne le comportement « partagé » ; un jeton
+     * par personne donne le comportement « individuel ».
+     */
+    const grant = await prisma.oAuthGrant.findFirst({
+      where: { connectorId: 'axonaut', client: { clientId: staticClientId } },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(grant?.connectionId).toBe(connection?.id);
+
     const access = await prisma.mcpAccess.findFirst({
       where: { connectorId: 'axonaut', client: { clientId: staticClientId } },
     });
-    expect(access?.mode).toBe('SHARED');
-    expect(access?.connectionId).toBe(connection?.id);
+    expect(access).not.toBeNull();
   });
 
   it('refuse un jeton statique inconnu', async () => {
