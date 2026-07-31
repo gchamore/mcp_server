@@ -340,17 +340,21 @@ export function ResetPassword() {
   const toast = useToast();
   const token = searchParams.get('token') ?? '';
 
-  const [status, setStatus] = useState<'checking' | 'valid' | 'invalid'>('checking');
+  /**
+   * L'absence de jeton se connaît dès le premier rendu : la déduire ici évite
+   * un rendu « en vérification » suivi d'un rendu « invalide » — l'utilisateur
+   * voyait un chargement pour une réponse déjà connue.
+   */
+  const [status, setStatus] = useState<'checking' | 'valid' | 'invalid'>(
+    token ? 'checking' : 'invalid',
+  );
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [loading, setLoading] = useState(false);
   const { message, capture, reset } = useApiError();
 
   useEffect(() => {
-    if (!token) {
-      setStatus('invalid');
-      return;
-    }
+    if (!token) return;
     api.auth
       .verifyResetToken(token)
       .then(({ valid }) => setStatus(valid ? 'valid' : 'invalid'))

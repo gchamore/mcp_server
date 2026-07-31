@@ -124,11 +124,9 @@ export function Counter({
   const [shown, setShown] = useState(0);
 
   useEffect(() => {
-    if (!inView) return;
-    if (reduced || value === 0) {
-      setShown(value);
-      return;
-    }
+    // Rien à animer : la valeur affichée est déduite plus bas. Écrire l'état
+    // ici déclencherait un rendu en cascade pour un résultat déjà connu.
+    if (!inView || reduced || value === 0) return;
 
     let frame = 0;
     const start = performance.now();
@@ -144,9 +142,11 @@ export function Counter({
     return () => cancelAnimationFrame(frame);
   }, [inView, value, duration, reduced]);
 
+  const displayed = reduced || value === 0 ? value : shown;
+
   return (
     <span ref={ref} className="tabular">
-      {new Intl.NumberFormat('fr-FR').format(shown)}
+      {new Intl.NumberFormat('fr-FR').format(displayed)}
       {suffix}
     </span>
   );
@@ -162,7 +162,18 @@ export function Counter({
  */
 export function CursorGlow() {
   const reduced = useReducedMotion();
-  const [enabled, setEnabled] = useState(false);
+
+  /**
+   * Capacité du pointeur, lue une seule fois au premier rendu.
+   *
+   * C'est une propriété de l'appareil, pas un état de l'application : la
+   * découvrir dans un effet puis la refléter dans un `useState` faisait rendre
+   * le composant deux fois pour une valeur qui ne change jamais.
+   */
+  const [finePointer] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches,
+  );
+  const enabled = !reduced && finePointer;
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -170,8 +181,7 @@ export function CursorGlow() {
   const springY = useSpring(y, { stiffness: 60, damping: 22, mass: 0.7 });
 
   useEffect(() => {
-    if (reduced || !window.matchMedia('(pointer: fine)').matches) return;
-    setEnabled(true);
+    if (!enabled) return;
 
     const onMove = (event: PointerEvent) => {
       x.set(event.clientX);
@@ -180,7 +190,7 @@ export function CursorGlow() {
 
     window.addEventListener('pointermove', onMove, { passive: true });
     return () => window.removeEventListener('pointermove', onMove);
-  }, [reduced, x, y]);
+  }, [enabled, x, y]);
 
   if (!enabled) return null;
 

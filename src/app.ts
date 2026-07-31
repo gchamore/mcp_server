@@ -1,5 +1,5 @@
-import path from 'node:path';
 import express, { type Express } from 'express';
+import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { pinoHttp } from 'pino-http';
 import { apiRouter } from './api.js';
@@ -11,6 +11,7 @@ import { mcpAuthRouter } from '@modelcontextprotocol/sdk/server/auth/router.js';
 import { mcpRouter } from './mcp/router.js';
 import { wellKnownRouter } from './mcp/well-known.js';
 import { MCP_SCOPE, oauthProvider } from './modules/oauth/provider.js';
+import { mountWeb } from './web/serve.js';
 import { errorHandler, notFoundHandler } from './middleware/error-handler.js';
 import { globalLimiter } from './middleware/rate-limit.js';
 import { cors, csrfGuard, securityHeaders } from './middleware/security.js';
@@ -93,41 +94,17 @@ export function createApp(): Express {
   app.use('/mcp', mcpRouter);
 
   // --- API REST ----------------------------------------------------------
-  app.use('/api', express.json({ limit: '256kb' }), csrfGuard, apiRouter);
+  /**
+   * Les réponses de l'API sont calculées à chaque appel : impossible de les
+   * précompresser comme les assets. Le seuil par défaut de 1 ko évite de
+   * compresser les accusés de réception, où l'en-tête coûterait plus que le
+   * corps.
+   */
+  app.use('/api', compression(), express.json({ limit: '256kb' }), csrfGuard, apiRouter);
   app.use('/api', notFoundHandler);
 
   // --- Interface web (SPA React construite par Vite) ----------------------
-  const webRoot = path.resolve(process.cwd(), 'web', 'dist');
-
-  app.use(
-    express.static(webRoot, {
-      // Les fichiers d'assets sont hachés par Vite : cache long sans risque.
-      setHeaders: (res, filePath) => {
-        if (filePath.includes(`${path.sep}assets${path.sep}`)) {
-          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-        } else {
-          res.setHeader('Cache-Control', 'no-cache');
-        }
-      },
-    }),
-  );
-
-  // Routage côté client : toute URL inconnue renvoie index.html.
-  app.get('/{*path}', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/mcp')) {
-      next();
-      return;
-    }
-    res.sendFile(path.join(webRoot, 'index.html'), (error) => {
-      if (error) {
-        // Cas typique : `npm run build:web` n'a pas encore tourné.
-        res
-          .status(503)
-          .type('text/plain')
-          .send("Interface web non construite. Lancez : npm run build:web");
-      }
-    });
-  });
+  mountWeb(app);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

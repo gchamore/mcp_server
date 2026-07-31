@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -15,6 +16,13 @@ export default defineConfig({
       '/mcp': { target: API_TARGET, changeOrigin: true },
       '/health': { target: API_TARGET, changeOrigin: true },
     },
+  },
+  test: {
+    name: 'interface',
+    environment: 'jsdom',
+    include: ['src/**/*.test.tsx'],
+    globals: false,
+    setupFiles: ['src/test-setup.ts'],
   },
   build: {
     outDir: 'dist',

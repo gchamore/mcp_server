@@ -1,0 +1,11 @@
+{
+  "name": "MCP Wesype",
+  "short_name": "Wesype",
+  "description": "Branchez vos outils métier à votre assistant IA.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#08090a",
+  "theme_color": "#08090a",
+  "lang": "fr",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

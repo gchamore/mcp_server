@@ -3,15 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="light dark" />
+    <!--
+      Le site n'existe qu'en sombre. Déclarer « light dark » laisse le
+      navigateur peindre les contrôles natifs, les barres de défilement et le
+      fond de page en clair le temps que la CSS arrive : un éclair blanc à
+      chaque chargement.
+    -->
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#08090a" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <!-- Titre et description sont remplacés route par route côté serveur. -->
+    <title>MCP Wesype</title>
     <meta
       name="description"
       content="MCP Wesype — branchez vos outils métier à votre assistant IA en quelques clics."
     />
-    <title>MCP Wesype</title>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      MCP Wesype a besoin de JavaScript pour fonctionner. Activez-le, puis rechargez la page.
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

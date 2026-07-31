@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api, ApiError, connectorOAuthUrl } from '../lib/api';
@@ -28,8 +28,17 @@ export function Consent() {
   const { user, isLoading: authLoading } = useAuth();
   const toast = useToast();
 
-  const [mode, setMode] = useState<McpAccessMode>('INDIVIDUAL');
-  const [connectionId, setConnectionId] = useState<string>('');
+  /**
+   * Choix de l'utilisateur, `null` tant qu'il n'a rien touché.
+   *
+   * Le mode et le compte effectifs sont *déduits* plus bas : ce que
+   * l'utilisateur a choisi s'il a choisi, sinon ce que le serveur impose. Les
+   * recopier dans un état via un effet, comme avant, produisait un rendu avec
+   * les mauvaises valeurs avant de se corriger au suivant — visible sous forme
+   * d'un bouton qui change tout seul juste après l'affichage.
+   */
+  const [modeChoice, setModeChoice] = useState<McpAccessMode | null>(null);
+  const [connectionChoice, setConnectionChoice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showCredentialForm, setShowCredentialForm] = useState(false);
   /**
@@ -45,13 +54,9 @@ export function Consent() {
     retry: false,
   });
 
-  // Le mode et le compte sélectionné se déduisent de la réponse serveur.
-  useEffect(() => {
-    if (!data) return;
-    if (data.establishedMode) setMode(data.establishedMode);
-    const preselected = searchParams.get('compte') ?? data.connections[0]?.id ?? '';
-    setConnectionId((current) => current || preselected);
-  }, [data, searchParams]);
+  const mode: McpAccessMode = modeChoice ?? data?.establishedMode ?? 'INDIVIDUAL';
+  const connectionId =
+    connectionChoice ?? searchParams.get('compte') ?? data?.connections[0]?.id ?? '';
 
   if (!demande) {
     return (
@@ -205,13 +210,13 @@ export function Consent() {
             <strong className="text-sm">Qui utilisera ce compte ?</strong>
             <ModeOption
               selected={mode === 'INDIVIDUAL'}
-              onSelect={() => setMode('INDIVIDUAL')}
+              onSelect={() => setModeChoice('INDIVIDUAL')}
               title="Compte individuel"
               description="Chaque personne connecte son propre compte. Les actions sont réalisées en son nom."
             />
             <ModeOption
               selected={mode === 'SHARED'}
-              onSelect={() => setMode('SHARED')}
+              onSelect={() => setModeChoice('SHARED')}
               title="Compte partagé"
               description="Tout le monde passe par le compte que vous choisissez ici. Pratique pour une boîte générique, mais toutes les actions lui seront attribuées."
             />
@@ -239,7 +244,7 @@ export function Consent() {
                   <ModeOption
                     key={connection.id}
                     selected={connectionId === connection.id}
-                    onSelect={() => setConnectionId(connection.id)}
+                    onSelect={() => setConnectionChoice(connection.id)}
                     title={connection.label}
                     description={connection.accountLabel ?? 'Compte raccordé'}
                   />
@@ -276,7 +281,7 @@ export function Consent() {
                             : `Compte ${data.connections.length + 1}`,
                         credentials,
                       });
-                      setConnectionId(created.connection.id);
+                      setConnectionChoice(created.connection.id);
                       setShowCredentialForm(false);
                       await refetch();
                     } catch (caught) {
