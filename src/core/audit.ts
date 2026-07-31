@@ -26,7 +26,8 @@ export type AuditAction =
   | 'endpoint.rotated'
   | 'oauth.authorized'
   | 'oauth.denied'
-  | 'oauth.client_registered';
+  | 'oauth.client_registered'
+  | 'oauth.clients_purged';
 
 type AuditInput = {
   action: AuditAction;

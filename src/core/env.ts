@@ -173,6 +173,15 @@ export const env = {
     passwordResetMinutes: 60,
     oauthStateMinutes: 10,
     toolInvocationRetentionDays: 30,
+    /**
+     * Au-delà, une inscription dynamique jamais utilisée est considérée morte.
+     *
+     * Entre l'inscription d'un client et le consentement, il s'écoule quelques
+     * secondes. Vingt-quatre heures laissent une marge sans commune mesure avec
+     * le cas réel, tout en évitant que la table n'accumule indéfiniment les
+     * tentatives abandonnées.
+     */
+    orphanClientHours: 24,
   },
 } as const;
 

@@ -13,7 +13,7 @@ import {
   Modal,
   Spinner,
 } from '../components/ui';
-import { IconChart, IconInbox, IconLink, IconSearch } from '../components/icons';
+import { IconChart, IconInbox, IconLink, IconSearch, IconTrash } from '../components/icons';
 import { formatDateTime, formatNumber, formatPercent, timeAgo } from '../lib/format';
 
 /** Panneau d'administration : usage de la plateforme et gestion des comptes. */
@@ -109,6 +109,33 @@ function McpClients() {
     },
   });
 
+  const purgeMutation = useMutation({
+    mutationFn: api.admin.purgeMcpClients,
+    onSuccess: async ({ removed }) => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'mcp-clients'] });
+      toast.success(
+        removed === 0
+          ? 'Aucune inscription abandonnée à retirer.'
+          : `${removed} inscription(s) abandonnée(s) retirée(s).`,
+      );
+    },
+    onError: (error) =>
+      toast.error(error instanceof ApiError ? error.message : 'Purge impossible.'),
+  });
+
+  /**
+   * Inscriptions sans aucun jeton et jamais utilisées.
+   *
+   * Chaque tentative d'ajout d'un serveur MCP en crée une, y compris celles qui
+   * échouent — et aucune plateforme ne les supprime en retirant le serveur de
+   * son côté. Les compter permet de proposer le ménage au bon moment, plutôt
+   * que d'afficher un bouton qui ne servirait à rien.
+   */
+  const abandonnees =
+    data?.clients.filter(
+      (client) => !client.isStatic && client._count.tokens === 0 && !client.lastUsedAt,
+    ).length ?? 0;
+
   if (isLoading) return <Spinner />;
 
   return (
@@ -119,10 +146,29 @@ function McpClients() {
           Créez un client statique uniquement pour un outil qui réclame un identifiant et un
           secret à saisir manuellement.
         </p>
-        <Button variant="primary" onClick={() => setCreating(true)}>
-          Créer un client statique
-        </Button>
+        <div className="row" style={{ gap: 'var(--s3)' }}>
+          {abandonnees > 0 && (
+            <Button
+              variant="secondary"
+              loading={purgeMutation.isPending}
+              onClick={() => purgeMutation.mutate()}
+            >
+              <IconTrash size={14} />
+              Purger {abandonnees} inscription(s) inutilisée(s)
+            </Button>
+          )}
+          <Button variant="primary" onClick={() => setCreating(true)}>
+            Créer un client statique
+          </Button>
+        </div>
       </div>
+
+      <Alert tone="info">
+        Retirer un serveur MCP dans Dust ou Claude <strong>ne nous en informe pas</strong> : la
+        spécification prévoit bien un moyen pour un client de supprimer son inscription, mais aucune
+        plateforme ne l’utilise. Les lignes sans jeton sont des tentatives abandonnées, sans effet ;
+        celles qui portent des jetons donnent un accès réel, à révoquer explicitement.
+      </Alert>
 
       {(data?.clients.length ?? 0) === 0 ? (
         <EmptyState

@@ -217,5 +217,7 @@ export const api = {
         scopes: string;
       }>('/admin/mcp-clients', { method: 'POST', body }),
     deleteMcpClient: (id: string) => request<void>(`/admin/mcp-clients/${id}`, { method: 'DELETE' }),
+    purgeMcpClients: () =>
+      request<{ removed: number }>('/admin/mcp-clients/purge', { method: 'POST' }),
   },
 };

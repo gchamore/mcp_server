@@ -9,6 +9,7 @@ import { createStaticClient, DUST_STATIC_REDIRECT_URIS } from '../oauth/client-s
 import { auth, requireAdmin, requireAuth } from '../../middleware/auth.js';
 import { sensitiveLimiter } from '../../middleware/rate-limit.js';
 import { getBody, getParams, getQuery, validate } from '../../middleware/validate.js';
+import { purgeOrphanClients } from '../../jobs/cleanup.js';
 
 /**
  * Panneau d'administration. Toutes les routes exigent le rôle ADMIN, vérifié
@@ -234,6 +235,33 @@ adminRouter.delete(
     res.status(204).end();
   },
 );
+
+/**
+ * Purge des inscriptions dynamiques abandonnées.
+ *
+ * Chaque tentative d'ajout d'un serveur MCP crée une inscription, y compris les
+ * tentatives qui échouent — et personne ne les supprime : la RFC 7592 prévoit un
+ * point de terminaison pour ça, mais aucune plateforme ne l'appelle. Retirer le
+ * serveur dans Dust ne nous informe de rien.
+ *
+ * La tâche d'entretien s'en charge toutes les heures ; ce bouton évite
+ * d'attendre, et de révoquer une à une dix lignes identiques.
+ *
+ * Ne touche qu'aux inscriptions sans aucun jeton et jamais utilisées : un client
+ * détenant un accès réel exige une révocation explicite.
+ */
+adminRouter.post('/mcp-clients/purge', async (req, res) => {
+  const removed = await purgeOrphanClients();
+
+  recordAudit({
+    action: 'oauth.clients_purged',
+    userId: auth(req).userId,
+    targetType: 'oauth_client',
+    metadata: { removed },
+  });
+
+  res.json({ removed });
+});
 
 /** Statistiques d'usage par outil, pour repérer ce qui sert vraiment. */
 adminRouter.get(
