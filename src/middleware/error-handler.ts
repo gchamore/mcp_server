@@ -42,7 +42,12 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     error: {
       code: appError.code,
       message: appError.expose ? appError.message : 'Une erreur interne est survenue',
-      ...(appError.details !== undefined ? { details: appError.details } : {}),
+      // `details` suivait le même sort que le message, sauf qu'il était émis
+      // dans tous les cas : masquer le message tout en publiant ses détails
+      // n'aurait protégé personne le jour où une erreur interne en porte.
+      ...(appError.expose && appError.details !== undefined
+        ? { details: appError.details }
+        : {}),
     },
   });
 };

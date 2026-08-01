@@ -65,16 +65,34 @@ export async function resetPassword(token: string, newPassword: string): Promise
     throw badRequest('Ce lien de réinitialisation est invalide ou expiré.');
   }
 
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: record.userId },
-      data: { passwordHash: await hashPassword(newPassword) },
-    }),
-    prisma.passwordResetToken.update({
-      where: { id: record.id },
-      data: { usedAt: new Date() },
-    }),
-  ]);
+  /**
+   * Le hachage est calculé avant de consommer le jeton.
+   *
+   * bcrypt à 12 tours prend environ 250 ms. Le placer entre la consommation et
+   * l'écriture ouvrirait une fenêtre où le jeton est déjà marqué utilisé alors
+   * que le mot de passe ne l'est pas encore : une erreur à cet instant
+   * laisserait l'utilisateur sans lien valide et sans nouveau mot de passe.
+   */
+  const passwordHash = await hashPassword(newPassword);
+
+  /**
+   * Consommation atomique, comme pour le code d'autorisation OAuth.
+   *
+   * La vérification ci-dessus lit `usedAt`, mais deux requêtes portant le même
+   * lien la franchissent ensemble. En plaçant `usedAt: null` dans la clause de
+   * filtrage, c'est la base qui départage : une seule des deux obtient le
+   * droit de poursuivre.
+   */
+  const consumed = await prisma.passwordResetToken.updateMany({
+    where: { id: record.id, usedAt: null },
+    data: { usedAt: new Date() },
+  });
+
+  if (consumed.count === 0) {
+    throw badRequest('Ce lien de réinitialisation est invalide ou expiré.');
+  }
+
+  await prisma.user.update({ where: { id: record.userId }, data: { passwordHash } });
 
   // Un mot de passe réinitialisé doit invalider les sessions existantes :
   // sinon un attaquant déjà connecté conserve son accès.

@@ -87,9 +87,15 @@ export function buildMcpServer(
             errorCode: error instanceof Error ? error.name : 'UnknownError',
           });
 
-          // Le message part au modèle : il doit rester actionnable, sans jamais
-          // contenir d'identifiant. `errorMessage` ne remonte que des messages
-          // construits par nos soins (voir core/http-client.ts).
+          /**
+           * Le message part au modèle, donc potentiellement à un tiers.
+           *
+           * `core/http-client.ts` en est le garant : il ne restitue d'un
+           * service distant que des champs de message reconnus, jamais le corps
+           * brut, et il retire les valeurs d'authentification qu'il a lui-même
+           * envoyées. Ce commentaire affirmait déjà cette garantie avant
+           * qu'elle n'existe.
+           */
           toolLogger.warn({ err: error, tool: tool.name }, "Échec d'exécution d'un outil MCP");
 
           return {

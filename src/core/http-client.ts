@@ -71,7 +71,10 @@ export class HttpClient {
     }
 
     if (!response.ok) {
-      throw upstreamError(await describeFailure(this.serviceName, response), undefined);
+      throw upstreamError(
+        await describeFailure(this.serviceName, response, this.secretValues(headers)),
+        undefined,
+      );
     }
 
     if (response.status === 204) return undefined as T;
@@ -86,6 +89,25 @@ export class HttpClient {
     }
   }
 
+  /**
+   * Valeurs d'en-tête à ne jamais répéter dans un message d'erreur.
+   *
+   * On ne devine pas ce qui est secret : on prend les en-têtes d'authentification
+   * usuels, tels qu'ils partent effectivement pour cette requête.
+   */
+  private secretValues(headers: Record<string, string>): string[] {
+    const sensitive = ['authorization', 'api-key', 'x-api-key', 'apikey', 'access-token'];
+
+    return Object.entries(headers)
+      .filter(([name]) => sensitive.includes(name.toLowerCase()))
+      .flatMap(([, value]) => {
+        // `Bearer xxx` : la valeur seule compte autant que l'en-tête entier.
+        const parts = value.split(' ');
+        return parts.length > 1 ? [value, parts[parts.length - 1] as string] : [value];
+      })
+      .filter(Boolean);
+  }
+
   get<T>(path: string, options: Omit<RequestOptions, 'path' | 'method' | 'body'> = {}) {
     return this.request<T>({ ...options, path, method: 'GET' });
   }
@@ -95,8 +117,12 @@ export class HttpClient {
   }
 }
 
-async function describeFailure(serviceName: string, response: Response): Promise<string> {
-  const hint = await readErrorHint(response);
+async function describeFailure(
+  serviceName: string,
+  response: Response,
+  secrets: string[],
+): Promise<string> {
+  const hint = await readErrorHint(response, secrets);
 
   switch (response.status) {
     case 401:
@@ -113,13 +139,66 @@ async function describeFailure(serviceName: string, response: Response): Promise
   }
 }
 
-/** Extrait un extrait court du corps d'erreur, borné pour ne rien déverser. */
-async function readErrorHint(response: Response): Promise<string> {
+/**
+ * Champs par lesquels les API décrivent une erreur. La liste est courte et
+ * fermée : tout le reste du corps est ignoré.
+ */
+const MESSAGE_FIELDS = ['message', 'error_description', 'error', 'detail', 'title'] as const;
+
+/**
+ * Extrait une indication exploitable du corps d'erreur.
+ *
+ * La version précédente recopiait les 200 premiers caractères du corps brut,
+ * qui repart ensuite vers le modèle. Or un service qui échoue renvoie parfois
+ * la requête qui a échoué — en-têtes compris. Le commentaire de
+ * `mcp/server-factory.ts` affirmait pourtant que ces messages « ne remontent
+ * que des messages construits par nos soins » : c'était faux, et une
+ * affirmation fausse dans un commentaire de sécurité est pire qu'un commentaire
+ * absent, parce qu'elle dispense le lecteur de vérifier.
+ *
+ * Deux garde-fous désormais :
+ *
+ *  1. seuls des champs de message reconnus sont lus, jamais le corps entier —
+ *     un service qui renvoie autre chose ne produit simplement aucune
+ *     indication ;
+ *  2. les valeurs d'authentification que ce client envoie lui-même sont
+ *     retirées de ce qu'il restitue. Il les connaît : il est le mieux placé
+ *     pour refuser de les répéter.
+ */
+async function readErrorHint(response: Response, secrets: string[]): Promise<string> {
   try {
     const text = (await response.text()).trim();
     if (!text) return '';
-    return ` ${text.slice(0, 200)}`;
+
+    let message: string | undefined;
+    try {
+      const parsed: unknown = JSON.parse(text);
+      if (parsed && typeof parsed === 'object') {
+        const record = parsed as Record<string, unknown>;
+        for (const field of MESSAGE_FIELDS) {
+          const value = record[field];
+          if (typeof value === 'string' && value.trim()) {
+            message = value.trim();
+            break;
+          }
+        }
+      }
+    } catch {
+      // Corps non-JSON : rien de structuré à extraire, donc rien à restituer.
+      return '';
+    }
+
+    if (!message) return '';
+    return ` ${redact(message, secrets).slice(0, 160)}`;
   } catch {
     return '';
   }
+}
+
+/** Retire d'un texte toute occurrence des secrets envoyés par ce client. */
+function redact(text: string, secrets: string[]): string {
+  return secrets.reduce(
+    (acc, secret) => (secret.length >= 8 ? acc.split(secret).join('[masqué]') : acc),
+    text,
+  );
 }
