@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import type { ConnectorDefinition, Credentials, ToolResult } from '../connectors/types.js';
+import type { AnyConnector, Credentials, ToolResult } from '../connectors/types.js';
 import { errorMessage } from '../core/errors.js';
 import { logger } from '../core/logger.js';
 
@@ -31,8 +31,7 @@ export interface McpServerContext {
 const SERVER_VERSION = '2.0.0';
 
 export function buildMcpServer(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  connector: ConnectorDefinition<any>,
+  connector: AnyConnector,
   context: McpServerContext,
 ): McpServer {
   const server = new McpServer(

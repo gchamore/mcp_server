@@ -6,6 +6,7 @@ import { authRouter } from './modules/auth/auth.router.js';
 import { catalogRouter } from './modules/catalog/catalog.router.js';
 import { connectionRouter } from './modules/connections/connection.router.js';
 import { oauthRouter } from './modules/oauth/oauth.router.js';
+import { telemetryRouter } from './modules/telemetry/telemetry.router.js';
 import { optionalAuth } from './middleware/auth.js';
 
 /** Assemblage de l'API REST sous /api. */
@@ -36,3 +37,4 @@ apiRouter.use('/oauth', oauthRouter);
 apiRouter.use('/connectors', catalogRouter);
 apiRouter.use('/connections', connectionRouter);
 apiRouter.use('/admin', adminRouter);
+apiRouter.use('/telemetry', telemetryRouter);

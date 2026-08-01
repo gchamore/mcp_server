@@ -45,6 +45,8 @@ const schema = z.object({
   GOOGLE_CLIENT_ID: optionalString,
   GOOGLE_CLIENT_SECRET: optionalString,
 
+  /** Facultatif. Renseigné, il active le partage des compteurs de débit. */
+  REDIS_URL: optionalString,
   SMTP_HOST: optionalString,
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
   SMTP_SECURE: booleanish,
@@ -165,6 +167,7 @@ export const env = {
   sessionSecret,
   usesFallbackSecrets,
   googleOAuth,
+  redisUrl: raw.REDIS_URL ?? null,
   smtp,
 
   /** Durées de vie, regroupées pour être ajustables d'un seul endroit. */

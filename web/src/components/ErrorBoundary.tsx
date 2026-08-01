@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { reportError } from '../lib/telemetry';
 
 /**
  * Garde-fou de rendu.
@@ -23,9 +24,16 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   }
 
   override componentDidCatch(error: Error, info: ErrorInfo): void {
-    // Pas encore de collecteur d'erreurs : la console reste le seul endroit où
-    // un incident laisse une trace exploitable.
+    // La console reste utile en développement ; le signalement, lui, est ce qui
+    // rend l'incident visible en production.
     console.error('Erreur de rendu', error, info.componentStack);
+
+    reportError({
+      message: error.message,
+      ...(error.stack ? { stack: error.stack } : {}),
+      ...(info.componentStack ? { componentStack: info.componentStack } : {}),
+      source: 'render',
+    });
   }
 
   override render(): ReactNode {

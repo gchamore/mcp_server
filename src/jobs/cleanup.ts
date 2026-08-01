@@ -3,16 +3,68 @@ import { logger } from '../core/logger.js';
 import { prisma } from '../core/prisma.js';
 
 /**
- * Tâche d'entretien périodique : purge des données expirées.
+ * ===========================================================================
+ *  Tâche d'entretien périodique
+ * ===========================================================================
  *
- * Volontairement basée sur un `setInterval` du processus. Le jour où plusieurs
- * instances tournent en parallèle, la purge sera simplement exécutée plusieurs
- * fois — les opérations sont idempotentes, donc sans conséquence.
+ * Purge des données expirées : sessions, jetons de réinitialisation, appels
+ * d'outils au-delà de la rétention, codes d'autorisation périmés, inscriptions
+ * dynamiques abandonnées.
+ *
+ * ---------------------------------------------------------------------------
+ * Plusieurs instances
+ * ---------------------------------------------------------------------------
+ *
+ * Le déclenchement reste un `setInterval` par processus : c'est simple et sans
+ * infrastructure. Avec N instances, la tâche se déclenche donc N fois par
+ * heure.
+ *
+ * La version précédente s'en accommodait au motif que les suppressions sont
+ * idempotentes. C'est vrai du résultat, pas du chemin : N processus lançant
+ * simultanément cinq `DELETE` sur les mêmes lignes se disputent les verrous de
+ * PostgreSQL, et le coût croît avec le nombre d'instances au lieu de rester
+ * constant.
+ *
+ * Un verrou consultatif règle la question sans rien ajouter à la pile : c'est
+ * PostgreSQL, déjà là, qui arbitre. `pg_try_advisory_lock` ne bloque pas —
+ * l'instance qui ne l'obtient pas passe simplement son tour, ce qui est
+ * exactement le comportement voulu pour une purge horaire.
  */
 
 const INTERVAL_MS = 60 * 60 * 1000; // toutes les heures
 
+/**
+ * Identifiant du verrou consultatif.
+ *
+ * L'espace est global à la base : une constante arbitraire mais fixe, choisie
+ * une fois. À ne jamais réutiliser pour un autre verrou.
+ */
+const CLEANUP_LOCK_ID = 4_812_233_901;
+
 let timer: NodeJS.Timeout | null = null;
+
+/**
+ * Exécute `travail` seulement si aucune autre instance ne le fait déjà.
+ *
+ * Le verrou est pris au niveau de la session PostgreSQL et relâché
+ * explicitement dans le `finally` : sans cela, il survivrait jusqu'à la
+ * fermeture de la connexion, que le pool garde ouverte — et la purge suivante
+ * ne s'exécuterait plus jamais sur cette instance.
+ */
+async function withAdvisoryLock(travail: () => Promise<void>): Promise<boolean> {
+  const lignes = await prisma.$queryRaw<
+    { acquis: boolean }[]
+  >`SELECT pg_try_advisory_lock(${CLEANUP_LOCK_ID}::bigint) AS "acquis"`;
+
+  if (!lignes[0]?.acquis) return false;
+
+  try {
+    await travail();
+    return true;
+  } finally {
+    await prisma.$queryRaw`SELECT pg_advisory_unlock(${CLEANUP_LOCK_ID}::bigint)`;
+  }
+}
 
 /**
  * Inscriptions dynamiques abandonnées.
@@ -48,39 +100,46 @@ export async function purgeOrphanClients(now = new Date()): Promise<number> {
 }
 
 async function runCleanup(): Promise<void> {
+  try {
+    const execute = await withAdvisoryLock(purgeAll);
+    if (!execute) {
+      logger.debug('Purge déjà en cours sur une autre instance : tour passé');
+    }
+  } catch (error) {
+    logger.error({ err: error }, 'Purge périodique en échec');
+  }
+}
+
+async function purgeAll(): Promise<void> {
   const now = new Date();
   const invocationCutoff = new Date(
     now.getTime() - env.ttl.toolInvocationRetentionDays * 24 * 60 * 60 * 1000,
   );
 
-  try {
-    const [sessions, resetTokens, invocations, grants, orphanClients] = await Promise.all([
-      prisma.session.deleteMany({ where: { expiresAt: { lt: now } } }),
-      prisma.passwordResetToken.deleteMany({ where: { expiresAt: { lt: now } } }),
-      prisma.toolInvocation.deleteMany({ where: { createdAt: { lt: invocationCutoff } } }),
-      // Codes d'autorisation périmés : quelques minutes de durée de vie, mais
-      // rien ne les effaçait jusqu'ici.
-      prisma.oAuthGrant.deleteMany({ where: { expiresAt: { lt: now } } }),
-      purgeOrphanClients(now),
-    ]);
+  const [sessions, resetTokens, invocations, grants, orphanClients] = await Promise.all([
+    prisma.session.deleteMany({ where: { expiresAt: { lt: now } } }),
+    prisma.passwordResetToken.deleteMany({ where: { expiresAt: { lt: now } } }),
+    prisma.toolInvocation.deleteMany({ where: { createdAt: { lt: invocationCutoff } } }),
+    // Codes d'autorisation périmés : quelques minutes de durée de vie, mais
+    // rien ne les effaçait jusqu'ici.
+    prisma.oAuthGrant.deleteMany({ where: { expiresAt: { lt: now } } }),
+    purgeOrphanClients(now),
+  ]);
 
-    const removed =
-      sessions.count + resetTokens.count + invocations.count + grants.count + orphanClients;
+  const removed =
+    sessions.count + resetTokens.count + invocations.count + grants.count + orphanClients;
 
-    if (removed > 0) {
-      logger.info(
-        {
-          sessions: sessions.count,
-          resetTokens: resetTokens.count,
-          toolInvocations: invocations.count,
-          oauthGrants: grants.count,
-          orphanClients,
-        },
-        'Purge périodique effectuée',
-      );
-    }
-  } catch (error) {
-    logger.error({ err: error }, 'Purge périodique en échec');
+  if (removed > 0) {
+    logger.info(
+      {
+        sessions: sessions.count,
+        resetTokens: resetTokens.count,
+        toolInvocations: invocations.count,
+        oauthGrants: grants.count,
+        orphanClients,
+      },
+      'Purge périodique effectuée',
+    );
   }
 }
 

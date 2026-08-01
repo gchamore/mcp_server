@@ -57,8 +57,10 @@ jobs:
       - name: Style
         run: npm run lint
 
-      - name: Tests
-        run: npm test
+      # Couverture plutôt que simple exécution : les seuils font échouer la
+      # tâche si le taux descend, ce qu'un `npm test` ne verrait pas.
+      - name: Tests et couverture
+        run: npm run test:coverage
 
       # Le build est la dernière chose à casser et la plus coûteuse à découvrir
       # en production : on le vérifie ici, précompression comprise.

@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { Request, Response } from 'express';
 import { requireConnector } from '../../connectors/registry.js';
-import type { ConnectorDefinition, OAuthCredentials } from '../../connectors/types.js';
+import type { AnyConnector, OAuthCredentials } from '../../connectors/types.js';
 import { encryptJson } from '../../core/crypto.js';
 import { connectorOAuthApp, env } from '../../core/env.js';
 import { badRequest, featureDisabled, upstreamError } from '../../core/errors.js';
@@ -53,8 +53,6 @@ const stateCookie = new StateCookie<ConnectorOAuthState>({
   encrypted: true,
 });
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyConnector = ConnectorDefinition<any>;
 
 /** L'application OAuth du connecteur est-elle configurée sur ce serveur ? */
 export function isConnectorOAuthReady(connector: AnyConnector): boolean {

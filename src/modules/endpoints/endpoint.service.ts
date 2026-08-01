@@ -1,6 +1,6 @@
 import type { Connection, McpEndpoint } from '@prisma/client';
 import { getConnector } from '../../connectors/registry.js';
-import type { ConnectorDefinition, Credentials } from '../../connectors/types.js';
+import type { AnyConnector, Credentials } from '../../connectors/types.js';
 import { decryptJson, encryptJson, generateToken, hashToken } from '../../core/crypto.js';
 import { env } from '../../core/env.js';
 import { logger } from '../../core/logger.js';
@@ -20,8 +20,7 @@ import { prisma } from '../../core/prisma.js';
 export type ResolvedEndpoint = {
   endpoint: McpEndpoint;
   connection: Connection;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  connector: ConnectorDefinition<any>;
+  connector: AnyConnector;
   credentials: Credentials;
 };
 

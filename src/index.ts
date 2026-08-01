@@ -3,6 +3,7 @@ import { connectorCount, loadConnectors } from './connectors/registry.js';
 import { env } from './core/env.js';
 import { logger } from './core/logger.js';
 import { checkDatabase, disconnectPrisma } from './core/prisma.js';
+import { connectRedis, disconnectRedis } from './core/redis.js';
 import { startCleanupJob, stopCleanupJob } from './jobs/cleanup.js';
 import { initMailer } from './services/mail.js';
 
@@ -29,6 +30,13 @@ async function main(): Promise<void> {
     throw new Error('Base de données injoignable au démarrage.');
   }
 
+  /**
+   * Avant `createApp` : les limiteurs choisissent leur stockage à la
+   * construction. Ouvrir la connexion après reviendrait à garder des compteurs
+   * locaux malgré un Redis disponible.
+   */
+  await connectRedis();
+
   const app = createApp();
   const server = app.listen(env.port, () => {
     logger.info(
@@ -51,7 +59,9 @@ async function main(): Promise<void> {
     stopCleanupJob();
 
     server.close(() => {
-      void disconnectPrisma().finally(() => process.exit(0));
+      void Promise.allSettled([disconnectPrisma(), disconnectRedis()]).finally(() =>
+        process.exit(0),
+      );
     });
 
     // Filet de sécurité : si des connexions restent ouvertes (flux SSE MCP

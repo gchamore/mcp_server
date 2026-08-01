@@ -7,6 +7,7 @@ import { ToastProvider } from './components/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AuthProvider } from './state/auth';
 import { ApiError } from './lib/api';
+import { installErrorReporting } from './lib/telemetry';
 import './styles.css';
 
 const queryClient = new QueryClient({
@@ -23,6 +24,9 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Avant tout rendu : une erreur au montage doit déjà être capturée.
+installErrorReporting();
 
 const container = document.getElementById('root');
 if (!container) throw new Error('Élément #root introuvable');

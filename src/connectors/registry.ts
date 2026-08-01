@@ -4,12 +4,7 @@ import { badRequest, notFound } from '../core/errors.js';
 import { logger } from '../core/logger.js';
 import { isConnectorOAuthReady } from '../modules/connections/connector-oauth.service.js';
 import { connectors as declaredConnectors } from './index.js';
-import type {
-  ConnectorDefinition,
-  ConnectorSummary,
-  CredentialField,
-  Credentials,
-} from './types.js';
+import type { AnyConnector, ConnectorSummary, CredentialField, Credentials } from './types.js';
 
 /**
  * Registre des connecteurs.
@@ -23,8 +18,6 @@ import type {
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/;
 const TOOL_NAME_PATTERN = /^[a-z][a-z0-9_]{1,62}$/;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyConnector = ConnectorDefinition<any>;
 
 const registry = new Map<string, AnyConnector>();
 let loaded = false;

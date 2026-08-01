@@ -1,7 +1,7 @@
 import axonaut from './axonaut/index.js';
 import brevo from './brevo/index.js';
 import gmail from './gmail/index.js';
-import type { ConnectorDefinition } from './types.js';
+import type { AnyConnector } from './types.js';
 
 /**
  * =========================================================================
@@ -18,5 +18,4 @@ import type { ConnectorDefinition } from './types.js';
  * TypeScript et compatibles partout — et le test `connectors.test.ts` échoue si
  * un dossier présent sur le disque a été oublié dans cette liste.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const connectors: ConnectorDefinition<any>[] = [axonaut, brevo, gmail];
+export const connectors: AnyConnector[] = [axonaut, brevo, gmail];

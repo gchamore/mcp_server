@@ -1,14 +1,31 @@
-import rateLimit, { ipKeyGenerator, type Options } from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator, type Options, type Store } from 'express-rate-limit';
+import { RedisStore } from 'rate-limit-redis';
 import type { Request, Response } from 'express';
 import { env } from '../core/env.js';
+import { getRedisClient } from '../core/redis.js';
 
 /**
- * Limitation de débit. Remplace l'ancienne Map maison qui n'était jamais purgée
- * (fuite mémoire) et se laissait contourner en changeant de User-Agent.
+ * ===========================================================================
+ *  Limitation de débit
+ * ===========================================================================
  *
- * Note pour le passage à plusieurs instances : le stockage par défaut est en
- * mémoire, donc par processus. Brancher `rate-limit-redis` le jour où le
- * serveur tourne sur plus d'un conteneur.
+ * Remplace l'ancienne Map maison qui n'était jamais purgée (fuite mémoire) et
+ * se laissait contourner en changeant de User-Agent.
+ *
+ * ---------------------------------------------------------------------------
+ * Compteurs locaux ou partagés
+ * ---------------------------------------------------------------------------
+ *
+ * Par défaut, les compteurs vivent dans la mémoire du processus. Correct tant
+ * qu'il n'y a qu'une instance ; faux dès qu'il y en a plusieurs, chacune
+ * accordant alors le quota complet. Trois instances, trois fois le débit
+ * annoncé — sans le moindre signal que la protection a fondu.
+ *
+ * Renseigner `REDIS_URL` fait basculer les compteurs dans Redis, partagés par
+ * toutes les instances. Rien d'autre à changer.
+ *
+ * Le choix se fait à la construction des limiteurs, donc au démarrage : la
+ * connexion Redis doit être ouverte avant. `index.ts` s'en charge.
  */
 
 function handler(_req: Request, res: Response): void {
@@ -35,8 +52,27 @@ function byUserOrIp(req: Request): string {
   return req.currentUser ? `user:${req.currentUser.userId}` : byIp(req);
 }
 
-function makeLimiter(overrides: Partial<Options>) {
+/**
+ * Compteurs partagés, si Redis est disponible.
+ *
+ * Chaque limiteur a son propre préfixe : sans cela, ils partageraient les mêmes
+ * clés et le quota d'authentification consommerait celui du trafic MCP.
+ */
+function makeStore(prefix: string): Store | undefined {
+  const redis = getRedisClient();
+  if (!redis) return undefined;
+
+  return new RedisStore({
+    prefix: `rl:${prefix}:`,
+    sendCommand: (...args: string[]) => redis.sendCommand(args),
+  });
+}
+
+function makeLimiter(prefix: string, overrides: Partial<Options>) {
+  const store = makeStore(prefix);
+
   return rateLimit({
+    ...(store ? { store } : {}),
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     keyGenerator: byUserOrIp,
@@ -60,20 +96,34 @@ function makeLimiter(overrides: Partial<Options>) {
  * VPN d'entreprise — les utilisateurs se partagent ce quota. D'où une limite
  * volontairement haute, dont le rôle est d'écrêter, pas d'arbitrer.
  */
-export const globalLimiter = makeLimiter({ windowMs: 60_000, limit: 300, keyGenerator: byIp });
+export const globalLimiter = makeLimiter('global', {
+  windowMs: 60_000,
+  limit: 300,
+  keyGenerator: byIp,
+});
 
 /** Endpoints d'authentification : cible privilégiée du bourrage d'identifiants. */
-export const authLimiter = makeLimiter({
+export const authLimiter = makeLimiter('auth', {
   windowMs: 15 * 60_000,
   limit: 20,
   skipSuccessfulRequests: true,
 });
 
 /** Actions coûteuses ou envoyant des e-mails. */
-export const sensitiveLimiter = makeLimiter({ windowMs: 15 * 60_000, limit: 10 });
+export const sensitiveLimiter = makeLimiter('sensible', { windowMs: 15 * 60_000, limit: 10 });
+
+/**
+ * Remontée d'erreurs depuis le navigateur.
+ *
+ * Point d'entrée non authentifié qui écrit dans les journaux : sans borne
+ * stricte, il suffit d'une boucle pour saturer le stockage. Trente par quart
+ * d'heure et par IP couvrent largement un incident réel — une page qui casse en
+ * boucle produit quelques signalements, pas des milliers.
+ */
+export const telemetryLimiter = makeLimiter('telemetrie', { windowMs: 15 * 60_000, limit: 30 });
 
 /** Trafic MCP : volumétrie légitimement élevée, on borne surtout les abus. */
-export const mcpLimiter = makeLimiter({
+export const mcpLimiter = makeLimiter('mcp', {
   windowMs: 60_000,
   limit: 240,
   keyGenerator: (req: Request) => `mcp:${ipKeyGenerator(req.ip ?? '')}`,

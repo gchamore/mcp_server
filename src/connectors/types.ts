@@ -181,18 +181,71 @@ export interface ConnectorDefinition<C extends Credentials = Credentials> {
    * à la mise à jour d'une connexion, et à la demande depuis l'UI.
    */
   verify: (credentials: C, ctx: { signal: AbortSignal; logger: Logger }) => Promise<VerifyResult>;
+  /**
+   * La forme des arguments varie d'un outil à l'autre : ce tableau est
+   * existentiellement quantifié sur `S`, ce que TypeScript ne sait pas
+   * exprimer. `never` ne convient pas — `S` apparaît en position covariante
+   * (`inputSchema`) comme contravariante (les arguments du handler).
+   *
+   * Le `any` reste donc, mais confiné à cette ligne : il ne s'échappe pas de la
+   * déclaration, puisque chaque outil conserve sa signature exacte au moment
+   * où il est écrit.
+   */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   tools: ToolDefinition<C, any>[];
 }
 
 /**
- * Fonction d'identité qui sert uniquement à l'inférence de types : elle donne
- * l'autocomplétion sur `credentials` dans les handlers d'outils.
+ * ===========================================================================
+ *  Vue effacée d'un connecteur
+ * ===========================================================================
+ *
+ * Le moteur — registre, transport MCP, résolution d'une connexion — manipule
+ * des connecteurs sans savoir lesquels. Or chacun a son propre type
+ * d'identifiants, et `verify` comme les handlers les prennent en *entrée* :
+ * ces positions sont contravariantes, si bien qu'un
+ * `ConnectorDefinition<GmailCredentials>` n'est pas assignable à un
+ * `ConnectorDefinition<Credentials>`. TypeScript a raison de refuser.
+ *
+ * La réponse retenue jusqu'ici était `ConnectorDefinition<any>`, répété dans
+ * sept fichiers. Elle réglait la compilation en supprimant toute vérification
+ * partout où le type circulait — y compris là où elle aurait servi.
+ *
+ * `AnyConnector` fait le contraire : il fixe une fois pour toutes la forme que
+ * le moteur voit, avec `Credentials` en entrée et rien d'autre. La conversion
+ * a lieu dans `defineConnector`, à un seul endroit, où elle est justifiable :
+ * les identifiants sont validés au moment de leur écriture, par le schéma
+ * déclaré par le connecteur lui-même (voir `parseCredentials`). Ce qui arrive
+ * au handler correspond donc bien à ce qu'il attend.
+ */
+export interface AnyTool extends Omit<ToolDefinition, 'inputSchema' | 'handler'> {
+  inputSchema: ZodRawShape;
+  handler: (args: Record<string, unknown>, ctx: ToolContext<Credentials>) => Promise<ToolResult>;
+}
+
+export interface AnyConnector extends Omit<ConnectorDefinition, 'verify' | 'tools'> {
+  verify: (
+    credentials: Credentials,
+    ctx: { signal: AbortSignal; logger: Logger },
+  ) => Promise<VerifyResult>;
+  tools: AnyTool[];
+}
+
+/**
+ * Déclare un connecteur.
+ *
+ * Le paramètre reste typé précisément : à l'intérieur de la définition,
+ * `credentials` a le type du connecteur et l'autocomplétion fonctionne. C'est
+ * en sortie que le type est effacé, pour que le moteur puisse les traiter tous
+ * de la même façon.
+ *
+ * La conversion ci-dessous est l'unique renoncement de typage du projet. Elle
+ * est confinée ici et couverte par la validation d'exécution.
  */
 export function defineConnector<C extends Credentials>(
   definition: ConnectorDefinition<C>,
-): ConnectorDefinition<C> {
-  return definition;
+): AnyConnector {
+  return definition as unknown as AnyConnector;
 }
 
 /**

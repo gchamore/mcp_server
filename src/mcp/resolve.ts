@@ -1,7 +1,7 @@
 import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
 import type { Connection } from '@prisma/client';
 import { getConnector } from '../connectors/registry.js';
-import type { ConnectorDefinition, Credentials, OAuthCredentials } from '../connectors/types.js';
+import type { AnyConnector, Credentials, OAuthCredentials } from '../connectors/types.js';
 import { decryptJson } from '../core/crypto.js';
 import { logger } from '../core/logger.js';
 import { prisma } from '../core/prisma.js';
@@ -23,8 +23,7 @@ import { resolveEndpoint } from '../modules/endpoints/endpoint.service.js';
  */
 
 export type McpContext = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  connector: ConnectorDefinition<any>;
+  connector: AnyConnector;
   connection: Connection;
   credentials: Credentials;
   /** Renseigné uniquement sur le chemin à jeton statique. */
@@ -93,8 +92,7 @@ export async function resolveFromUrlToken(
 }
 
 async function finalize(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  connector: ConnectorDefinition<any>,
+  connector: AnyConnector,
   connection: Connection,
   meta: { endpointId: string | null; userId: string; origin: McpContext['origin'] },
 ): Promise<McpContext | ResolutionFailure> {
