@@ -2,12 +2,13 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { Request, Response } from 'express';
 import { requireConnector } from '../../connectors/registry.js';
 import type { ConnectorDefinition, OAuthCredentials } from '../../connectors/types.js';
-import { decryptJson, encryptJson, sign, verifySignature } from '../../core/crypto.js';
+import { encryptJson } from '../../core/crypto.js';
 import { connectorOAuthApp, env } from '../../core/env.js';
 import { badRequest, featureDisabled, upstreamError } from '../../core/errors.js';
 import { logger } from '../../core/logger.js';
 import { prisma } from '../../core/prisma.js';
-import { assertCookieFits } from '../../core/limits.js';
+import { safeInternalPath } from '../../core/redirect.js';
+import { StateCookie } from '../../core/state-cookie.js';
 
 /**
  * ===========================================================================
@@ -26,7 +27,6 @@ import { assertCookieFits } from '../../core/limits.js';
  *    qui produit le parcours « tout se configure tout seul ».
  */
 
-const STATE_COOKIE = 'wsp_connector_oauth';
 const STATE_TTL_MS = 15 * 60 * 1000;
 /** Marge avant expiration : on rafraîchit un peu en avance. */
 const REFRESH_MARGIN_MS = 2 * 60 * 1000;
@@ -40,6 +40,18 @@ type ConnectorOAuthState = {
   returnTo: string;
   expiresAt: number;
 };
+
+/**
+ * Chiffré, pas seulement signé : contrairement au flux de connexion, cet état
+ * porte un `userId`. Un cookie signé reste lisible par son porteur, et rien
+ * n'oblige à lui révéler l'identifiant interne d'un compte.
+ */
+const stateCookie = new StateCookie<ConnectorOAuthState>({
+  name: 'wsp_connector_oauth',
+  path: '/api/connections/oauth',
+  ttlMs: STATE_TTL_MS,
+  encrypted: true,
+});
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyConnector = ConnectorDefinition<any>;
@@ -89,21 +101,11 @@ export function startConnectorOAuth(
     codeVerifier,
     nonce,
     label: input.label,
-    returnTo: sanitizeReturnTo(input.returnTo),
-    expiresAt: Date.now() + STATE_TTL_MS,
+    returnTo: safeInternalPath(input.returnTo, '/connexions'),
+    expiresAt: stateCookie.expiryTimestamp(),
   };
 
-  const encoded = encryptJson(state);
-  const cookie = `${encoded}.${sign(encoded)}`;
-  assertCookieFits(STATE_COOKIE, cookie);
-
-  res.cookie(STATE_COOKIE, cookie, {
-    httpOnly: true,
-    secure: env.isProduction,
-    sameSite: 'lax',
-    path: '/api/connections/oauth',
-    maxAge: STATE_TTL_MS,
-  });
+  stateCookie.write(res, state);
 
   const url = new URL(config.authorizationUrl);
   url.searchParams.set('client_id', app.clientId);
@@ -127,8 +129,8 @@ export async function completeConnectorOAuth(
   res: Response,
   input: { connectorId: string; code: string; state: string },
 ): Promise<{ connectionId: string; returnTo: string }> {
-  const stored = readState(req);
-  res.clearCookie(STATE_COOKIE, { path: '/api/connections/oauth' });
+  const stored = stateCookie.read(req);
+  stateCookie.clear(res);
 
   if (!stored) throw badRequest('Session OAuth expirée. Relancez la connexion.');
   if (stored.nonce !== input.state) throw badRequest('Paramètre state invalide.');
@@ -281,26 +283,3 @@ function toCredentials(tokens: TokenResponse): OAuthCredentials {
   };
 }
 
-function readState(req: Request): ConnectorOAuthState | null {
-  const raw = req.cookies?.[STATE_COOKIE];
-  if (typeof raw !== 'string') return null;
-
-  const separator = raw.lastIndexOf('.');
-  if (separator <= 0) return null;
-
-  const encoded = raw.slice(0, separator);
-  if (!verifySignature(encoded, raw.slice(separator + 1))) return null;
-
-  try {
-    const state = decryptJson<ConnectorOAuthState>(encoded);
-    return state.expiresAt > Date.now() ? state : null;
-  } catch {
-    return null;
-  }
-}
-
-/** N'accepte qu'un chemin interne : bloque les redirections ouvertes. */
-function sanitizeReturnTo(value: string): string {
-  if (!value.startsWith('/') || value.startsWith('//')) return '/connexions';
-  return value;
-}

@@ -58,9 +58,32 @@ function GoogleButton({ label, returnTo = '/catalogue' }: { label: string; retur
 }
 
 /** N'accepte qu'un chemin interne : bloque les redirections ouvertes. */
+/**
+ * Ramène une destination demandée à un chemin interne.
+ *
+ * Le contrôle précédent — « commence par `/` mais pas par `//` » — laissait
+ * passer `/\evil.test`, que le navigateur normalise en `//evil.test`, donc une
+ * URL relative au protocole vers un autre domaine.
+ *
+ * Ici la valeur est résolue contre l'origine courante et rejetée si elle en
+ * sort : on délègue le calcul à celui qui fera la navigation, plutôt que de
+ * tenter d'énumérer les écritures dangereuses. Le serveur applique exactement
+ * le même contrôle sur `returnTo` ; les deux doivent rester d'accord.
+ */
+// eslint-disable-next-line no-control-regex -- les détecter est précisément l’objet de ce test.
+const CARACTERES_DE_CONTROLE = /[\u0000-\u001f\u007f]/;
+
 function safeReturnTo(value: string | null): string {
-  if (!value || !value.startsWith('/') || value.startsWith('//')) return '/catalogue';
-  return value;
+  const fallback = '/catalogue';
+  if (!value || !value.startsWith('/') || CARACTERES_DE_CONTROLE.test(value)) return fallback;
+
+  try {
+    const resolved = new URL(value, window.location.origin);
+    if (resolved.origin !== window.location.origin) return fallback;
+    return `${resolved.pathname}${resolved.search}${resolved.hash}`;
+  } catch {
+    return fallback;
+  }
 }
 
 /** Traduit une erreur d'API en message + erreurs par champ. */

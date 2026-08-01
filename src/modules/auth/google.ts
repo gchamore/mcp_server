@@ -1,9 +1,9 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { Request, Response } from 'express';
-import { sign, verifySignature } from '../../core/crypto.js';
 import { env } from '../../core/env.js';
 import { badRequest, featureDisabled, upstreamError } from '../../core/errors.js';
-import { assertCookieFits } from '../../core/limits.js';
+import { safeInternalPath } from '../../core/redirect.js';
+import { StateCookie } from '../../core/state-cookie.js';
 
 /**
  * OAuth 2.0 Google — implémentation directe, sans Passport ni session serveur.
@@ -19,7 +19,23 @@ const AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 const USERINFO_ENDPOINT = 'https://openidconnect.googleapis.com/v1/userinfo';
 
-const STATE_COOKIE = 'wsp_oauth';
+interface GoogleAuthState {
+  state: string;
+  codeVerifier: string;
+  returnTo: string;
+  expiresAt: number;
+}
+
+/**
+ * Signé, non chiffré : cet état n'appartient qu'à la personne qui le porte, et
+ * ne dit rien sur qui que ce soit d'autre. Le `code_verifier` doit être
+ * infalsifiable, pas secret vis-à-vis de son propre navigateur.
+ */
+const stateCookie = new StateCookie<GoogleAuthState>({
+  name: 'wsp_oauth',
+  path: '/api/auth',
+  ttlMs: env.ttl.oauthStateMinutes * 60_000,
+});
 
 export type GoogleProfile = {
   googleId: string;
@@ -46,22 +62,11 @@ export function beginGoogleAuth(res: Response, returnTo: string | undefined): st
   const codeVerifier = randomBytes(32).toString('base64url');
   const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url');
 
-  const payload = JSON.stringify({
+  stateCookie.write(res, {
     state,
     codeVerifier,
-    returnTo: sanitizeReturnTo(returnTo),
-    expiresAt: Date.now() + env.ttl.oauthStateMinutes * 60_000,
-  });
-  const encoded = Buffer.from(payload).toString('base64url');
-  const cookie = `${encoded}.${sign(encoded)}`;
-  assertCookieFits(STATE_COOKIE, cookie);
-
-  res.cookie(STATE_COOKIE, cookie, {
-    httpOnly: true,
-    secure: env.isProduction,
-    sameSite: 'lax',
-    path: '/api/auth',
-    maxAge: env.ttl.oauthStateMinutes * 60_000,
+    returnTo: safeInternalPath(returnTo, '/'),
+    expiresAt: stateCookie.expiryTimestamp(),
   });
 
   const url = new URL(AUTH_ENDPOINT);
@@ -84,8 +89,8 @@ export async function completeGoogleAuth(
   input: { code: string; state: string },
 ): Promise<{ profile: GoogleProfile; returnTo: string }> {
   const config = requireConfig();
-  const stored = readState(req);
-  res.clearCookie(STATE_COOKIE, { path: '/api/auth' });
+  const stored = stateCookie.read(req);
+  stateCookie.clear(res);
 
   if (!stored) throw badRequest('Session OAuth expirée. Relancez la connexion.');
   if (stored.state !== input.state) throw badRequest('Paramètre state invalide.');
@@ -148,30 +153,4 @@ export async function completeGoogleAuth(
   };
 }
 
-type StoredState = { state: string; codeVerifier: string; returnTo: string; expiresAt: number };
 
-function readState(req: Request): StoredState | null {
-  const raw = req.cookies?.[STATE_COOKIE];
-  if (typeof raw !== 'string') return null;
-
-  const separator = raw.lastIndexOf('.');
-  if (separator <= 0) return null;
-
-  const encoded = raw.slice(0, separator);
-  const signature = raw.slice(separator + 1);
-  if (!verifySignature(encoded, signature)) return null;
-
-  try {
-    const parsed = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')) as StoredState;
-    return parsed.expiresAt > Date.now() ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-/** N'accepte qu'un chemin interne : bloque les redirections ouvertes. */
-function sanitizeReturnTo(value: string | undefined): string {
-  if (!value) return '/';
-  if (!value.startsWith('/') || value.startsWith('//')) return '/';
-  return value;
-}

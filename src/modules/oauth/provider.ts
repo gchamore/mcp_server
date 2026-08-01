@@ -182,16 +182,6 @@ export const oauthProvider: OAuthServerProvider = {
     if (!grant || grant.client.clientId !== client.client_id) {
       throw new InvalidGrantError("Code d'autorisation invalide.");
     }
-    if (grant.usedAt) {
-      // Code rejoué : on révoque toute la famille de jetons issue de ce code,
-      // conformément aux recommandations OAuth 2.1 sur la détection de rejeu.
-      await prisma.oAuthToken.updateMany({
-        where: { familyId: grant.id, revokedAt: null },
-        data: { revokedAt: new Date() },
-      });
-      logger.warn({ grantId: grant.id }, "Rejeu d'un code d'autorisation détecté");
-      throw new InvalidGrantError("Code d'autorisation déjà utilisé.");
-    }
     if (grant.expiresAt.getTime() <= Date.now()) {
       throw new InvalidGrantError("Code d'autorisation expiré.");
     }
@@ -202,7 +192,35 @@ export const oauthProvider: OAuthServerProvider = {
       throw new InvalidGrantError("Le paramètre 'resource' ne correspond pas à la demande initiale.");
     }
 
-    await prisma.oAuthGrant.update({ where: { id: grant.id }, data: { usedAt: new Date() } });
+    /**
+     * Consommation atomique du code.
+     *
+     * La version précédente lisait `usedAt`, décidait, puis écrivait. Entre les
+     * deux, une seconde requête portant le même code voyait elle aussi
+     * `usedAt: null` : les deux passaient, et deux jeux de jetons étaient émis
+     * pour un code à usage unique. Une fenêtre courte, mais un attaquant qui a
+     * intercepté un code n'a qu'à le rejouer en parallèle de la victime pour
+     * s'y glisser.
+     *
+     * `updateMany` avec `usedAt: null` dans la clause de filtrage rend la
+     * décision et l'écriture indivisibles : la base tranche, une seule des
+     * requêtes concurrentes obtient `count === 1`.
+     */
+    const consumed = await prisma.oAuthGrant.updateMany({
+      where: { id: grant.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+
+    if (consumed.count === 0) {
+      // Code déjà consommé : on révoque toute la famille de jetons qui en est
+      // issue, conformément aux recommandations OAuth 2.1 sur le rejeu.
+      await prisma.oAuthToken.updateMany({
+        where: { familyId: grant.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      logger.warn({ grantId: grant.id }, "Rejeu d'un code d'autorisation détecté");
+      throw new InvalidGrantError("Code d'autorisation déjà utilisé.");
+    }
 
     return issueTokens({
       familyId: grant.id,
@@ -230,17 +248,50 @@ export const oauthProvider: OAuthServerProvider = {
       !existing ||
       existing.type !== 'REFRESH' ||
       existing.client.clientId !== client.client_id ||
-      existing.revokedAt ||
       existing.expiresAt.getTime() <= Date.now()
     ) {
       throw new InvalidGrantError('Jeton de rafraîchissement invalide ou expiré.');
     }
 
-    // Rotation : l'ancien jeton de rafraîchissement est révoqué immédiatement.
-    await prisma.oAuthToken.update({
-      where: { id: existing.id },
+    /**
+     * Rejeu d'un jeton déjà tourné.
+     *
+     * Un jeton de rafraîchissement révoqué qui resurgit n'est pas un incident
+     * anodin : c'est la signature d'une copie. Le client légitime a tourné son
+     * jeton ; celui qui présente l'ancien détient donc un exemplaire volé — ou
+     * bien c'est le voleur qui a tourné le premier, et c'est le client légitime
+     * qui se présente ici.
+     *
+     * Impossible de distinguer les deux, et c'est précisément pourquoi la
+     * spécification demande de tout révoquer : dans le doute, on coupe la
+     * famille entière et l'utilisateur réautorise. Se contenter de refuser la
+     * requête, comme auparavant, laissait la session du voleur intacte dans un
+     * cas sur deux.
+     */
+    if (existing.revokedAt) {
+      await prisma.oAuthToken.updateMany({
+        where: { familyId: existing.familyId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      logger.warn(
+        { familyId: existing.familyId, clientId: client.client_id },
+        "Rejeu d'un jeton de rafraîchissement : famille révoquée",
+      );
+      throw new InvalidGrantError('Jeton de rafraîchissement invalide ou expiré.');
+    }
+
+    /**
+     * Rotation atomique, pour la même raison que le code d'autorisation :
+     * deux rafraîchissements simultanés ne doivent pas produire deux familles.
+     */
+    const rotated = await prisma.oAuthToken.updateMany({
+      where: { id: existing.id, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+
+    if (rotated.count === 0) {
+      throw new InvalidGrantError('Jeton de rafraîchissement invalide ou expiré.');
+    }
 
     return issueTokens({
       familyId: existing.familyId,
