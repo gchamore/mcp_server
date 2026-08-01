@@ -25,7 +25,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "postinstall": "npm --prefix web install --no-audit --no-fund"
+    "postinstall": "npm --prefix web install --include=dev --no-audit --no-fund"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

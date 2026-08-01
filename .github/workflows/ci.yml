@@ -64,3 +64,38 @@ jobs:
       # en production : on le vérifie ici, précompression comprise.
       - name: Build
         run: npm run build
+
+  # ---------------------------------------------------------------------------
+  # Build dans les conditions exactes de l'hébergeur.
+  #
+  # La tâche ci-dessus construit avec NODE_ENV=test, où `npm ci` installe tout.
+  # Railway déclare NODE_ENV=production, et npm y omet alors les dépendances de
+  # développement — dont les paquets de types. Le build échouait sur
+  # « TS2688: Cannot find type definition file for 'node' », une erreur qui
+  # n'évoque en rien un problème d'installation.
+  #
+  # Le défaut était latent depuis le début et ne s'est manifesté qu'au premier
+  # `npm ci` exécuté sans couche de cache héritée. Cette tâche le rendrait
+  # visible immédiatement, sur une machine neuve à chaque fois.
+  # ---------------------------------------------------------------------------
+  build-production:
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Les outils de construction sont-ils bien présents ?
+        run: |
+          test -d node_modules/@types/node || { echo '@types/node absent'; exit 1; }
+          test -d web/node_modules/vite    || { echo 'vite absent côté web'; exit 1; }
+
+      - run: npm run build
