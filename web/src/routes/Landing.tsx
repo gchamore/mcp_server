@@ -192,6 +192,14 @@ export function Landing() {
               'Traçabilité',
               'Chaque appel d’outil est journalisé : quel compte, quel outil, quelle durée.',
             ],
+            [
+              'Usage unique garanti',
+              'Un code d’autorisation ne s’échange qu’une fois, même sous requêtes simultanées. Tout rejeu révoque la famille de jetons entière.',
+            ],
+            [
+              'Secrets hors des journaux',
+              'Clés, cookies et en-têtes d’autorisation sont expurgés des journaux, et jamais répétés dans un message d’erreur.',
+            ],
           ].map(([title, body]) => (
             <StaggerItem key={title} as="article" className="step">
               <h3>{title}</h3>
