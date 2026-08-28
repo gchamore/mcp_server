@@ -31,6 +31,7 @@ export type {
   CredentialFieldType,
   CredentialPreview,
   Endpoint,
+  HostedMcp,
   McpClient,
   Role,
   UsageStats,

@@ -117,6 +117,18 @@ export interface ConsentView {
   scopes: string[];
 }
 
+/** MCP hébergé par l'éditeur lui-même : référencé, jamais proxifié. */
+export interface HostedMcp {
+  id: string;
+  name: string;
+  tagline: string;
+  category: string;
+  url: string;
+  docsUrl: string;
+  icon: string;
+  auth: 'oauth' | 'oauth_ou_cle_api';
+}
+
 export interface Category {
   id: string;
   label: string;

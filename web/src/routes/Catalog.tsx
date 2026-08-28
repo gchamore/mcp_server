@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { ConnectorCard } from '../components/ConnectorCard';
 import { CopyField, EmptyState, Input, Spinner } from '../components/ui';
-import { IconSearch } from '../components/icons';
+import { IconExternal, IconSearch } from '../components/icons';
 import { pluralize } from '../lib/format';
 import { useAuth } from '../state/auth';
 
@@ -128,6 +128,46 @@ export function Catalog() {
                 connector={connector}
                 connectionCount={connectionCounts.get(connector.id) ?? 0}
               />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Seconde nature du catalogue : les serveurs MCP hébergés par les
+          éditeurs eux-mêmes. Référencés, jamais proxifiés — la connexion se
+          fait en direct, sans passer par Toolink. Un même service peut exister
+          des deux côtés : c'est voulu, l'utilisateur choisit. */}
+      {(catalogQuery.data?.hosted ?? []).length > 0 && (
+        <div className="stack">
+          <div className="stack stack--tight">
+            <h2 style={{ fontSize: '1.15rem' }}>MCP officiels des éditeurs</h2>
+            <p className="text-sm text-muted" style={{ maxWidth: '68ch' }}>
+              Ces services hébergent leur propre serveur MCP : collez l’URL directement dans votre
+              client IA. La connexion ne transite pas par Toolink — l’autorisation et le choix des
+              outils se font chez l’éditeur.
+            </p>
+          </div>
+          <div className="grid">
+            {(catalogQuery.data?.hosted ?? []).map((entry) => (
+              <article key={entry.id} className="step">
+                <div className="row" style={{ gap: 'var(--s3)', alignItems: 'center' }}>
+                  <img className="connector-icon" src={entry.icon} alt="" />
+                  <h3 style={{ margin: 0 }}>{entry.name}</h3>
+                  <span className="text-xs text-faint" style={{ marginLeft: 'auto' }}>
+                    hébergé par l’éditeur
+                  </span>
+                </div>
+                <p className="card__meta">{entry.tagline}</p>
+                <CopyField value={entry.url} />
+                <div className="row row--between text-xs">
+                  <span className="text-muted">
+                    {entry.auth === 'oauth' ? 'OAuth' : 'OAuth ou clé API'}
+                  </span>
+                  <a href={entry.docsUrl} target="_blank" rel="noreferrer noopener">
+                    Documentation <IconExternal size={11} />
+                  </a>
+                </div>
+              </article>
             ))}
           </div>
         </div>

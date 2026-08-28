@@ -7,6 +7,7 @@ import type {
   Connector,
   ConsentView,
   Endpoint,
+  HostedMcp,
   McpClient,
   UsageStats,
   User,
@@ -133,7 +134,7 @@ export const api = {
       if (params.q) search.set('q', params.q);
       if (params.category && params.category !== 'all') search.set('category', params.category);
       const suffix = search.size > 0 ? `?${search.toString()}` : '';
-      return request<{ connectors: Connector[]; categories: Category[]; total: number }>(
+      return request<{ connectors: Connector[]; hosted: HostedMcp[]; categories: Category[]; total: number }>(
         `/connectors${suffix}`,
       );
     },

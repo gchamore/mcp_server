@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { listConnectors, requireConnector, toSummary } from '../../connectors/registry.js';
+import { hostedMcps } from '../../connectors/hosted.js';
 import { getParams, getQuery, validate } from '../../middleware/validate.js';
 
 /**
@@ -38,9 +39,20 @@ catalogRouter.get('/', validate({ query: querySchema }), (req, res) => {
     );
   }
 
+  // Même filtre de recherche pour les deux natures : chercher « stripe » doit
+  // remonter la fiche officielle comme un éventuel connecteur Toolink.
+  let hosted = hostedMcps;
+  if (category && category !== 'all') {
+    hosted = hosted.filter((entry) => entry.category === category);
+  }
+  if (q) {
+    const needle = normalize(q);
+    hosted = hosted.filter((entry) => normalize(`${entry.name} ${entry.tagline}`).includes(needle));
+  }
+
   const categories = countCategories();
 
-  res.json({ connectors, categories, total: connectors.length });
+  res.json({ connectors, hosted, categories, total: connectors.length });
 });
 
 catalogRouter.get(
