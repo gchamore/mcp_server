@@ -41,8 +41,9 @@ describe('catalogue public', () => {
 
   it('filtre par catégorie', async () => {
     const response = await request(app).get('/api/connectors?category=marketing').expect(200);
-    expect(response.body.connectors.every((c: { category: string }) => c.category === 'marketing'))
-      .toBe(true);
+    expect(
+      response.body.connectors.every((c: { category: string }) => c.category === 'marketing'),
+    ).toBe(true);
   });
 
   it('renvoie 404 pour un connecteur inconnu, au format d’erreur standard', async () => {

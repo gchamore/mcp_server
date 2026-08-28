@@ -1,6 +1,16 @@
 import { api, ApiError } from '../../lib/api';
 import { useToast } from '../../components/Toast';
-import { Alert, Badge, Button, CopyField, EmptyState, Field, Input, Modal, Spinner } from '../../components/ui';
+import {
+  Alert,
+  Badge,
+  Button,
+  CopyField,
+  EmptyState,
+  Field,
+  Input,
+  Modal,
+  Spinner,
+} from '../../components/ui';
 import { IconLink, IconTrash } from '../../components/icons';
 import { timeAgo } from '../../lib/format';
 import { useState } from 'react';
@@ -88,9 +98,9 @@ export function McpClients() {
     <div className="stack">
       <div className="row row--between">
         <p className="text-sm text-muted" style={{ maxWidth: '62ch' }}>
-          La plupart des clients s’enregistrent seuls en découvrant l’URL d’un connecteur.
-          Créez un client statique uniquement pour un outil qui réclame un identifiant et un
-          secret à saisir manuellement.
+          La plupart des clients s’enregistrent seuls en découvrant l’URL d’un connecteur. Créez un
+          client statique uniquement pour un outil qui réclame un identifiant et un secret à saisir
+          manuellement.
         </p>
         <div className="row" style={{ gap: 'var(--s3)' }}>
           {abandonnees > 0 && (

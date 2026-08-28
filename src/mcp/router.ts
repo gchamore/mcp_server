@@ -7,10 +7,7 @@ import { listConnectors } from '../connectors/registry.js';
 import { env } from '../core/env.js';
 import { logger } from '../core/logger.js';
 import { mcpLimiter } from '../middleware/rate-limit.js';
-import {
-  recordToolInvocation,
-  touchEndpoint,
-} from '../modules/endpoints/endpoint.service.js';
+import { recordToolInvocation, touchEndpoint } from '../modules/endpoints/endpoint.service.js';
 import { oauthProvider } from '../modules/oauth/provider.js';
 import { buildMcpServer } from './server-factory.js';
 import { isFailure, resolveFromAuthInfo, resolveFromUrlToken, type McpContext } from './resolve.js';
@@ -150,7 +147,8 @@ async function serve(
   resolved: Awaited<ReturnType<typeof resolveFromAuthInfo>>,
 ): Promise<void> {
   if (isFailure(resolved)) {
-    const status = resolved.reason === 'unauthorized' ? 401 : resolved.reason === 'not-found' ? 404 : 403;
+    const status =
+      resolved.reason === 'unauthorized' ? 401 : resolved.reason === 'not-found' ? 404 : 403;
     sendJsonRpcError(res, status, -32001, resolved.message);
     return;
   }

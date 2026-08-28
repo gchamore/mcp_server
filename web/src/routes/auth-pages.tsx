@@ -422,7 +422,9 @@ export function ResetPassword() {
     reset();
 
     if (password !== confirmation) {
-      capture(new ApiError(400, 'VALIDATION_ERROR', 'Les deux mots de passe ne correspondent pas.'));
+      capture(
+        new ApiError(400, 'VALIDATION_ERROR', 'Les deux mots de passe ne correspondent pas.'),
+      );
       return;
     }
 

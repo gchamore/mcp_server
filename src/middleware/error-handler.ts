@@ -1,7 +1,7 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { ZodError } from 'zod';
 import { AppError, isAppError } from '../core/errors.js';
-import { logger } from '../core/logger.js';
+import { logger, maskSensitiveUrl } from '../core/logger.js';
 
 /**
  * Format d'erreur unique pour toute l'API :
@@ -19,7 +19,10 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   // Une réponse déjà commencée (streaming MCP par exemple) ne peut plus être
   // transformée en JSON : on coupe la connexion et on se contente de journaliser.
   if (res.headersSent) {
-    logger.error({ err, path: req.originalUrl }, 'Erreur après envoi des en-têtes');
+    logger.error(
+      { err, path: maskSensitiveUrl(req.originalUrl) },
+      'Erreur après envoi des en-têtes',
+    );
     res.end();
     return;
   }
@@ -28,12 +31,12 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
 
   if (appError.status >= 500) {
     logger.error(
-      { err, code: appError.code, path: req.originalUrl, method: req.method },
+      { err, code: appError.code, path: maskSensitiveUrl(req.originalUrl), method: req.method },
       appError.message,
     );
   } else {
     logger.warn(
-      { code: appError.code, path: req.originalUrl, method: req.method },
+      { code: appError.code, path: maskSensitiveUrl(req.originalUrl), method: req.method },
       appError.message,
     );
   }
@@ -45,9 +48,7 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
       // `details` suivait le même sort que le message, sauf qu'il était émis
       // dans tous les cas : masquer le message tout en publiant ses détails
       // n'aurait protégé personne le jour où une erreur interne en porte.
-      ...(appError.expose && appError.details !== undefined
-        ? { details: appError.details }
-        : {}),
+      ...(appError.expose && appError.details !== undefined ? { details: appError.details } : {}),
     },
   });
 };

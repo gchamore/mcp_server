@@ -3,10 +3,12 @@ name: CI
 # Les tests existaient déjà ; personne ne les lançait avant de pousser. Un test
 # qui ne tourne pas automatiquement est un test qui finit par être faux sans
 # que personne s'en aperçoive.
+# Sur TOUS les push, quelle que soit la branche : une branche d'essai non
+# vérifiée devient tôt ou tard une fusion non vérifiée.
 on:
   push:
-    branches: [main, New_project_test]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   verify:

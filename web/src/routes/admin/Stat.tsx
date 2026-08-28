@@ -1,5 +1,3 @@
-
-
 /** Tuile de chiffre, partagée par la vue d'ensemble et l'usage des outils. */
 export function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (

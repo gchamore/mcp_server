@@ -1,4 +1,4 @@
-# MCP Wesype
+# Toolink
 
 Plateforme qui transforme vos outils métier (CRM, facturation, e-mailing) en
 serveurs **Model Context Protocol** utilisables directement par Claude, Dust ou

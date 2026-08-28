@@ -118,7 +118,10 @@ adminRouter.patch(
   '/users/:id',
   validate({
     params: userIdParam,
-    body: z.object({ role: z.enum(['USER', 'ADMIN']).optional(), isActive: z.boolean().optional() }),
+    body: z.object({
+      role: z.enum(['USER', 'ADMIN']).optional(),
+      isActive: z.boolean().optional(),
+    }),
   }),
   async (req, res) => {
     const actor = auth(req);
@@ -225,16 +228,12 @@ adminRouter.post(
   },
 );
 
-adminRouter.delete(
-  '/mcp-clients/:id',
-  validate({ params: userIdParam }),
-  async (req, res) => {
-    const { id } = getParams<{ id: string }>(req);
-    // Les jetons et accès partent en cascade : révocation immédiate.
-    await prisma.oAuthClient.delete({ where: { id } });
-    res.status(204).end();
-  },
-);
+adminRouter.delete('/mcp-clients/:id', validate({ params: userIdParam }), async (req, res) => {
+  const { id } = getParams<{ id: string }>(req);
+  // Les jetons et accès partent en cascade : révocation immédiate.
+  await prisma.oAuthClient.delete({ where: { id } });
+  res.status(204).end();
+});
 
 /**
  * Purge des inscriptions dynamiques abandonnées.

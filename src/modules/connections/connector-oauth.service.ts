@@ -53,7 +53,6 @@ const stateCookie = new StateCookie<ConnectorOAuthState>({
   encrypted: true,
 });
 
-
 /** L'application OAuth du connecteur est-elle configurée sur ce serveur ? */
 export function isConnectorOAuthReady(connector: AnyConnector): boolean {
   if (connector.auth.type !== 'oauth2') return true;
@@ -111,7 +110,10 @@ export function startConnectorOAuth(
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('scope', config.scopes.join(' '));
   url.searchParams.set('state', nonce);
-  url.searchParams.set('code_challenge', createHash('sha256').update(codeVerifier).digest('base64url'));
+  url.searchParams.set(
+    'code_challenge',
+    createHash('sha256').update(codeVerifier).digest('base64url'),
+  );
   url.searchParams.set('code_challenge_method', 'S256');
 
   for (const [key, value] of Object.entries(config.authorizationParams ?? {})) {
@@ -238,7 +240,10 @@ export async function ensureFreshCredentials(
       })
       .catch(() => undefined);
 
-    logger.warn({ err: error, connectionId, connector: connector.id }, 'Rafraîchissement OAuth refusé');
+    logger.warn(
+      { err: error, connectionId, connector: connector.id },
+      'Rafraîchissement OAuth refusé',
+    );
     throw upstreamError("L'autorisation du compte a expiré. Reconnectez-le depuis MCP Wesype.");
   }
 }
@@ -280,4 +285,3 @@ function toCredentials(tokens: TokenResponse): OAuthCredentials {
     ...(tokens.scope ? { scope: tokens.scope } : {}),
   };
 }
-

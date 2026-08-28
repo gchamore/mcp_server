@@ -40,7 +40,10 @@ connectionRouter.get(
   '/oauth/:connectorId/start',
   requireAuth,
   sensitiveLimiter,
-  validate({ params: z.object({ connectorId: z.string().min(1).max(40) }), query: oauthStartSchema }),
+  validate({
+    params: z.object({ connectorId: z.string().min(1).max(40) }),
+    query: oauthStartSchema,
+  }),
   (req, res) => {
     const { connectorId } = getParams<{ connectorId: string }>(req);
     const { label, returnTo } = getQuery<z.infer<typeof oauthStartSchema>>(req);
@@ -62,7 +65,9 @@ connectionRouter.get(
     const query = getQuery<z.infer<typeof oauthCallbackSchema>>(req);
 
     if (query.error || !query.code || !query.state) {
-      res.redirect(`/connexions?erreur=${encodeURIComponent(query.error ?? 'autorisation_annulee')}`);
+      res.redirect(
+        `/connexions?erreur=${encodeURIComponent(query.error ?? 'autorisation_annulee')}`,
+      );
       return;
     }
 
@@ -91,7 +96,10 @@ connectionRouter.use(requireAuth);
 
 const labelSchema = z.string().trim().min(1).max(60);
 const idParam = z.object({ id: z.string().min(1).max(40) });
-const endpointParams = z.object({ id: z.string().min(1).max(40), endpointId: z.string().min(1).max(40) });
+const endpointParams = z.object({
+  id: z.string().min(1).max(40),
+  endpointId: z.string().min(1).max(40),
+});
 
 const createSchema = z.object({
   connectorId: z.string().min(1).max(40),
@@ -109,7 +117,9 @@ const updateSchema = z
     message: 'Rien à mettre à jour.',
   });
 
-const endpointSchema = z.object({ name: z.string().trim().min(1).max(60).default('Point d’accès') });
+const endpointSchema = z.object({
+  name: z.string().trim().min(1).max(60).default('Point d’accès'),
+});
 
 connectionRouter.get('/', async (req, res) => {
   res.json({ connections: await listConnections(auth(req).userId) });
@@ -227,7 +237,12 @@ connectionRouter.delete(
     const { id, endpointId } = getParams<{ id: string; endpointId: string }>(req);
 
     await removeEndpoint(userId, id, endpointId);
-    recordAudit({ action: 'endpoint.revoked', userId, targetType: 'endpoint', targetId: endpointId });
+    recordAudit({
+      action: 'endpoint.revoked',
+      userId,
+      targetType: 'endpoint',
+      targetId: endpointId,
+    });
 
     res.status(204).end();
   },

@@ -297,7 +297,7 @@ const listQuotations = tool({
   name: 'list_quotations',
   title: 'Lister les devis',
   description:
-    "Liste les devis Axonaut. Utiliser pour suivre le pipeline commercial et les propositions en attente de signature.",
+    'Liste les devis Axonaut. Utiliser pour suivre le pipeline commercial et les propositions en attente de signature.',
   inputSchema: { page },
   annotations: { readOnlyHint: true, openWorldHint: true },
   async handler(args, ctx) {
@@ -358,7 +358,7 @@ const listExpenses = tool({
   name: 'list_expenses',
   title: 'Lister les dépenses',
   description:
-    "Liste les dépenses et achats enregistrés dans Axonaut. Utiliser pour analyser les coûts ou répondre à une question de marge.",
+    'Liste les dépenses et achats enregistrés dans Axonaut. Utiliser pour analyser les coûts ou répondre à une question de marge.',
   inputSchema: { page },
   annotations: { readOnlyHint: true, openWorldHint: true },
   async handler(args, ctx) {

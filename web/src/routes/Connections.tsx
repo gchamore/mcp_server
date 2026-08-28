@@ -21,7 +21,10 @@ import type { Connection } from '../lib/types';
 /** Tableau de bord des connexions de l'utilisateur et de leurs points d'accès MCP. */
 export function Connections() {
   const queryClient = useQueryClient();
-  const { data, isLoading } = useQuery({ queryKey: ['connections'], queryFn: api.connections.list });
+  const { data, isLoading } = useQuery({
+    queryKey: ['connections'],
+    queryFn: api.connections.list,
+  });
 
   const connections = data?.connections ?? [];
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['connections'] });
@@ -167,7 +170,11 @@ function ConnectionCard({
         </div>
 
         <div className="row">
-          <Button size="sm" onClick={() => verifyMutation.mutate()} loading={verifyMutation.isPending}>
+          <Button
+            size="sm"
+            onClick={() => verifyMutation.mutate()}
+            loading={verifyMutation.isPending}
+          >
             Vérifier
           </Button>
           <Button size="sm" onClick={() => setEditing(true)}>
@@ -185,9 +192,7 @@ function ConnectionCard({
 
       <div className="stack stack--tight">
         <div className="row row--between">
-          <strong className="text-sm">
-            Points d’accès MCP ({connection.endpoints.length})
-          </strong>
+          <strong className="text-sm">Points d’accès MCP ({connection.endpoints.length})</strong>
           <Button
             size="sm"
             variant="ghost"

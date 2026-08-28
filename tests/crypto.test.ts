@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { decryptJson, encryptJson, generateToken, hashToken, safeEqual } from '../src/core/crypto.js';
+import {
+  decryptJson,
+  encryptJson,
+  generateToken,
+  hashToken,
+  safeEqual,
+} from '../src/core/crypto.js';
 
 describe('chiffrement des identifiants', () => {
   it('effectue un aller-retour sans perte', () => {

@@ -152,5 +152,3 @@ export async function completeGoogleAuth(
     returnTo: stored.returnTo,
   };
 }
-
-

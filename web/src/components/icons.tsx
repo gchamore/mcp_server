@@ -117,30 +117,10 @@ export const IconExternal = (p: IconProps) => (
   </Icon>
 );
 
-export const IconRefresh = (p: IconProps) => (
-  <Icon {...p}>
-    <path d="M20 12a8 8 0 1 1-2.6-5.9" />
-    <path d="M20 4v4h-4" />
-  </Icon>
-);
-
 export const IconTrash = (p: IconProps) => (
   <Icon {...p}>
     <path d="M4 7h16" />
     <path d="M9 7V5h6v2" />
     <path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12" />
-  </Icon>
-);
-
-export const IconPlus = (p: IconProps) => (
-  <Icon {...p}>
-    <path d="M12 5v14M5 12h14" />
-  </Icon>
-);
-
-export const IconEye = (p: IconProps) => (
-  <Icon {...p}>
-    <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
-    <circle cx="12" cy="12" r="2.75" />
   </Icon>
 );

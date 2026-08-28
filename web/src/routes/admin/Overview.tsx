@@ -7,7 +7,10 @@ import { Stat } from './Stat';
 
 /** Vue d'ensemble : les chiffres qui disent si la plateforme est vivante. */
 export function Overview() {
-  const { data, isLoading } = useQuery({ queryKey: ['admin', 'overview'], queryFn: api.admin.overview });
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'overview'],
+    queryFn: api.admin.overview,
+  });
 
   if (isLoading) return <Spinner />;
   if (!data) return null;
@@ -15,10 +18,22 @@ export function Overview() {
   return (
     <div className="stack stack--loose">
       <div className="grid grid--stats">
-        <Stat label="Utilisateurs" value={formatNumber(data.totals.users)} hint={`${formatNumber(data.totals.activeUsers)} actifs sur 7 jours`} />
+        <Stat
+          label="Utilisateurs"
+          value={formatNumber(data.totals.users)}
+          hint={`${formatNumber(data.totals.activeUsers)} actifs sur 7 jours`}
+        />
         <Stat label="Connexions" value={formatNumber(data.totals.connections)} />
-        <Stat label="Points d’accès" value={formatNumber(data.totals.endpoints)} hint="non révoqués" />
-        <Stat label="Connecteurs" value={formatNumber(data.totals.connectors)} hint="au catalogue" />
+        <Stat
+          label="Points d’accès"
+          value={formatNumber(data.totals.endpoints)}
+          hint="non révoqués"
+        />
+        <Stat
+          label="Connecteurs"
+          value={formatNumber(data.totals.connectors)}
+          hint="au catalogue"
+        />
         <Stat
           label="Appels d’outils"
           value={formatNumber(data.calls.total)}

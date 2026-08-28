@@ -79,9 +79,7 @@ function toConnectionView(connection: Connection & { endpoints: McpEndpoint[] })
     lastUsedAt: connection.lastUsedAt,
     createdAt: connection.createdAt,
     credentials: describeCredentials(connector, credentials),
-    endpoints: connection.endpoints
-      .filter((endpoint) => !endpoint.revokedAt)
-      .map(toEndpointView),
+    endpoints: connection.endpoints.filter((endpoint) => !endpoint.revokedAt).map(toEndpointView),
     connector: toSummary(connector),
   };
 }

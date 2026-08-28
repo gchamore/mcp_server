@@ -217,9 +217,7 @@ export function Consent() {
       <Shell>
         <div className="stack" style={{ alignItems: 'center', textAlign: 'center' }}>
           <Spinner label="Finalisation de l’autorisation…" />
-          <p className="text-sm text-muted">
-            Compte raccordé. Retour vers {data.client.name}…
-          </p>
+          <p className="text-sm text-muted">Compte raccordé. Retour vers {data.client.name}…</p>
         </div>
       </Shell>
     );
@@ -282,7 +280,8 @@ export function Consent() {
         {data.connectorAvailable && data.connections.length === 1 && (
           <p className="text-sm text-muted row" style={{ gap: 'var(--s2)' }}>
             <IconCheck size={14} />
-            Compte utilisé : <strong>{data.connections[0]?.accountLabel ?? data.connections[0]?.label}</strong>
+            Compte utilisé :{' '}
+            <strong>{data.connections[0]?.accountLabel ?? data.connections[0]?.label}</strong>
           </p>
         )}
 

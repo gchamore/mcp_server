@@ -33,7 +33,10 @@ export type McpContext = {
   origin: 'oauth' | 'url-token';
 };
 
-export type ResolutionFailure = { reason: 'unauthorized' | 'not-found' | 'connection-error'; message: string };
+export type ResolutionFailure = {
+  reason: 'unauthorized' | 'not-found' | 'connection-error';
+  message: string;
+};
 
 /** Résolution depuis un jeton OAuth déjà validé par le middleware du SDK. */
 export async function resolveFromAuthInfo(
@@ -41,8 +44,7 @@ export async function resolveFromAuthInfo(
   connectorId: string,
 ): Promise<McpContext | ResolutionFailure> {
   const extra = authInfo.extra as
-    | { userId?: string; connectorId?: string; connectionId?: string | null }
-    | undefined;
+    { userId?: string; connectorId?: string; connectionId?: string | null } | undefined;
 
   if (!extra?.userId || extra.connectorId !== connectorId) {
     return { reason: 'unauthorized', message: "Ce jeton n'est pas valide pour ce connecteur." };
@@ -68,7 +70,11 @@ export async function resolveFromAuthInfo(
     };
   }
 
-  return finalize(connector, connection, { endpointId: null, userId: extra.userId, origin: 'oauth' });
+  return finalize(connector, connection, {
+    endpointId: null,
+    userId: extra.userId,
+    origin: 'oauth',
+  });
 }
 
 /** Résolution depuis un jeton statique présent dans l'URL. */
@@ -100,8 +106,14 @@ async function finalize(
   try {
     credentials = decryptJson<Credentials>(connection.credentials);
   } catch (error) {
-    logger.error({ err: error, connectionId: connection.id }, 'Déchiffrement des identifiants impossible');
-    return { reason: 'connection-error', message: 'Identifiants illisibles. Reconfigurez la connexion.' };
+    logger.error(
+      { err: error, connectionId: connection.id },
+      'Déchiffrement des identifiants impossible',
+    );
+    return {
+      reason: 'connection-error',
+      message: 'Identifiants illisibles. Reconfigurez la connexion.',
+    };
   }
 
   // Pour un connecteur OAuth, le jeton d'accès a une durée de vie courte :

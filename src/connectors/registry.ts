@@ -18,7 +18,6 @@ import type { AnyConnector, ConnectorSummary, CredentialField, Credentials } fro
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/;
 const TOOL_NAME_PATTERN = /^[a-z][a-z0-9_]{1,62}$/;
 
-
 const registry = new Map<string, AnyConnector>();
 let loaded = false;
 
@@ -70,7 +69,7 @@ function assertValidConnector(value: unknown): AnyConnector {
     }
     if (!oauth?.scopes?.length) fail('auth.oauth.scopes doit contenir au moins un scope');
     if (connector.auth.fields.length > 0) {
-      fail("un connecteur OAuth ne doit déclarer aucun champ de saisie (auth.fields)");
+      fail('un connecteur OAuth ne doit déclarer aucun champ de saisie (auth.fields)');
     }
   } else if (!connector.auth.fields?.length) {
     fail('auth.fields doit contenir au moins un champ');

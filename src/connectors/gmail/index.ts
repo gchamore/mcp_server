@@ -86,7 +86,7 @@ const listMessages = tool({
 
 const getMessage = tool({
   name: 'get_message',
-  title: "Lire un e-mail",
+  title: 'Lire un e-mail',
   description:
     "Récupère le contenu complet d'un e-mail à partir de son identifiant. Utiliser après " +
     "list_messages lorsque l'utilisateur veut connaître le contenu exact d'un message.",
@@ -113,8 +113,8 @@ const listLabels = tool({
   name: 'list_labels',
   title: 'Lister les libellés',
   description:
-    "Liste les libellés Gmail et le nombre de messages non lus de chacun. Utiliser pour savoir où " +
-    "en est la boîte de réception, ou pour retrouver un libellé avant de filtrer une recherche.",
+    'Liste les libellés Gmail et le nombre de messages non lus de chacun. Utiliser pour savoir où ' +
+    'en est la boîte de réception, ou pour retrouver un libellé avant de filtrer une recherche.',
   inputSchema: {},
   annotations: { readOnlyHint: true, openWorldHint: true },
   async handler(_args, ctx) {
@@ -183,7 +183,7 @@ export default defineConnector<GmailCredentials>({
   tagline: 'Boîte e-mail : recherche, lecture et envoi',
   description:
     "Donne à votre assistant IA l'accès à votre boîte Gmail : rechercher des messages, en lire le " +
-    "contenu, consulter vos libellés et envoyer des e-mails en votre nom. La connexion se fait par " +
+    'contenu, consulter vos libellés et envoyer des e-mails en votre nom. La connexion se fait par ' +
     'Google, sans aucune clé à saisir.',
   category: 'productivity',
   status: 'beta',
@@ -222,9 +222,7 @@ export default defineConnector<GmailCredentials>({
   async verify(credentials, ctx) {
     try {
       const profile = await new GmailClient(credentials.accessToken, ctx.signal).getProfile();
-      return profile.emailAddress
-        ? { ok: true, accountLabel: profile.emailAddress }
-        : { ok: true };
+      return profile.emailAddress ? { ok: true, accountLabel: profile.emailAddress } : { ok: true };
     } catch (error) {
       ctx.logger.debug({ err: error }, 'Vérification Gmail échouée');
       return { ok: false, message: errorMessage(error) };

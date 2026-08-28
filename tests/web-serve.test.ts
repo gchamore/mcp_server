@@ -85,10 +85,7 @@ describe('compression', () => {
     const asset = /\/assets\/index-[A-Za-z0-9_-]+\.js/.exec(index.text)?.[0];
     expect(asset).toBeDefined();
 
-    const response = await request(app)
-      .get(asset!)
-      .set('Accept-Encoding', 'br')
-      .expect(200);
+    const response = await request(app).get(asset!).set('Accept-Encoding', 'br').expect(200);
 
     expect(response.headers['content-encoding']).toBe('br');
     // Sans ça, le navigateur téléchargerait le fichier au lieu de l'exécuter.
@@ -101,10 +98,7 @@ describe('compression', () => {
     const index = await request(app).get('/');
     const asset = /\/assets\/index-[A-Za-z0-9_-]+\.js/.exec(index.text)?.[0];
 
-    const response = await request(app)
-      .get(asset!)
-      .set('Accept-Encoding', 'identity')
-      .expect(200);
+    const response = await request(app).get(asset!).set('Accept-Encoding', 'identity').expect(200);
 
     expect(response.headers['content-encoding']).toBeUndefined();
   });

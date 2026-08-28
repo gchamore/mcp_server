@@ -4,7 +4,11 @@ import { recordAudit } from '../../core/audit.js';
 import { auth, requireAuth } from '../../middleware/auth.js';
 import { sensitiveLimiter } from '../../middleware/rate-limit.js';
 import { getBody, getQuery, validate } from '../../middleware/validate.js';
-import { approveAuthorization, denyAuthorization, describeAuthorization } from './consent.service.js';
+import {
+  approveAuthorization,
+  denyAuthorization,
+  describeAuthorization,
+} from './consent.service.js';
 import { decodePendingAuthorization } from './provider.js';
 
 /**
@@ -63,7 +67,7 @@ oauthRouter.post(
       action: 'oauth.authorized',
       userId,
       targetType: 'connector',
-      ...(pending.connectorId ?? input.connectorId
+      ...((pending.connectorId ?? input.connectorId)
         ? { targetId: (pending.connectorId ?? input.connectorId) as string }
         : {}),
       metadata: { clientId: pending.clientId, connectionId: input.connectionId ?? null },

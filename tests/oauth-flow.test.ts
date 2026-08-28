@@ -392,16 +392,13 @@ suite('flux OAuth complet', () => {
     // Sans le secret, l'échange doit être rejeté. On vérifie le code d'erreur
     // OAuth plutôt que le statut HTTP : la RFC 6749 autorise 400 comme 401
     // pour `invalid_client`, et le SDK a choisi 400.
-    const refused = await request(app)
-      .post('/token')
-      .type('form')
-      .send({
-        grant_type: 'authorization_code',
-        code,
-        client_id: staticClientId,
-        redirect_uri: 'https://dust.tt/oauth/mcp_static/finalize',
-        code_verifier: codeVerifier,
-      });
+    const refused = await request(app).post('/token').type('form').send({
+      grant_type: 'authorization_code',
+      code,
+      client_id: staticClientId,
+      redirect_uri: 'https://dust.tt/oauth/mcp_static/finalize',
+      code_verifier: codeVerifier,
+    });
 
     expect(refused.status).toBeGreaterThanOrEqual(400);
     expect(refused.body.error).toBe('invalid_client');
@@ -456,6 +453,9 @@ suite('flux OAuth complet', () => {
   });
 
   it('exige une session Toolink pour consulter une demande de consentement', async () => {
-    await request(app).get('/api/oauth/authorization').query({ demande: 'x'.repeat(40) }).expect(401);
+    await request(app)
+      .get('/api/oauth/authorization')
+      .query({ demande: 'x'.repeat(40) })
+      .expect(401);
   });
 });

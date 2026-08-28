@@ -69,7 +69,9 @@ export function Users() {
                   <tr key={user.id}>
                     <td>
                       <div className="stack stack--tight">
-                        <strong>{[user.firstName, user.lastName].filter(Boolean).join(' ') || '—'}</strong>
+                        <strong>
+                          {[user.firstName, user.lastName].filter(Boolean).join(' ') || '—'}
+                        </strong>
                         <span className="text-xs text-muted mono">{user.email}</span>
                       </div>
                     </td>

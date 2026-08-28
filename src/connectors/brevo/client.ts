@@ -85,10 +85,13 @@ export class BrevoClient {
   }
 
   async listLists(params: { limit?: number; offset?: number } = {}) {
-    const payload = await this.http.get<{ lists?: BrevoList[]; count?: number }>('/contacts/lists', {
-      ...this.options(),
-      query: { limit: params.limit ?? 25, offset: params.offset ?? 0 },
-    });
+    const payload = await this.http.get<{ lists?: BrevoList[]; count?: number }>(
+      '/contacts/lists',
+      {
+        ...this.options(),
+        query: { limit: params.limit ?? 25, offset: params.offset ?? 0 },
+      },
+    );
     return { lists: payload.lists ?? [], total: payload.count ?? 0 };
   }
 

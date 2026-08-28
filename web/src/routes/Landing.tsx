@@ -169,8 +169,7 @@ export function Landing() {
           <h2>Vos clés ne quittent jamais la plateforme</h2>
           <p className="lead">
             Le client IA reçoit un jeton limité à un seul connecteur, révocable à tout instant. Il
-            n’a jamais accès à vos identifiants : c’est Toolink qui appelle le service, jamais
-            lui.
+            n’a jamais accès à vos identifiants : c’est Toolink qui appelle le service, jamais lui.
           </p>
         </Reveal>
 

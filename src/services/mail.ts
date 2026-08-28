@@ -14,7 +14,7 @@ let transporter: Transporter | null = null;
 
 export function initMailer(): void {
   if (!env.smtp.enabled) {
-    logger.warn("SMTP non configuré : les e-mails seront écrits dans les logs (dev uniquement).");
+    logger.warn('SMTP non configuré : les e-mails seront écrits dans les logs (dev uniquement).');
     return;
   }
 

@@ -5,7 +5,7 @@ import { pinoHttp } from 'pino-http';
 import { apiRouter } from './api.js';
 import { connectorCount } from './connectors/registry.js';
 import { env } from './core/env.js';
-import { logger } from './core/logger.js';
+import { logger, maskSensitiveUrl } from './core/logger.js';
 import { checkDatabase } from './core/prisma.js';
 import { mcpAuthRouter } from '@modelcontextprotocol/sdk/server/auth/router.js';
 import { mcpRouter } from './mcp/router.js';
@@ -34,10 +34,17 @@ export function createApp(): Express {
   app.use(
     pinoHttp({
       logger,
+      // Les URL peuvent transporter des jetons (chemin MCP de repli, lien de
+      // réinitialisation) : elles sont masquées avant d'être journalisées.
+      serializers: {
+        req(req: { url?: string } & Record<string, unknown>) {
+          if (typeof req.url === 'string') req.url = maskSensitiveUrl(req.url);
+          return req;
+        },
+      },
       autoLogging: {
         // Les fichiers statiques et le health check noient les journaux.
-        ignore: (req) =>
-          req.url === '/health' || Boolean(req.url?.startsWith('/assets/')),
+        ignore: (req) => req.url === '/health' || Boolean(req.url?.startsWith('/assets/')),
       },
       customLogLevel: (_req, res, err) => {
         if (err || res.statusCode >= 500) return 'error';

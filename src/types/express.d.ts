@@ -1,7 +1,6 @@
 import type { Role } from '@prisma/client';
 
 declare global {
-   
   namespace Express {
     interface SessionUser {
       userId: string;

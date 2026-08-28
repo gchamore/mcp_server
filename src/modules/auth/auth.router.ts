@@ -7,12 +7,7 @@ import { auth, requireAuth } from '../../middleware/auth.js';
 import { authLimiter, sensitiveLimiter } from '../../middleware/rate-limit.js';
 import { getBody, getQuery, validate } from '../../middleware/validate.js';
 import { isMailEnabled } from '../../services/mail.js';
-import {
-  authenticate,
-  registerUser,
-  toPublicUser,
-  upsertGoogleUser,
-} from './auth.service.js';
+import { authenticate, registerUser, toPublicUser, upsertGoogleUser } from './auth.service.js';
 import { beginGoogleAuth, completeGoogleAuth, isGoogleEnabled } from './google.js';
 import {
   changePasswordSchema,

@@ -30,10 +30,7 @@ export interface McpServerContext {
 
 const SERVER_VERSION = '2.0.0';
 
-export function buildMcpServer(
-  connector: AnyConnector,
-  context: McpServerContext,
-): McpServer {
+export function buildMcpServer(connector: AnyConnector, context: McpServerContext): McpServer {
   const server = new McpServer(
     { name: `toolink-${connector.id}`, version: SERVER_VERSION },
     {

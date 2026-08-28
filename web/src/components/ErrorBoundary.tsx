@@ -52,7 +52,11 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
           <div className="row" style={{ gap: 'var(--s3)' }}>
             {/* Rechargement complet plutôt que remise à zéro de l'état : si le
                 composant a échoué une fois, il échouera à l'identique. */}
-            <button type="button" className="btn btn--primary" onClick={() => window.location.reload()}>
+            <button
+              type="button"
+              className="btn btn--primary"
+              onClick={() => window.location.reload()}
+            >
               Recharger la page
             </button>
             <a className="btn btn--secondary" href="/">

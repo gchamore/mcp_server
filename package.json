@@ -26,7 +26,8 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "postinstall": "npm --prefix web install --include=dev --no-audit --no-fund",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "new:connector": "node scripts/new-connector.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

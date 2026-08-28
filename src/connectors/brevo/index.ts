@@ -103,7 +103,7 @@ const getContact = tool({
   name: 'get_contact',
   title: "Détail d'un contact",
   description:
-    "Récupère un contact Brevo par son adresse e-mail ou son identifiant, avec ses attributs personnalisés. Utiliser pour répondre à une question sur une personne précise.",
+    'Récupère un contact Brevo par son adresse e-mail ou son identifiant, avec ses attributs personnalisés. Utiliser pour répondre à une question sur une personne précise.',
   inputSchema: {
     identifier: z.string().min(1).describe('Adresse e-mail ou identifiant numérique du contact.'),
   },
@@ -264,7 +264,7 @@ const sendEmail = tool({
     if (!sender) {
       return {
         text:
-          "Aucun expéditeur disponible. Renseigner « Expéditeur par défaut » sur la connexion Brevo, " +
+          'Aucun expéditeur disponible. Renseigner « Expéditeur par défaut » sur la connexion Brevo, ' +
           'ou fournir sender_email dans l’appel.',
       };
     }

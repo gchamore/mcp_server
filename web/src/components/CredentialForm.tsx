@@ -92,7 +92,9 @@ export function CredentialForm({
       )}
 
       {fields.map((field) => {
-        const error = touched[field.key] ? (clientErrors[field.key] ?? serverErrors[field.key]) : serverErrors[field.key];
+        const error = touched[field.key]
+          ? (clientErrors[field.key] ?? serverErrors[field.key])
+          : serverErrors[field.key];
 
         return (
           <Field

@@ -91,10 +91,14 @@ export function decodePendingAuthorization(token: string): PendingAuthorization 
   try {
     pending = decryptJson<PendingAuthorization>(token);
   } catch {
-    throw badRequest("Demande d'autorisation illisible. Relancez la connexion depuis votre client IA.");
+    throw badRequest(
+      "Demande d'autorisation illisible. Relancez la connexion depuis votre client IA.",
+    );
   }
   if (pending.expiresAt <= Date.now()) {
-    throw badRequest("Demande d'autorisation expirée. Relancez la connexion depuis votre client IA.");
+    throw badRequest(
+      "Demande d'autorisation expirée. Relancez la connexion depuis votre client IA.",
+    );
   }
   return pending;
 }
@@ -189,7 +193,9 @@ export const oauthProvider: OAuthServerProvider = {
       throw new InvalidGrantError('redirect_uri ne correspond pas à la demande initiale.');
     }
     if (resource && grant.resource && resource.toString() !== grant.resource) {
-      throw new InvalidGrantError("Le paramètre 'resource' ne correspond pas à la demande initiale.");
+      throw new InvalidGrantError(
+        "Le paramètre 'resource' ne correspond pas à la demande initiale.",
+      );
     }
 
     /**

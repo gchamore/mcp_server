@@ -93,7 +93,6 @@ export interface Connector {
   toolCount: number;
 }
 
-
 /** Ce que l'écran de consentement doit afficher. */
 export interface ConsentView {
   client: { name: string; clientId: string };
@@ -199,5 +198,11 @@ export interface McpClient {
 export interface UsageStats {
   days: number;
   since: string;
-  tools: { connectorId: string; toolName: string; calls: number; failures: number; avgMs: number }[];
+  tools: {
+    connectorId: string;
+    toolName: string;
+    calls: number;
+    failures: number;
+    avgMs: number;
+  }[];
 }

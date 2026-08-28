@@ -60,7 +60,11 @@ interface FieldProps {
   required?: boolean;
   help?: string;
   error?: string;
-  children: (props: { id: string; 'aria-describedby'?: string; 'aria-invalid'?: boolean }) => ReactNode;
+  children: (props: {
+    id: string;
+    'aria-describedby'?: string;
+    'aria-invalid'?: boolean;
+  }) => ReactNode;
 }
 
 /**

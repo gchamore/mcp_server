@@ -14,7 +14,7 @@ export default defineConnector<AxonautCredentials>({
   name: 'Axonaut',
   tagline: 'CRM, devis et facturation pour TPE/PME',
   description:
-    "Donne à votre assistant IA un accès en lecture et en écriture à votre compte Axonaut : entreprises, contacts, devis, factures, projets et dépenses. Idéal pour interroger votre portefeuille clients ou suivre les impayés en langage naturel.",
+    'Donne à votre assistant IA un accès en lecture et en écriture à votre compte Axonaut : entreprises, contacts, devis, factures, projets et dépenses. Idéal pour interroger votre portefeuille clients ou suivre les impayés en langage naturel.',
   category: 'crm',
   status: 'stable',
   icon: 'https://www.axonaut.com/favicon.ico',

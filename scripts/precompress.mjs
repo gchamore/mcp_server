@@ -20,7 +20,16 @@ const brotli = promisify(brotliCompress);
 const gz = promisify(gzip);
 
 const ROOT = path.resolve(import.meta.dirname, '..', 'web', 'dist');
-const COMPRESSIBLE = new Set(['.js', '.css', '.html', '.svg', '.json', '.txt', '.xml', '.webmanifest']);
+const COMPRESSIBLE = new Set([
+  '.js',
+  '.css',
+  '.html',
+  '.svg',
+  '.json',
+  '.txt',
+  '.xml',
+  '.webmanifest',
+]);
 
 /** En dessous de ce seuil, l'en-tête de compression coûte plus qu'il ne rapporte. */
 const MIN_BYTES = 1024;
@@ -75,5 +84,7 @@ console.log(
  * Empreinte du lot, écrite pour que le serveur puisse vérifier au démarrage
  * que les fichiers `.br` correspondent bien au build servi.
  */
-const digest = createHash('sha256').update(report.map((r) => `${r.file}:${r.br}`).join('\n')).digest('hex');
+const digest = createHash('sha256')
+  .update(report.map((r) => `${r.file}:${r.br}`).join('\n'))
+  .digest('hex');
 await writeFile(path.join(ROOT, '.precompressed'), `${digest}\n`);

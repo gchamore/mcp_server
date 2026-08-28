@@ -19,7 +19,10 @@ export const passwordSchema = z
   .string()
   .min(10, 'Le mot de passe doit contenir au moins 10 caractères')
   .max(200, 'Le mot de passe est trop long')
-  .refine((value) => value.trim().length >= 10, 'Le mot de passe ne peut pas être composé d’espaces');
+  .refine(
+    (value) => value.trim().length >= 10,
+    'Le mot de passe ne peut pas être composé d’espaces',
+  );
 
 const nameSchema = z.string().trim().min(1).max(80).optional();
 

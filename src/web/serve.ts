@@ -102,13 +102,25 @@ const STATIC_PAGES: Record<string, PageMeta> = {
     description:
       'Tous les services disponibles en Model Context Protocol : les outils exposés, les autorisations demandées, et la marche à suivre pour les brancher.',
   },
-  '/connexion': { title: `Connexion — ${SITE_NAME}`, description: 'Accédez à vos connecteurs.', noindex: true },
+  '/connexion': {
+    title: `Connexion — ${SITE_NAME}`,
+    description: 'Accédez à vos connecteurs.',
+    noindex: true,
+  },
   '/inscription': {
     title: `Créer un compte — ${SITE_NAME}`,
     description: 'Créez votre compte et branchez votre premier outil en deux minutes.',
   },
-  '/mot-de-passe-oublie': { title: `Mot de passe oublié — ${SITE_NAME}`, description: '', noindex: true },
-  '/reinitialiser-mot-de-passe': { title: `Nouveau mot de passe — ${SITE_NAME}`, description: '', noindex: true },
+  '/mot-de-passe-oublie': {
+    title: `Mot de passe oublié — ${SITE_NAME}`,
+    description: '',
+    noindex: true,
+  },
+  '/reinitialiser-mot-de-passe': {
+    title: `Nouveau mot de passe — ${SITE_NAME}`,
+    description: '',
+    noindex: true,
+  },
   '/autoriser': { title: `Autoriser l’accès — ${SITE_NAME}`, description: '', noindex: true },
   '/connexions': { title: `Mes connexions — ${SITE_NAME}`, description: '', noindex: true },
   '/parametres': { title: `Paramètres — ${SITE_NAME}`, description: '', noindex: true },
@@ -252,13 +264,15 @@ function renderHtml(pathname: string): string | null {
 
   // Le gabarit porte un titre et une description génériques : on les retire
   // pour ne pas en avoir deux, le second l'emportant selon les analyseurs.
-  return template
-    .replace(/<title>.*?<\/title>\s*/s, '')
-    .replace(/<meta\s+name="description"[^>]*>\s*/s, '')
-    // Les commentaires du gabarit expliquent des choix aux développeurs ; ils
-    // n'ont rien à faire dans une page servie des milliers de fois.
-    .replace(/<!--[\s\S]*?-->\s*/g, '')
-    .replace('</head>', `  ${head}\n  </head>`);
+  return (
+    template
+      .replace(/<title>.*?<\/title>\s*/s, '')
+      .replace(/<meta\s+name="description"[^>]*>\s*/s, '')
+      // Les commentaires du gabarit expliquent des choix aux développeurs ; ils
+      // n'ont rien à faire dans une page servie des milliers de fois.
+      .replace(/<!--[\s\S]*?-->\s*/g, '')
+      .replace('</head>', `  ${head}\n  </head>`)
+  );
 }
 
 // --- 4. Fichiers pour les robots -------------------------------------------
@@ -315,7 +329,9 @@ function mountRobots(app: Express): void {
     res
       .type('application/xml')
       .setHeader('Cache-Control', 'public, max-age=86400')
-      .send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`);
+      .send(
+        `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`,
+      );
   });
 }
 
@@ -332,7 +348,10 @@ export function mountWeb(app: Express): void {
       // changer, on peut donc les mettre en cache pour un an.
       setHeaders: (res, filePath) => {
         const inAssets = filePath.includes(`${path.sep}assets${path.sep}`);
-        res.setHeader('Cache-Control', inAssets ? 'public, max-age=31536000, immutable' : 'no-cache');
+        res.setHeader(
+          'Cache-Control',
+          inAssets ? 'public, max-age=31536000, immutable' : 'no-cache',
+        );
       },
     }),
   );

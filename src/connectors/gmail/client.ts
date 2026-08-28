@@ -109,9 +109,7 @@ export class GmailClient {
       ...this.options(),
       query: {
         format,
-        ...(format === 'metadata'
-          ? { metadataHeaders: 'From,To,Subject,Date' }
-          : {}),
+        ...(format === 'metadata' ? { metadataHeaders: 'From,To,Subject,Date' } : {}),
       },
     });
 

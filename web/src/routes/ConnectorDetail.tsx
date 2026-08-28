@@ -160,8 +160,8 @@ export function ConnectorDetail() {
           <Badge tone="info">configuration automatique</Badge>
         </div>
         <p className="text-sm text-muted">
-          Collez cette URL dans Claude, Dust ou ChatGPT. Le client détecte seul qu’une
-          autorisation est nécessaire et ouvre l’écran de consentement : aucune clé à copier.
+          Collez cette URL dans Claude, Dust ou ChatGPT. Le client détecte seul qu’une autorisation
+          est nécessaire et ouvre l’écran de consentement : aucune clé à copier.
         </p>
         <CopyField value={connector.mcpUrl} label="URL du serveur MCP" />
       </section>
@@ -267,7 +267,8 @@ export function ConnectorDetail() {
           {createdUrl && <CopyField value={createdUrl} label="URL du serveur MCP" />}
           <p className="text-sm text-muted">
             Cette URL contient un secret. Ne la partagez pas publiquement : elle donne accès à votre
-            compte {connector.name}. Vous pourrez la révoquer à tout moment depuis « Mes connexions ».
+            compte {connector.name}. Vous pourrez la révoquer à tout moment depuis « Mes connexions
+            ».
           </p>
         </div>
       </Modal>

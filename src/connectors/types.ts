@@ -20,13 +20,7 @@ import type { Logger } from '../core/logger.js';
 
 /** Regroupement utilisé par les filtres du catalogue. */
 export type ConnectorCategory =
-  | 'crm'
-  | 'finance'
-  | 'productivity'
-  | 'marketing'
-  | 'support'
-  | 'developer'
-  | 'other';
+  'crm' | 'finance' | 'productivity' | 'marketing' | 'support' | 'developer' | 'other';
 
 export type ConnectorStatus = 'stable' | 'beta' | 'coming-soon';
 
@@ -109,9 +103,7 @@ export type OAuthCredentials = Credentials & {
 };
 
 /** Résultat de `verify()` : sert à passer la connexion en ACTIVE ou ERROR. */
-export type VerifyResult =
-  | { ok: true; accountLabel?: string }
-  | { ok: false; message: string };
+export type VerifyResult = { ok: true; accountLabel?: string } | { ok: false; message: string };
 
 /** Contexte transmis à chaque exécution d'outil. */
 export interface ToolContext<C extends Credentials = Credentials> {

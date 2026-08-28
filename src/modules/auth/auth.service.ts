@@ -79,7 +79,8 @@ export async function authenticate(email: string, password: string): Promise<Use
 
   // Le hachage est exécuté même quand l'utilisateur n'existe pas : sans cela, la
   // différence de temps de réponse permet d'énumérer les comptes existants.
-  const hash = user?.passwordHash ?? '$2a$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvalidin';
+  const hash =
+    user?.passwordHash ?? '$2a$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvalidin';
   const passwordMatches = await verifyPassword(password, hash);
 
   if (!user || !user.passwordHash || !passwordMatches) throw invalidCredentials();

@@ -18,7 +18,10 @@ import type {
  * Volontairement une navigation complète et non un `fetch` : le parcours passe
  * par le site du fournisseur, il faut donc quitter l'application.
  */
-export function connectorOAuthUrl(connectorId: string, options: { label?: string; returnTo: string }) {
+export function connectorOAuthUrl(
+  connectorId: string,
+  options: { label?: string; returnTo: string },
+) {
   const params = new URLSearchParams({ returnTo: options.returnTo });
   if (options.label) params.set('label', options.label);
   return `/api/connections/oauth/${connectorId}/start?${params.toString()}`;
@@ -171,11 +174,7 @@ export const api = {
       if (connectorId) params.set('connectorId', connectorId);
       return request<ConsentView>(`/oauth/authorization?${params.toString()}`);
     },
-    approve: (body: {
-      demande: string;
-      connectionId?: string;
-      connectorId?: string;
-    }) =>
+    approve: (body: { demande: string; connectionId?: string; connectorId?: string }) =>
       request<{ redirectTo: string }>('/oauth/authorization/approve', { method: 'POST', body }),
     deny: (demande: string) =>
       request<{ redirectTo: string }>('/oauth/authorization/deny', {
@@ -216,7 +215,8 @@ export const api = {
         tokenEndpoint: string;
         scopes: string;
       }>('/admin/mcp-clients', { method: 'POST', body }),
-    deleteMcpClient: (id: string) => request<void>(`/admin/mcp-clients/${id}`, { method: 'DELETE' }),
+    deleteMcpClient: (id: string) =>
+      request<void>(`/admin/mcp-clients/${id}`, { method: 'DELETE' }),
     purgeMcpClients: () =>
       request<{ removed: number }>('/admin/mcp-clients/purge', { method: 'POST' }),
   },

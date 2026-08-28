@@ -78,9 +78,7 @@ export function installErrorReporting(): void {
   window.addEventListener('error', (event) => {
     reportError({
       message: event.message || 'Erreur inconnue',
-      ...(event.error instanceof Error && event.error.stack
-        ? { stack: event.error.stack }
-        : {}),
+      ...(event.error instanceof Error && event.error.stack ? { stack: event.error.stack } : {}),
       source: 'window',
     });
   });
