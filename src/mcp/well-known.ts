@@ -27,7 +27,7 @@ wellKnownRouter.get('/oauth-protected-resource/mcp/:connectorId', (req, res) => 
     resource: `${env.baseUrl}/mcp/${connector.id}`,
     authorization_servers: [env.baseUrl],
     scopes_supported: [MCP_SCOPE],
-    resource_name: `${connector.name} — MCP Wesype`,
+    resource_name: `${connector.name} — Toolink`,
     resource_documentation: `${env.baseUrl}/catalogue/${connector.id}`,
     bearer_methods_supported: ['header'],
   });
@@ -39,7 +39,7 @@ wellKnownRouter.get('/oauth-protected-resource', (_req, res) => {
     resource: `${env.baseUrl}/mcp`,
     authorization_servers: [env.baseUrl],
     scopes_supported: [MCP_SCOPE],
-    resource_name: 'MCP Wesype',
+    resource_name: 'Toolink',
     resource_documentation: `${env.baseUrl}/catalogue`,
     bearer_methods_supported: ['header'],
     // Indice utile au débogage : la liste des ressources réellement exposées.

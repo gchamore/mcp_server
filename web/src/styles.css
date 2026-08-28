@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MCP Wesype — système de design
+   Toolink — système de design
    --------------------------------------------------------------------------
    Registre visuel : instrumentation aérospatiale. Noir profond, monochrome,
    une seule teinte froide, angles nets, filets d'un pixel.
@@ -1393,6 +1393,32 @@ a:hover > * > .card__arrow {
 }
 .cta h2 {
   max-width: 20ch;
+}
+
+/**
+ * Bouton « Continuer avec Google ».
+ *
+ * Couleurs imposées par les règles de marque de Google pour le thème sombre :
+ * fond #131314, filet #8E918F, texte #E3E3E3. Elles sont volontairement en dur
+ * — ce ne sont pas des jetons du système, ce sont les valeurs du contrat de
+ * marque, et elles ne doivent pas suivre nos variables.
+ */
+.btn--google {
+  gap: 10px;
+  /* La spécification demande 14 px — la taille de bouton du système (12 px)
+     serait une entorse au contrat de marque. */
+  font-size: 0.875rem;
+  background: #131314;
+  border: 1px solid #8e918f;
+  color: #e3e3e3;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+.btn--google:hover {
+  background: #1f2020;
+  border-color: #a6a9a7;
+  color: #e3e3e3;
 }
 
 /* --- 17. Matière : grain, lumière, profondeur ---------------------------- */

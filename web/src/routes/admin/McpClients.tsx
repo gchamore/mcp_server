@@ -197,7 +197,7 @@ export function McpClients() {
         }
       >
         <div className="stack">
-          <Field label="Nom du client" required help="Par exemple « Dust — espace Wesype ».">
+          <Field label="Nom du client" required help="Par exemple « Dust — espace Toolink ».">
             {(props) => (
               <Input {...props} value={name} onChange={(event) => setName(event.target.value)} />
             )}

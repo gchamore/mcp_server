@@ -41,7 +41,7 @@ mcpRouter.use(express.json({ limit: '4mb' }));
 /** Informations publiques : le catalogue et les modes de connexion. */
 mcpRouter.get('/', (_req, res) => {
   res.json({
-    name: 'MCP Wesype',
+    name: 'Toolink',
     version: '2.0.0',
     transport: 'streamable-http',
     authorization: {

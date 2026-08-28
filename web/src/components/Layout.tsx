@@ -1,3 +1,4 @@
+import { LogoMark } from './Logo';
 import { NavLink, Link, Outlet } from 'react-router-dom';
 import { useAuth } from '../state/auth';
 import { Button } from './ui';
@@ -17,9 +18,9 @@ export function Layout() {
         <div className="container topbar__inner">
           <Link to={user ? '/catalogue' : '/'} className="brand">
             <span className="brand__mark" aria-hidden="true">
-              W
+              <LogoMark size={16} />
             </span>
-            Wesype
+            Toolink
           </Link>
 
           {user && (
@@ -80,7 +81,7 @@ export function Layout() {
 
       <footer className="footer">
         <div className="container footer__inner">
-          <span>© {new Date().getFullYear()} Wesype — Model Context Protocol</span>
+          <span>© {new Date().getFullYear()} Toolink — Model Context Protocol</span>
           <a href="/mcp" target="_blank" rel="noreferrer noopener">
             État du service
           </a>

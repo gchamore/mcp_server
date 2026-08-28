@@ -65,7 +65,7 @@ export async function sendMail(input: {
 
 export function renderPasswordResetEmail(resetUrl: string, minutes: number) {
   const text = [
-    'Réinitialisation de votre mot de passe MCP Wesype',
+    'Réinitialisation de votre mot de passe Toolink',
     '',
     `Ouvrez ce lien pour choisir un nouveau mot de passe (valable ${minutes} minutes) :`,
     resetUrl,
@@ -77,7 +77,7 @@ export function renderPasswordResetEmail(resetUrl: string, minutes: number) {
     <div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;color:#0f172a">
       <h1 style="font-size:20px;margin:0 0 16px">Réinitialisation de votre mot de passe</h1>
       <p style="line-height:1.6;color:#475569">
-        Vous avez demandé à réinitialiser le mot de passe de votre compte MCP Wesype.
+        Vous avez demandé à réinitialiser le mot de passe de votre compte Toolink.
         Ce lien est valable ${minutes} minutes.
       </p>
       <p style="margin:28px 0">

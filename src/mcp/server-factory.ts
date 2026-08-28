@@ -35,11 +35,11 @@ export function buildMcpServer(
   context: McpServerContext,
 ): McpServer {
   const server = new McpServer(
-    { name: `wesype-${connector.id}`, version: SERVER_VERSION },
+    { name: `toolink-${connector.id}`, version: SERVER_VERSION },
     {
       capabilities: { tools: {} },
       instructions:
-        `Outils ${connector.name} fournis par MCP Wesype. ${connector.description}\n` +
+        `Outils ${connector.name} fournis par Toolink. ${connector.description}\n` +
         `Les listes sont paginées : si un résultat semble tronqué, rappeler l'outil avec la page suivante.`,
     },
   );

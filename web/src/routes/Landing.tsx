@@ -61,7 +61,7 @@ export function Landing() {
             </motion.h1>
 
             <motion.p className="lead" {...enter(0.16)}>
-              MCP Wesype expose vos logiciels — CRM, facturation, e-mailing — comme des outils que
+              Toolink expose vos logiciels — CRM, facturation, e-mailing — comme des outils que
               Claude, Dust ou ChatGPT savent utiliser. Vous collez une URL, l’assistant travaille
               avec vos données.
             </motion.p>
@@ -169,7 +169,7 @@ export function Landing() {
           <h2>Vos clés ne quittent jamais la plateforme</h2>
           <p className="lead">
             Le client IA reçoit un jeton limité à un seul connecteur, révocable à tout instant. Il
-            n’a jamais accès à vos identifiants : c’est MCP Wesype qui appelle le service, jamais
+            n’a jamais accès à vos identifiants : c’est Toolink qui appelle le service, jamais
             lui.
           </p>
         </Reveal>

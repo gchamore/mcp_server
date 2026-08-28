@@ -21,7 +21,7 @@ describe('métadonnées par route', () => {
   it('donne à la page d’accueil son titre, sa canonique et sa description structurée', async () => {
     const response = await request(app).get('/').expect(200);
 
-    expect(response.text).toContain('<title>MCP Wesype — Vos outils métier');
+    expect(response.text).toContain('<title>Toolink — Vos outils métier');
     expect(response.text).toContain('rel="canonical"');
     expect(response.text).toContain('application/ld+json');
     expect(response.text).toContain('property="og:title"');

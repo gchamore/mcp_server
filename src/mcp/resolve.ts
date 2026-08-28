@@ -120,7 +120,7 @@ async function finalize(
         message:
           error instanceof Error
             ? error.message
-            : "L'autorisation du compte a expiré. Reconnectez-le depuis MCP Wesype.",
+            : "L'autorisation du compte a expiré. Reconnectez-le depuis Toolink.",
       };
     }
   }

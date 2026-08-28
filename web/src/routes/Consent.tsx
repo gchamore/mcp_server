@@ -234,7 +234,7 @@ export function Consent() {
             <h1 style={{ fontSize: '1.35rem' }}>Autoriser {data.client.name}</h1>
             <p className="text-muted text-sm">
               <strong>{data.client.name}</strong> demande l’accès à vos outils{' '}
-              <strong>{connector.name}</strong> via MCP Wesype.
+              <strong>{connector.name}</strong> via Toolink.
             </p>
           </div>
         </div>
@@ -335,7 +335,7 @@ export function Consent() {
         )}
 
         <p className="text-xs text-muted">
-          Vous pourrez révoquer cet accès à tout moment depuis « Mes connexions ». MCP Wesype ne
+          Vous pourrez révoquer cet accès à tout moment depuis « Mes connexions ». Toolink ne
           transmet vos identifiants à aucun tiers : {data.client.name} reçoit uniquement un jeton
           limité à ce connecteur.
         </p>

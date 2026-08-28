@@ -89,11 +89,11 @@ interface PageMeta {
   noindex?: boolean;
 }
 
-const SITE_NAME = 'MCP Wesype';
+const SITE_NAME = 'Toolink';
 
 const STATIC_PAGES: Record<string, PageMeta> = {
   '/': {
-    title: 'MCP Wesype — Vos outils métier, pilotés par votre IA',
+    title: 'Toolink — Vos outils métier, pilotés par votre IA',
     description:
       'Branchez CRM, facturation et e-mailing à Claude, Dust ou ChatGPT. Une URL à coller, vos identifiants chiffrés, aucun accès partagé.',
   },

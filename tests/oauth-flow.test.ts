@@ -455,7 +455,7 @@ suite('flux OAuth complet', () => {
     expect(response.body.error.code).toBe(-32001);
   });
 
-  it('exige une session Wesype pour consulter une demande de consentement', async () => {
+  it('exige une session Toolink pour consulter une demande de consentement', async () => {
     await request(app).get('/api/oauth/authorization').query({ demande: 'x'.repeat(40) }).expect(401);
   });
 });
