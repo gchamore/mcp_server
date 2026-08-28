@@ -139,14 +139,18 @@ export async function completeConnectorOAuth(
   const connector = requireConnector(input.connectorId);
   const { config, app } = requireOAuthConfig(connector);
 
-  const tokens = await exchange(config.tokenUrl, {
-    grant_type: 'authorization_code',
-    code: input.code,
-    redirect_uri: connectorRedirectUri(connector.id),
-    client_id: app.clientId,
-    client_secret: app.clientSecret,
-    code_verifier: stored.codeVerifier,
-  });
+  const tokens = await exchange(
+    config.tokenUrl,
+    {
+      grant_type: 'authorization_code',
+      code: input.code,
+      redirect_uri: connectorRedirectUri(connector.id),
+      client_id: app.clientId,
+      client_secret: app.clientSecret,
+      code_verifier: stored.codeVerifier,
+    },
+    config.tokenEndpointAuth,
+  );
 
   const credentials = toCredentials(tokens);
 
@@ -205,12 +209,16 @@ export async function ensureFreshCredentials(
   const { config, app } = requireOAuthConfig(connector);
 
   try {
-    const tokens = await exchange(config.tokenUrl, {
-      grant_type: 'refresh_token',
-      refresh_token: credentials.refreshToken,
-      client_id: app.clientId,
-      client_secret: app.clientSecret,
-    });
+    const tokens = await exchange(
+      config.tokenUrl,
+      {
+        grant_type: 'refresh_token',
+        refresh_token: credentials.refreshToken,
+        client_id: app.clientId,
+        client_secret: app.clientSecret,
+      },
+      config.tokenEndpointAuth,
+    );
 
     // Beaucoup de fournisseurs ne renvoient pas de nouveau refresh_token :
     // on conserve l'ancien plutôt que de perdre l'accès.
@@ -256,11 +264,37 @@ type TokenResponse = {
   token_type?: string;
 };
 
-async function exchange(tokenUrl: string, params: Record<string, string>): Promise<TokenResponse> {
+/**
+ * Échange auprès du point de jeton du fournisseur.
+ *
+ * Deux écoles d'authentification cohabitent chez les fournisseurs : le secret
+ * dans le corps (Google, Microsoft…) ou en HTTP Basic (Notion, et tout
+ * fournisseur qui suit la RFC 6749 §2.3.1 à la lettre — certains **refusent**
+ * le secret dans le corps). Le connecteur choisit via `tokenEndpointAuth` ;
+ * en Basic, les identifiants sortent du corps pour ne pas voyager deux fois.
+ */
+export async function exchange(
+  tokenUrl: string,
+  params: Record<string, string>,
+  auth: 'body' | 'basic' = 'body',
+): Promise<TokenResponse> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    Accept: 'application/json',
+  };
+  const body = { ...params };
+
+  if (auth === 'basic') {
+    const { client_id: clientId, client_secret: clientSecret } = body;
+    delete body.client_id;
+    delete body.client_secret;
+    headers.Authorization = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`;
+  }
+
   const response = await fetch(tokenUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-    body: new URLSearchParams(params),
+    headers,
+    body: new URLSearchParams(body),
     signal: AbortSignal.timeout(15_000),
   });
 

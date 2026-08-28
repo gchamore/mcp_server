@@ -74,6 +74,14 @@ export interface ConnectorOAuthConfig {
   authorizationParams?: Record<string, string>;
   /** URL de révocation côté fournisseur, appelée à la suppression de la connexion. */
   revokeUrl?: string;
+  /**
+   * Comment le point de jeton authentifie le client.
+   *
+   * `body` (défaut) : client_id et client_secret dans le corps — Google,
+   * Microsoft, la plupart. `basic` : en-tête HTTP Basic — Notion et les
+   * fournisseurs qui suivent la lettre de la RFC 6749 §2.3.1.
+   */
+  tokenEndpointAuth?: 'body' | 'basic';
 }
 
 export interface ConnectorAuth {
