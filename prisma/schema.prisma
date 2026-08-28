@@ -190,6 +190,9 @@ model AuditLog {
 
   @@index([userId, createdAt])
   @@index([action, createdAt])
+  /// La purge de rétention balaie par date seule : sans cet index, elle
+  /// parcourrait la table entière à chaque passage.
+  @@index([createdAt])
   @@map("audit_logs")
 }
 

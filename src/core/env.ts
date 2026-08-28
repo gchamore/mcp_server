@@ -45,6 +45,14 @@ const schema = z.object({
   GOOGLE_CLIENT_ID: optionalString,
   GOOGLE_CLIENT_SECRET: optionalString,
 
+  /**
+   * Anciennes clés de chiffrement, séparées par des virgules. Facultatif.
+   *
+   * À renseigner pendant une rotation : les données déjà stockées restent
+   * lisibles avec l'ancienne clé le temps de les rechiffrer (`npm run
+   * rotate:encryption`), puis la variable se retire.
+   */
+  ENCRYPTION_KEY_PREVIOUS: optionalString,
   /** Facultatif. Renseigné, il active le partage des compteurs de débit. */
   REDIS_URL: optionalString,
   SMTP_HOST: optionalString,
@@ -98,6 +106,19 @@ function resolveSecret(name: string, value: string | undefined, requireHex: bool
 }
 
 const encryptionKey = resolveSecret('ENCRYPTION_KEY', raw.ENCRYPTION_KEY, true);
+
+const encryptionKeysPrevious = (raw.ENCRYPTION_KEY_PREVIOUS ?? '')
+  .split(',')
+  .map((k) => k.trim())
+  .filter(Boolean);
+
+for (const previous of encryptionKeysPrevious) {
+  if (!/^[0-9a-f]{64}$/i.test(previous)) {
+    // Une ancienne clé mal recopiée rendrait le rechiffrement silencieusement
+    // incomplet : mieux vaut refuser de démarrer.
+    throw new Error('ENCRYPTION_KEY_PREVIOUS doit contenir des clés de 64 caractères hexadécimaux.');
+  }
+}
 const sessionSecret = resolveSecret('SESSION_SECRET', raw.SESSION_SECRET, false);
 const usesFallbackSecrets = !raw.ENCRYPTION_KEY || !raw.SESSION_SECRET;
 
@@ -164,6 +185,7 @@ export const env = {
   corsOrigins,
   databaseUrl: raw.DATABASE_URL,
   encryptionKey,
+  encryptionKeysPrevious,
   sessionSecret,
   usesFallbackSecrets,
   googleOAuth,
@@ -185,6 +207,17 @@ export const env = {
      * tentatives abandonnées.
      */
     orphanClientHours: 24,
+    /**
+     * Le journal d'audit répond à « qui a fait quoi » : six mois couvrent
+     * toute enquête raisonnable. Sans borne, la table grossissait sans fin.
+     */
+    auditLogRetentionDays: 180,
+    /**
+     * Un jeton OAuth expiré ou révoqué ne sert plus qu'à la détection de rejeu
+     * de sa famille — pertinente tant que des jetons frères vivent encore.
+     * Trente jours au-delà de la fin de vie couvrent largement ce besoin.
+     */
+    oauthTokenGraceDays: 30,
   },
 } as const;
 

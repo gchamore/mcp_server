@@ -116,18 +116,37 @@ async function purgeAll(): Promise<void> {
     now.getTime() - env.ttl.toolInvocationRetentionDays * 24 * 60 * 60 * 1000,
   );
 
-  const [sessions, resetTokens, invocations, grants, orphanClients] = await Promise.all([
-    prisma.session.deleteMany({ where: { expiresAt: { lt: now } } }),
-    prisma.passwordResetToken.deleteMany({ where: { expiresAt: { lt: now } } }),
-    prisma.toolInvocation.deleteMany({ where: { createdAt: { lt: invocationCutoff } } }),
-    // Codes d'autorisation périmés : quelques minutes de durée de vie, mais
-    // rien ne les effaçait jusqu'ici.
-    prisma.oAuthGrant.deleteMany({ where: { expiresAt: { lt: now } } }),
-    purgeOrphanClients(now),
-  ]);
+  const auditCutoff = new Date(now.getTime() - env.ttl.auditLogRetentionDays * 24 * 60 * 60 * 1000);
+  const tokenCutoff = new Date(now.getTime() - env.ttl.oauthTokenGraceDays * 24 * 60 * 60 * 1000);
+
+  const [sessions, resetTokens, invocations, grants, audits, tokens, orphanClients] =
+    await Promise.all([
+      prisma.session.deleteMany({ where: { expiresAt: { lt: now } } }),
+      prisma.passwordResetToken.deleteMany({ where: { expiresAt: { lt: now } } }),
+      prisma.toolInvocation.deleteMany({ where: { createdAt: { lt: invocationCutoff } } }),
+      // Codes d'autorisation périmés : quelques minutes de durée de vie, mais
+      // rien ne les effaçait jusqu'ici.
+      prisma.oAuthGrant.deleteMany({ where: { expiresAt: { lt: now } } }),
+      // Deux tables grossissaient sans borne : le journal d'audit, et les
+      // jetons OAuth morts — expirés ou révoqués depuis plus que le délai de
+      // grâce, gardé pour la détection de rejeu de leur famille.
+      prisma.auditLog.deleteMany({ where: { createdAt: { lt: auditCutoff } } }),
+      prisma.oAuthToken.deleteMany({
+        where: {
+          OR: [{ expiresAt: { lt: tokenCutoff } }, { revokedAt: { lt: tokenCutoff } }],
+        },
+      }),
+      purgeOrphanClients(now),
+    ]);
 
   const removed =
-    sessions.count + resetTokens.count + invocations.count + grants.count + orphanClients;
+    sessions.count +
+    resetTokens.count +
+    invocations.count +
+    grants.count +
+    audits.count +
+    tokens.count +
+    orphanClients;
 
   if (removed > 0) {
     logger.info(
@@ -136,6 +155,8 @@ async function purgeAll(): Promise<void> {
         resetTokens: resetTokens.count,
         toolInvocations: invocations.count,
         oauthGrants: grants.count,
+        auditLogs: audits.count,
+        oauthTokens: tokens.count,
         orphanClients,
       },
       'Purge périodique effectuée',

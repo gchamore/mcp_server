@@ -39,9 +39,12 @@ describe('chiffrement des identifiants', () => {
      * fois sur quatre — un faux négatif sur une garantie d'intégrité, ce qu'on
      * ne peut pas se permettre de laisser passer.
      */
-    const cipher = Buffer.from(parts[3]!, 'base64url');
+    // Format v3 : le texte chiffré est le 5e segment (version.idClé.iv.tag.données).
+    const cipher = Buffer.from(parts[4]!, 'base64url');
     cipher[0] = cipher[0]! ^ 0x01;
-    const tampered = [parts[0], parts[1], parts[2], cipher.toString('base64url')].join('.');
+    const tampered = [parts[0], parts[1], parts[2], parts[3], cipher.toString('base64url')].join(
+      '.',
+    );
 
     expect(() => decryptJson(tampered)).toThrow();
   });

@@ -200,3 +200,17 @@ Trois points, tous documentés dans le code :
 2. **Purge périodique** — s'exécutera sur chaque instance ; les opérations sont
    idempotentes, donc sans conséquence (`src/jobs/cleanup.ts`).
 3. **Transport MCP** — déjà sans état, rien à faire.
+
+## Rotation de la clé de chiffrement
+
+Les identifiants tiers sont chiffrés (AES-256-GCM) sous un format qui porte
+l'identifiant de la clé : la clé peut donc tourner **sans interruption ni perte**.
+
+1. Générer une nouvelle clé : `openssl rand -hex 32` → la placer dans `ENCRYPTION_KEY`.
+2. Placer l'ancienne dans `ENCRYPTION_KEY_PREVIOUS` (plusieurs possibles, séparées
+   par des virgules). Redéployer : le service chiffre avec la nouvelle, lit avec les deux.
+3. `npm run rotate:encryption` — rechiffre tout le stock ; idempotent, relançable.
+4. Retirer `ENCRYPTION_KEY_PREVIOUS`, redéployer.
+
+À faire immédiatement si la clé est suspectée compromise ; sinon, au rythme des
+bonnes pratiques de l'équipe.
