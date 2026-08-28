@@ -14,11 +14,13 @@ import type {
   OAuthTokens,
 } from '@modelcontextprotocol/sdk/shared/auth.js';
 import { getConnector } from '../../connectors/registry.js';
+import { isHubResource } from '../../mcp/hub.js';
 import { decryptJson, encryptJson, generateToken, hashToken } from '../../core/crypto.js';
 import { env } from '../../core/env.js';
 import { badRequest } from '../../core/errors.js';
 import { logger } from '../../core/logger.js';
 import { prisma } from '../../core/prisma.js';
+import { Prisma } from '@prisma/client';
 import { clientStore } from './client-store.js';
 
 /**
@@ -121,7 +123,7 @@ export const oauthProvider: OAuthServerProvider = {
     const connectorId = connectorIdFromResource(params.resource);
 
     // Une ressource explicitement fournie mais inconnue est une vraie erreur.
-    if (connectorId && !getConnector(connectorId)) {
+    if (connectorId && !isHubResource(connectorId) && !getConnector(connectorId)) {
       redirectWithError(
         res,
         params.redirectUri,
@@ -234,6 +236,8 @@ export const oauthProvider: OAuthServerProvider = {
       userId: grant.userId,
       connectorId: grant.connectorId,
       connectionId: grant.connectionId,
+      connectionIds: grant.connectionIds,
+      toolSelection: (grant.toolSelection as Prisma.InputJsonValue) ?? null,
       scopes: grant.scopes,
       resource: grant.resource,
     });
@@ -305,6 +309,8 @@ export const oauthProvider: OAuthServerProvider = {
       userId: existing.userId,
       connectorId: existing.connectorId,
       connectionId: existing.connectionId,
+      connectionIds: existing.connectionIds,
+      toolSelection: (existing.toolSelection as Prisma.InputJsonValue) ?? null,
       // On n'élargit jamais la portée lors d'un rafraîchissement.
       scopes: scopes?.length ? scopes.filter((s) => existing.scopes.includes(s)) : existing.scopes,
       resource: existing.resource,
@@ -342,6 +348,8 @@ export const oauthProvider: OAuthServerProvider = {
         userId: row.userId,
         connectorId: row.connectorId,
         connectionId: row.connectionId,
+        connectionIds: row.connectionIds,
+        toolSelection: row.toolSelection,
       },
     };
   },
@@ -373,6 +381,10 @@ async function issueTokens(input: {
   userId: string;
   connectorId: string;
   connectionId: string | null;
+  /** Hub : l'ensemble des connexions cochées. Vide pour un connecteur simple. */
+  connectionIds: string[];
+  /** Hub : outils retenus par connexion (null = tous). */
+  toolSelection: Prisma.InputJsonValue | null;
   scopes: string[];
   resource: string | null;
 }): Promise<OAuthTokens> {
@@ -385,6 +397,8 @@ async function issueTokens(input: {
     userId: input.userId,
     connectorId: input.connectorId,
     connectionId: input.connectionId,
+    connectionIds: input.connectionIds,
+    toolSelection: input.toolSelection ?? Prisma.JsonNull,
     scopes: input.scopes,
     resource: input.resource,
     familyId: input.familyId,

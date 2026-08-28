@@ -140,6 +140,88 @@ async function finalize(
   return { connector, connection, credentials, ...meta };
 }
 
+/**
+ * -----------------------------------------------------------------------------
+ * Résolution du hub : un jeton, plusieurs connexions
+ * -----------------------------------------------------------------------------
+ */
+
+export type HubEntry = {
+  connector: AnyConnector;
+  connection: Connection;
+  credentials: Credentials;
+  /** Outils retenus au consentement pour cette connexion. null = tous. */
+  allowedTools: string[] | null;
+};
+
+export type HubContext = {
+  kind: 'hub';
+  userId: string;
+  entries: HubEntry[];
+};
+
+export async function resolveHubFromAuthInfo(
+  authInfo: AuthInfo,
+): Promise<HubContext | ResolutionFailure> {
+  const extra = authInfo.extra as
+    | {
+        userId?: string;
+        connectorId?: string;
+        connectionIds?: string[];
+        toolSelection?: Record<string, string[]> | null;
+      }
+    | undefined;
+
+  if (!extra?.userId || extra.connectorId !== 'hub' || !extra.connectionIds?.length) {
+    return { reason: 'unauthorized', message: "Ce jeton n'est pas valide pour le hub." };
+  }
+
+  const rows = await prisma.connection.findMany({
+    where: { id: { in: extra.connectionIds }, userId: extra.userId },
+  });
+
+  const entries: HubEntry[] = [];
+  for (const connection of rows) {
+    const connector = getConnector(connection.connectorId);
+    if (!connector) continue; // connecteur retiré du code : la connexion est orpheline
+
+    const resolved = await finalize(connector, connection, {
+      endpointId: null,
+      userId: extra.userId,
+      origin: 'oauth',
+    });
+    /**
+     * Une connexion en échec (identifiants illisibles, OAuth expiré) est omise
+     * plutôt que fatale : le hub sert ce qui marche encore, et l'utilisateur
+     * répare l'entrée en panne depuis « Mes connexions » sans perdre le reste.
+     */
+    if (isFailure(resolved)) {
+      logger.warn(
+        { connectionId: connection.id, reason: resolved.reason },
+        "Connexion omise du hub",
+      );
+      continue;
+    }
+
+    entries.push({
+      connector,
+      connection,
+      credentials: resolved.credentials,
+      allowedTools: extra.toolSelection?.[connection.id] ?? null,
+    });
+  }
+
+  if (entries.length === 0) {
+    return {
+      reason: 'connection-error',
+      message:
+        'Aucune des connexions de ce hub n’est utilisable. Vérifiez-les dans « Mes connexions », puis réautorisez.',
+    };
+  }
+
+  return { kind: 'hub', userId: extra.userId, entries };
+}
+
 export function isFailure(value: McpContext | ResolutionFailure): value is ResolutionFailure {
   return 'reason' in value;
 }

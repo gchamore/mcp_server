@@ -31,6 +31,11 @@ export async function loadConnectors(): Promise<void> {
   for (const definition of declaredConnectors) {
     const connector = assertValidConnector(definition);
 
+    if (connector.id === 'hub') {
+      // `/mcp/hub` est le point d'accès agrégé : un connecteur de ce nom
+      // rendrait ses outils inatteignables.
+      throw new Error('L’identifiant « hub » est réservé au point d’accès agrégé.');
+    }
     if (registry.has(connector.id)) {
       throw new Error(`Deux connecteurs déclarent le même id "${connector.id}".`);
     }

@@ -4,9 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import { api, ApiError, connectorOAuthUrl } from '../lib/api';
 import { useAuth } from '../state/auth';
 import { useToast } from '../components/Toast';
-import { Alert, Badge, Button, Spinner } from '../components/ui';
+import { Alert, Badge, Button, Input, Spinner } from '../components/ui';
 import { CredentialForm } from '../components/CredentialForm';
-import { IconArrowRight, IconCheck } from '../components/icons';
+import { IconArrowRight, IconCheck, IconSearch } from '../components/icons';
 
 /**
  * ===========================================================================
@@ -49,6 +49,18 @@ export function Consent() {
   const toast = useToast();
 
   const [connectionChoice, setConnectionChoice] = useState<string | null>(null);
+  /**
+   * Sélecteur du hub.
+   *
+   * `null` tant que l'utilisateur n'a rien touché : l'état initial est alors
+   * déduit de la réponse serveur (tout coché) au moment du rendu, sans effet.
+   * `outilsExclus` liste les outils décochés — le cas rare — plutôt que les
+   * cochés : l'absence d'entrée signifie « tous », ce qui est aussi la
+   * convention du serveur.
+   */
+  const [servicesCoches, setServicesCoches] = useState<Record<string, boolean> | null>(null);
+  const [outilsExclus, setOutilsExclus] = useState<Record<string, string[]>>({});
+  const [recherche, setRecherche] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showCredentialForm, setShowCredentialForm] = useState(false);
   /**
@@ -68,6 +80,82 @@ export function Consent() {
   const connectionId =
     connectionChoice ?? searchParams.get('compte') ?? data?.connections[0]?.id ?? '';
 
+  /** Cochage effectif d'un service : choix de l'utilisateur, sinon tout coché. */
+  const estCoche = (id: string): boolean => servicesCoches?.[id] ?? true;
+
+  const basculerService = (id: string) =>
+    setServicesCoches((courant) => {
+      const base: Record<string, boolean> = { ...(courant ?? {}) };
+      for (const c of data?.connections ?? []) base[c.id] = base[c.id] ?? true;
+      base[id] = !(base[id] ?? true);
+      return base;
+    });
+
+  const basculerOutil = (connectionId: string, tool: string) =>
+    setOutilsExclus((courant) => {
+      const exclus = new Set(courant[connectionId] ?? []);
+      if (exclus.has(tool)) exclus.delete(tool);
+      else exclus.add(tool);
+      return { ...courant, [connectionId]: [...exclus] };
+    });
+
+  /**
+   * Préréglage « Recommandés » : la lecture seule. C'est le réglage sûr — un
+   * hub qui ne peut rien écrire ne peut rien abîmer — et le critère est porté
+   * par les connecteurs eux-mêmes (annotation readOnlyHint), pas par une liste
+   * à maintenir ici.
+   */
+  const preregler = (mode: 'tout' | 'lecture' | 'rien') => {
+    const services: Record<string, boolean> = {};
+    const exclus: Record<string, string[]> = {};
+    for (const connexion of data?.connections ?? []) {
+      const outils = connexion.tools ?? [];
+      if (mode === 'rien') {
+        services[connexion.id] = false;
+        continue;
+      }
+      if (mode === 'tout') {
+        services[connexion.id] = true;
+        continue;
+      }
+      const lecture = outils.filter((t) => t.readOnly);
+      services[connexion.id] = lecture.length > 0;
+      exclus[connexion.id] = outils.filter((t) => !t.readOnly).map((t) => t.name);
+    }
+    setServicesCoches(services);
+    setOutilsExclus(mode === 'lecture' ? exclus : {});
+  };
+
+  const construireSelections = () =>
+    (data?.connections ?? [])
+      .filter((connexion) => estCoche(connexion.id))
+      .map((connexion) => {
+        const exclus = new Set(outilsExclus[connexion.id] ?? []);
+        const gardes = (connexion.tools ?? []).filter((t) => !exclus.has(t.name));
+        // Tous gardés → on n'envoie pas de liste : « tous » est la convention.
+        return exclus.size === 0 || gardes.length === (connexion.tools ?? []).length
+          ? { connectionId: connexion.id }
+          : { connectionId: connexion.id, tools: gardes.map((t) => t.name) };
+      });
+
+  const selectionsValides = () =>
+    construireSelections().length > 0 &&
+    construireSelections().every((s) => !s.tools || s.tools.length > 0);
+
+  const filtreRecherche = (connexion: NonNullable<typeof data>['connections'][number]) => {
+    const besoin = recherche.trim().toLowerCase();
+    if (!besoin) return true;
+    const meule = [
+      connexion.connectorName ?? '',
+      connexion.label,
+      connexion.accountLabel ?? '',
+      ...(connexion.tools ?? []).map((t) => t.title),
+    ]
+      .join(' ')
+      .toLowerCase();
+    return meule.includes(besoin);
+  };
+
   const submit = async (decision: 'approve' | 'deny') => {
     setSubmitting(true);
     try {
@@ -76,8 +164,9 @@ export function Consent() {
           ? await api.oauth.deny(demande)
           : await api.oauth.approve({
               demande,
-              ...(connectionId ? { connectionId } : {}),
+              ...(connectionId && !data?.hub ? { connectionId } : {}),
               ...(pickedConnectorId ? { connectorId: pickedConnectorId } : {}),
+              ...(data?.hub ? { selections: construireSelections() } : {}),
             });
 
       // Retour vers le client IA : navigation complète, ce n'est pas notre domaine.
@@ -160,6 +249,148 @@ export function Consent() {
             ? error.message
             : 'Demande d’autorisation illisible ou expirée.'}
         </Alert>
+      </Shell>
+    );
+  }
+
+  /**
+   * Écran du hub : composer son ensemble.
+   *
+   * Placé AVANT la branche « quel service ? » — le hub a aussi `connector`
+   * nul, et tomberait sinon dans le sélecteur mono-service.
+   */
+  if (data.hub) {
+    const visibles = data.connections.filter(filtreRecherche);
+    const total = construireSelections().length;
+
+    return (
+      <Shell wide>
+        <div className="stack">
+          <div className="stack stack--tight">
+            <h1 style={{ fontSize: '1.35rem' }}>Composez votre hub</h1>
+            <p className="text-muted text-sm">
+              <strong>{data.client.name}</strong> recevra une seule connexion exposant les services
+              cochés. Vous pourrez ouvrir chaque service pour choisir ses outils.
+            </p>
+          </div>
+
+          {data.connections.length === 0 ? (
+            <Alert tone="info">
+              Aucun service raccordé pour l’instant. Ajoutez vos comptes depuis le{' '}
+              <a href="/catalogue">catalogue</a>, puis revenez autoriser le hub.
+            </Alert>
+          ) : (
+            <>
+              <div className="row" style={{ gap: 'var(--s3)', alignItems: 'center' }}>
+                <div className="search" style={{ flex: 1 }}>
+                  <span className="search__icon" aria-hidden="true">
+                    <IconSearch size={15} />
+                  </span>
+                  <Input
+                    type="search"
+                    value={recherche}
+                    onChange={(event) => setRecherche(event.target.value)}
+                    placeholder="Rechercher un service ou un outil…"
+                    aria-label="Rechercher"
+                  />
+                </div>
+                <div className="row" style={{ gap: 'var(--s2)' }}>
+                  <Button size="sm" variant="ghost" onClick={() => preregler('tout')}>
+                    Tout
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => preregler('lecture')}>
+                    Recommandés
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => preregler('rien')}>
+                    Aucun
+                  </Button>
+                </div>
+              </div>
+
+              <div className="stack stack--tight">
+                {visibles.map((connexion) => {
+                  const exclus = new Set(outilsExclus[connexion.id] ?? []);
+                  const outils = connexion.tools ?? [];
+                  const gardes = outils.length - exclus.size;
+
+                  return (
+                    <div key={connexion.id} className="option" style={{ cursor: 'default' }}>
+                      <label
+                        className="row"
+                        style={{ gap: 'var(--s3)', alignItems: 'center', cursor: 'pointer' }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={estCoche(connexion.id)}
+                          onChange={() => basculerService(connexion.id)}
+                        />
+                        {connexion.connectorIcon && (
+                          <img className="connector-icon" src={connexion.connectorIcon} alt="" />
+                        )}
+                        <span className="stack stack--tight" style={{ gap: 0 }}>
+                          <span className="option__title">{connexion.connectorName}</span>
+                          <span className="option__desc">
+                            {connexion.accountLabel ?? connexion.label}
+                          </span>
+                        </span>
+                        <span className="text-xs text-faint" style={{ marginLeft: 'auto' }}>
+                          {gardes}/{outils.length} outils
+                        </span>
+                      </label>
+
+                      {estCoche(connexion.id) && outils.length > 0 && (
+                        <details className="text-sm" style={{ marginTop: 'var(--s2)' }}>
+                          <summary className="text-muted" style={{ cursor: 'pointer' }}>
+                            Choisir les outils
+                          </summary>
+                          <div className="stack stack--tight" style={{ marginTop: 'var(--s2)' }}>
+                            {outils.map((outil) => (
+                              <label
+                                key={outil.name}
+                                className="row"
+                                style={{ gap: 'var(--s2)', alignItems: 'center', cursor: 'pointer' }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={!exclus.has(outil.name)}
+                                  onChange={() => basculerOutil(connexion.id, outil.name)}
+                                />
+                                <span>{outil.title}</span>
+                                {!outil.readOnly && <Badge tone="warning">écriture</Badge>}
+                              </label>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  );
+                })}
+                {visibles.length === 0 && (
+                  <p className="text-sm text-muted">Rien ne correspond à cette recherche.</p>
+                )}
+              </div>
+            </>
+          )}
+
+          <p className="text-xs text-muted">
+            Chaque outil restera exécuté avec le compte affiché ; {data.client.name} ne voit jamais
+            vos identifiants. La sélection se modifie en réautorisant le hub.
+          </p>
+
+          <div className="row row--end">
+            <Button variant="ghost" onClick={() => void submit('deny')} disabled={submitting}>
+              Refuser
+            </Button>
+            <Button
+              variant="primary"
+              loading={submitting}
+              disabled={!selectionsValides()}
+              onClick={() => void submit('approve')}
+            >
+              Autoriser {total > 0 ? `${total} service${total > 1 ? 's' : ''}` : ''}
+            </Button>
+          </div>
+        </div>
       </Shell>
     );
   }
@@ -415,10 +646,10 @@ function ChoixCompte({
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
   return (
     <div className="auth-layout">
-      <div className="auth-card" style={{ width: 'min(520px, 100%)' }}>
+      <div className="auth-card" style={{ width: wide ? 'min(680px, 100%)' : 'min(520px, 100%)' }}>
         {children}
       </div>
     </div>

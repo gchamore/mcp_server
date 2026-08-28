@@ -3,6 +3,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { AnyConnector, Credentials, ToolResult } from '../connectors/types.js';
 import { errorMessage } from '../core/errors.js';
 import { logger } from '../core/logger.js';
+import type { Logger } from 'pino';
 
 /**
  * Construit un serveur MCP à partir d'une définition de connecteur.
@@ -47,11 +48,41 @@ export function buildMcpServer(connector: AnyConnector, context: McpServerContex
   });
 
   for (const tool of connector.tools) {
+    registerConnectorTool(server, connector, tool, {
+      prefix: '',
+      credentials: context.credentials,
+      connectionId: context.connectionId,
+      logger: toolLogger,
+      ...(context.onToolCall ? { onToolCall: context.onToolCall } : {}),
+    });
+  }
+
+  return server;
+}
+
+interface ToolWiring {
+  /** Préfixe du nom exposé — vide pour un connecteur seul, `gmail_` dans le hub. */
+  prefix: string;
+  credentials: Credentials;
+  connectionId: string;
+  logger: Logger;
+  onToolCall?: McpServerContext['onToolCall'];
+}
+
+function registerConnectorTool(
+  server: McpServer,
+  connector: AnyConnector,
+  tool: AnyConnector['tools'][number],
+  wiring: ToolWiring,
+): void {
+  {
     server.registerTool(
-      tool.name,
+      `${wiring.prefix}${tool.name}`,
       {
-        title: tool.title,
-        description: tool.description,
+        title: wiring.prefix ? `${connector.name} — ${tool.title}` : tool.title,
+        description: wiring.prefix
+          ? `[${connector.name}] ${tool.description}`
+          : tool.description,
         inputSchema: tool.inputSchema,
         ...(tool.annotations ? { annotations: { title: tool.title, ...tool.annotations } } : {}),
       },
@@ -60,13 +91,13 @@ export function buildMcpServer(connector: AnyConnector, context: McpServerContex
         const startedAt = Date.now();
         try {
           const result = await tool.handler(args, {
-            credentials: context.credentials,
-            connectionId: context.connectionId,
-            logger: toolLogger,
+            credentials: wiring.credentials,
+            connectionId: wiring.connectionId,
+            logger: wiring.logger,
             signal: extra.signal,
           });
 
-          context.onToolCall?.({
+          wiring.onToolCall?.({
             toolName: tool.name,
             success: true,
             durationMs: Date.now() - startedAt,
@@ -76,7 +107,7 @@ export function buildMcpServer(connector: AnyConnector, context: McpServerContex
         } catch (error) {
           const message = errorMessage(error);
 
-          context.onToolCall?.({
+          wiring.onToolCall?.({
             toolName: tool.name,
             success: false,
             durationMs: Date.now() - startedAt,
@@ -92,7 +123,7 @@ export function buildMcpServer(connector: AnyConnector, context: McpServerContex
            * envoyées. Ce commentaire affirmait déjà cette garantie avant
            * qu'elle n'existe.
            */
-          toolLogger.warn({ err: error, tool: tool.name }, "Échec d'exécution d'un outil MCP");
+          wiring.logger.warn({ err: error, tool: tool.name }, "Échec d'exécution d'un outil MCP");
 
           return {
             content: [{ type: 'text', text: `Échec de l'appel à ${tool.name} : ${message}` }],
@@ -102,6 +133,74 @@ export function buildMcpServer(connector: AnyConnector, context: McpServerContex
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any,
     );
+  }
+}
+
+/**
+ * Serveur MCP du hub : l'union des outils des connexions cochées.
+ *
+ * Chaque outil est exposé sous `<connecteur>_<nom>` — deux services déclarant
+ * `get_account` ne se percutent pas — et son libellé porte le nom du service,
+ * pour que le modèle sache à quoi il parle. La sélection faite au consentement
+ * filtre ici : un outil décoché n'existe simplement pas pour ce jeton.
+ */
+export function buildHubMcpServer(
+  entries: {
+    connector: AnyConnector;
+    connectionId: string;
+    credentials: Credentials;
+    allowedTools: string[] | null;
+  }[],
+  options: {
+    onToolCall?: (
+      event: {
+        toolName: string;
+        success: boolean;
+        durationMs: number;
+        errorCode?: string;
+      } & { connectorId: string; connectionId: string },
+    ) => void;
+  } = {},
+): McpServer {
+  const server = new McpServer(
+    { name: 'toolink-hub', version: SERVER_VERSION },
+    {
+      capabilities: { tools: {} },
+      instructions:
+        'Hub Toolink : plusieurs services derrière une seule connexion. ' +
+        'Chaque outil est préfixé par le service qu’il pilote (ex. gmail_, axonaut_).\n' +
+        'Les listes sont paginées : si un résultat semble tronqué, rappeler l’outil avec la page suivante.',
+    },
+  );
+
+  for (const entry of entries) {
+    const allowed = entry.allowedTools ? new Set(entry.allowedTools) : null;
+    const toolLogger = logger.child({
+      connector: entry.connector.id,
+      connectionId: entry.connectionId,
+      hub: true,
+    });
+
+    for (const tool of entry.connector.tools) {
+      if (allowed && !allowed.has(tool.name)) continue;
+
+      registerConnectorTool(server, entry.connector, tool, {
+        prefix: `${entry.connector.id}_`,
+        credentials: entry.credentials,
+        connectionId: entry.connectionId,
+        logger: toolLogger,
+        ...(options.onToolCall
+          ? {
+              onToolCall: (event) =>
+                options.onToolCall?.({
+                  ...event,
+                  connectorId: entry.connector.id,
+                  connectionId: entry.connectionId,
+                }),
+            }
+          : {}),
+      });
+    }
   }
 
   return server;

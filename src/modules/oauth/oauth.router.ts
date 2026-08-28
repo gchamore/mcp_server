@@ -32,6 +32,16 @@ const approveSchema = z.object({
   demande: z.string().min(20).max(4000),
   connectionId: z.string().min(1).max(40).optional(),
   connectorId: z.string().min(1).max(40).optional(),
+  /** Mode hub : les services cochés, avec éventuellement leurs outils. */
+  selections: z
+    .array(
+      z.object({
+        connectionId: z.string().min(1).max(40),
+        tools: z.array(z.string().min(1).max(64)).min(1).max(200).optional(),
+      }),
+    )
+    .max(100)
+    .optional(),
 });
 
 /** Ce que l'écran de consentement doit afficher. */
@@ -60,6 +70,7 @@ oauthRouter.post(
 
     const redirectTo = await approveAuthorization(pending, userId, {
       ...(input.connectionId ? { connectionId: input.connectionId } : {}),
+      ...(input.selections ? { selections: input.selections } : {}),
       ...(input.connectorId ? { connectorId: input.connectorId } : {}),
     });
 

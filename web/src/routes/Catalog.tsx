@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { ConnectorCard } from '../components/ConnectorCard';
-import { EmptyState, Input, Spinner } from '../components/ui';
+import { CopyField, EmptyState, Input, Spinner } from '../components/ui';
 import { IconSearch } from '../components/icons';
 import { pluralize } from '../lib/format';
 import { useAuth } from '../state/auth';
@@ -53,6 +53,23 @@ export function Catalog() {
           </p>
         </div>
       </div>
+
+      {/* Le hub : la porte d'entrée recommandée — une URL pour tous les
+          services cochés. Montré aux seuls connectés : un visiteur n'a encore
+          rien à agréger. */}
+      {user && (
+        <div className="card stack stack--tight">
+          <div className="row row--between" style={{ alignItems: 'baseline' }}>
+            <strong>Hub Toolink — tous vos services derrière une seule URL</strong>
+            <span className="text-xs text-muted">recommandé</span>
+          </div>
+          <p className="text-sm text-muted">
+            Collez cette URL dans Dust ou Claude : au moment d’autoriser, vous cocherez les
+            services et les outils à exposer.
+          </p>
+          <CopyField value={`${window.location.origin}/mcp/hub`} />
+        </div>
+      )}
 
       <div className="stack">
         <div className="row">

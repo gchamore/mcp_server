@@ -278,6 +278,12 @@ model OAuthGrant {
   connectorId         String
   /// Connexion retenue au moment du consentement (mode individuel).
   connectionId        String?
+  /// Point d'accès « hub » : les connexions cochées au consentement. Vide pour
+  /// un connecteur simple, où `connectionId` fait foi.
+  connectionIds       String[]  @default([])
+  /// Hub : sélection d'outils par connexion (`{ [connectionId]: string[] }`).
+  /// Une entrée absente ou nulle vaut « tous les outils du connecteur ».
+  toolSelection       Json?
   redirectUri         String
   codeChallenge       String
   codeChallengeMethod String   @default("S256")
@@ -310,6 +316,12 @@ model OAuthToken {
   userId        String
   connectorId   String
   connectionId  String?
+  /// Point d'accès « hub » : les connexions cochées au consentement. Vide pour
+  /// un connecteur simple, où `connectionId` fait foi.
+  connectionIds       String[]  @default([])
+  /// Hub : sélection d'outils par connexion (`{ [connectionId]: string[] }`).
+  /// Une entrée absente ou nulle vaut « tous les outils du connecteur ».
+  toolSelection       Json?
   scopes        String[]
   resource      String?
   /// Relie un jeton d'accès au jeton de rafraîchissement qui l'a produit,

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { getConnector, listConnectors } from '../connectors/registry.js';
 import { env } from '../core/env.js';
 import { MCP_SCOPE } from '../modules/oauth/provider.js';
+import { HUB_ID, HUB_NAME } from './hub.js';
 
 /**
  * Métadonnées de ressource protégée (RFC 9728).
@@ -13,6 +14,18 @@ import { MCP_SCOPE } from '../modules/oauth/provider.js';
  * distincte au sens de la RFC 8707.
  */
 export const wellKnownRouter: Router = Router();
+
+// Déclaré avant la route paramétrée : « hub » n'est pas un connecteur.
+wellKnownRouter.get(`/oauth-protected-resource/mcp/${HUB_ID}`, (_req, res) => {
+  res.json({
+    resource: `${env.baseUrl}/mcp/${HUB_ID}`,
+    authorization_servers: [env.baseUrl],
+    scopes_supported: [MCP_SCOPE],
+    resource_name: HUB_NAME,
+    resource_documentation: `${env.baseUrl}/catalogue`,
+    bearer_methods_supported: ['header'],
+  });
+});
 
 wellKnownRouter.get('/oauth-protected-resource/mcp/:connectorId', (req, res) => {
   const connectorId = req.params.connectorId as string;
@@ -43,6 +56,9 @@ wellKnownRouter.get('/oauth-protected-resource', (_req, res) => {
     resource_documentation: `${env.baseUrl}/catalogue`,
     bearer_methods_supported: ['header'],
     // Indice utile au débogage : la liste des ressources réellement exposées.
-    mcp_resources: listConnectors().map((connector) => `${env.baseUrl}/mcp/${connector.id}`),
+    mcp_resources: [
+      `${env.baseUrl}/mcp/${HUB_ID}`,
+      ...listConnectors().map((connector) => `${env.baseUrl}/mcp/${connector.id}`),
+    ],
   });
 });

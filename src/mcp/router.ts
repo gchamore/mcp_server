@@ -9,8 +9,16 @@ import { logger } from '../core/logger.js';
 import { mcpLimiter } from '../middleware/rate-limit.js';
 import { recordToolInvocation, touchEndpoint } from '../modules/endpoints/endpoint.service.js';
 import { oauthProvider } from '../modules/oauth/provider.js';
-import { buildMcpServer } from './server-factory.js';
-import { isFailure, resolveFromAuthInfo, resolveFromUrlToken, type McpContext } from './resolve.js';
+import { buildHubMcpServer, buildMcpServer } from './server-factory.js';
+import {
+  isFailure,
+  resolveFromAuthInfo,
+  resolveFromUrlToken,
+  resolveHubFromAuthInfo,
+  type HubContext,
+  type McpContext,
+} from './resolve.js';
+import { HUB_ID, HUB_NAME, isHubResource } from './hub.js';
 
 /**
  * Transport MCP « Streamable HTTP », avec deux façons de s'authentifier.
@@ -45,6 +53,11 @@ mcpRouter.get('/', (_req, res) => {
       type: 'oauth2',
       note: "Collez l'URL d'un connecteur dans votre client IA : la configuration se fait automatiquement.",
       metadata: `${env.baseUrl}/.well-known/oauth-authorization-server`,
+    },
+    hub: {
+      name: HUB_NAME,
+      url: `${env.baseUrl}/mcp/${HUB_ID}`,
+      note: 'Plusieurs services derrière une seule URL : cochez-les au consentement.',
     },
     connectors: listConnectors().map((connector) => ({
       id: connector.id,
@@ -123,6 +136,11 @@ const oauthHandler = async (req: Request, res: Response) => {
   // Le middleware a déjà répondu (401/403) si le jeton est absent ou invalide.
   if (res.headersSent || !req.auth) return;
 
+  if (isHubResource(connectorId)) {
+    await serveHub(req, res, await resolveHubFromAuthInfo(req.auth));
+    return;
+  }
+
   const resolved = await resolveFromAuthInfo(req.auth, connectorId);
   await serve(req, res, resolved);
 };
@@ -130,6 +148,13 @@ const oauthHandler = async (req: Request, res: Response) => {
 const urlTokenHandler = async (req: Request, res: Response) => {
   const connectorId = req.params.connectorId as string;
   const token = req.params.token as string;
+
+  if (isHubResource(connectorId)) {
+    // Le hub porte un ENSEMBLE de connexions choisi au consentement : un jeton
+    // d'URL ne désigne qu'une connexion, il ne peut pas le représenter.
+    sendJsonRpcError(res, 404, -32001, 'Le hub s’utilise via OAuth, pas par jeton d’URL.');
+    return;
+  }
 
   const resolved = await resolveFromUrlToken(token, connectorId);
   await serve(req, res, resolved);
@@ -188,6 +213,61 @@ async function serve(
       { err: error, connector: context.connector.id, origin: context.origin },
       'Erreur pendant le traitement MCP',
     );
+    if (!res.headersSent) sendJsonRpcError(res, 500, -32603, 'Erreur interne du serveur MCP.');
+  }
+}
+
+async function serveHub(
+  req: Request,
+  res: Response,
+  resolved: Awaited<ReturnType<typeof resolveHubFromAuthInfo>>,
+): Promise<void> {
+  if ('reason' in resolved) {
+    const status = resolved.reason === 'unauthorized' ? 401 : 403;
+    sendJsonRpcError(res, status, -32001, resolved.message);
+    return;
+  }
+
+  const context: HubContext = resolved;
+
+  const server = buildHubMcpServer(
+    context.entries.map((entry) => ({
+      connector: entry.connector,
+      connectionId: entry.connection.id,
+      credentials: entry.credentials,
+      allowedTools: entry.allowedTools,
+    })),
+    {
+      // Chaque appel est attribué à la connexion réellement pilotée : les
+      // statistiques par service restent justes à travers le hub.
+      onToolCall: (event) =>
+        recordToolInvocation({
+          connectionId: event.connectionId,
+          endpointId: null,
+          connectorId: event.connectorId,
+          toolName: event.toolName,
+          success: event.success,
+          durationMs: event.durationMs,
+          ...(event.errorCode ? { errorCode: event.errorCode } : {}),
+        }),
+    },
+  );
+
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: undefined,
+    enableJsonResponse: true,
+  });
+
+  res.on('close', () => {
+    void transport.close().catch(() => undefined);
+    void server.close().catch(() => undefined);
+  });
+
+  try {
+    await server.connect(transport);
+    await transport.handleRequest(req, res, req.body);
+  } catch (error) {
+    logger.error({ err: error, hub: true }, 'Erreur pendant le traitement MCP');
     if (!res.headersSent) sendJsonRpcError(res, 500, -32603, 'Erreur interne du serveur MCP.');
   }
 }

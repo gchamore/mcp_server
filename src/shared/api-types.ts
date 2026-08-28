@@ -96,11 +96,22 @@ export interface Connector {
 /** Ce que l'écran de consentement doit afficher. */
 export interface ConsentView {
   client: { name: string; clientId: string };
+  /** true pour /mcp/hub : sélecteur multi-services avec cochage des outils. */
+  hub: boolean;
   /** Nul si le client IA n'a pas transmis d'indicateur de ressource. */
   connector: Connector | null;
   /** Renseigné uniquement lorsque `connector` est nul. */
   selectableConnectors: { id: string; name: string; tagline: string; icon: string }[];
-  connections: { id: string; label: string; accountLabel: string | null; status: string }[];
+  connections: {
+    id: string;
+    label: string;
+    accountLabel: string | null;
+    status: string;
+    connectorId?: string;
+    connectorName?: string;
+    connectorIcon?: string;
+    tools?: { name: string; title: string; readOnly: boolean }[];
+  }[];
   requiresConnectorOAuth: boolean;
   connectorAvailable: boolean;
   scopes: string[];
