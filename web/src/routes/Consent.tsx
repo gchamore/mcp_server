@@ -60,6 +60,8 @@ export function Consent() {
    */
   const [servicesCoches, setServicesCoches] = useState<Record<string, boolean> | null>(null);
   const [outilsExclus, setOutilsExclus] = useState<Record<string, string[]>>({});
+  /** Mono-connecteur : outils décochés. L'absence = tous, comme au serveur. */
+  const [exclusMono, setExclusMono] = useState<Set<string>>(new Set());
   const [recherche, setRecherche] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showCredentialForm, setShowCredentialForm] = useState(false);
@@ -167,6 +169,13 @@ export function Consent() {
               ...(connectionId && !data?.hub ? { connectionId } : {}),
               ...(pickedConnectorId ? { connectorId: pickedConnectorId } : {}),
               ...(data?.hub ? { selections: construireSelections() } : {}),
+              ...(!data?.hub && exclusMono.size > 0 && data?.connector
+                ? {
+                    tools: data.connector.tools
+                      .map((t) => t.name)
+                      .filter((name) => !exclusMono.has(name)),
+                  }
+                : {}),
             });
 
       // Retour vers le client IA : navigation complète, ce n'est pas notre domaine.
@@ -469,19 +478,38 @@ export function Consent() {
         </div>
 
         <section className="card stack stack--tight">
-          <strong className="text-sm">Ce que cette application pourra faire</strong>
-          <ul className="stack stack--tight" style={{ paddingInlineStart: '1.1rem', margin: 0 }}>
-            {connector.tools.slice(0, 6).map((tool) => (
-              <li key={tool.name} className="text-sm">
-                {tool.title} {!tool.readOnly && <Badge tone="warning">écriture</Badge>}
-              </li>
-            ))}
-          </ul>
-          {connector.tools.length > 6 && (
-            <span className="text-xs text-muted">
-              …et {connector.tools.length - 6} autre(s) outil(s).
+          <div className="row row--between" style={{ alignItems: 'baseline' }}>
+            <strong className="text-sm">Ce que cette application pourra faire</strong>
+            <span className="text-xs text-faint">
+              {connector.tools.length - exclusMono.size}/{connector.tools.length} outils
             </span>
-          )}
+          </div>
+          {/* Même granularité que le hub : décocher un outil le retire du
+              jeton — il n'existera pas pour ce client, pas seulement caché. */}
+          <div className="stack stack--tight">
+            {connector.tools.map((tool) => (
+              <label
+                key={tool.name}
+                className="row text-sm"
+                style={{ gap: 'var(--s2)', alignItems: 'center', cursor: 'pointer' }}
+              >
+                <input
+                  type="checkbox"
+                  checked={!exclusMono.has(tool.name)}
+                  onChange={() =>
+                    setExclusMono((courant) => {
+                      const suivant = new Set(courant);
+                      if (suivant.has(tool.name)) suivant.delete(tool.name);
+                      else suivant.add(tool.name);
+                      return suivant;
+                    })
+                  }
+                />
+                <span>{tool.title}</span>
+                {!tool.readOnly && <Badge tone="warning">écriture</Badge>}
+              </label>
+            ))}
+          </div>
         </section>
 
         {!data.connectorAvailable && (
@@ -596,7 +624,11 @@ export function Consent() {
             <Button
               variant="primary"
               loading={submitting}
-              disabled={!data.connectorAvailable || !hasAccount}
+              disabled={
+                !data.connectorAvailable ||
+                !hasAccount ||
+                exclusMono.size >= connector.tools.length
+              }
               onClick={() => void submit('approve')}
             >
               Autoriser

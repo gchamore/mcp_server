@@ -171,6 +171,8 @@ export async function approveAuthorization(
   choice: {
     connectionId?: string;
     connectorId?: string;
+    /** Mono-connecteur : les outils cochés. Absent = tous. */
+    tools?: string[];
     /** Mode hub : les connexions cochées, avec éventuellement leurs outils. */
     selections?: { connectionId: string; tools?: string[] }[];
   },
@@ -196,6 +198,28 @@ export async function approveAuthorization(
    * en personnel, chacun fait le sien et obtient le sien.
    */
   const connectionId = await requireOwnedConnection(userId, connector.id, choice.connectionId);
+
+  /**
+   * Sélection d'outils, même granularité que le hub : un outil décoché
+   * n'existera pas pour ce jeton. Validée contre le catalogue réel — un nom
+   * inconnu est une erreur, pas un silence.
+   */
+  let toolSelection: Record<string, string[]> | null = null;
+  if (choice.tools) {
+    const connus = new Set(connector.tools.map((t) => t.name));
+    const retenus = [...new Set(choice.tools)].filter((name) => connus.has(name));
+    if (retenus.length !== new Set(choice.tools).size) {
+      throw badRequest('La sélection contient un outil inconnu pour ce service.');
+    }
+    if (retenus.length === 0) {
+      throw badRequest('Gardez au moins un outil.');
+    }
+    // Tous cochés = pas de restriction : le jeton suit le connecteur s'il
+    // gagne des outils plus tard, ce qui est le comportement attendu.
+    if (retenus.length < connector.tools.length) {
+      toolSelection = { [connectionId]: retenus };
+    }
+  }
 
   /**
    * Trace, et non plus règle.
@@ -225,6 +249,7 @@ export async function approveAuthorization(
       userId,
       connectorId: connector.id,
       connectionId,
+      toolSelection: toolSelection ? (toolSelection as Prisma.InputJsonValue) : Prisma.JsonNull,
       redirectUri: pending.redirectUri,
       codeChallenge: pending.codeChallenge,
       scopes: pending.scopes,

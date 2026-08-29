@@ -31,6 +31,8 @@ export type McpContext = {
   /** Utilisateur à l'origine de l'appel, connu seulement via OAuth. */
   userId: string;
   origin: 'oauth' | 'url-token';
+  /** Outils retenus au consentement. null = tous — dont le chemin à jeton statique. */
+  allowedTools: string[] | null;
 };
 
 export type ResolutionFailure = {
@@ -44,7 +46,13 @@ export async function resolveFromAuthInfo(
   connectorId: string,
 ): Promise<McpContext | ResolutionFailure> {
   const extra = authInfo.extra as
-    { userId?: string; connectorId?: string; connectionId?: string | null } | undefined;
+    | {
+        userId?: string;
+        connectorId?: string;
+        connectionId?: string | null;
+        toolSelection?: Record<string, string[]> | null;
+      }
+    | undefined;
 
   if (!extra?.userId || extra.connectorId !== connectorId) {
     return { reason: 'unauthorized', message: "Ce jeton n'est pas valide pour ce connecteur." };
@@ -74,6 +82,7 @@ export async function resolveFromAuthInfo(
     endpointId: null,
     userId: extra.userId,
     origin: 'oauth',
+    allowedTools: extra.toolSelection?.[connection.id] ?? null,
   });
 }
 
@@ -100,7 +109,12 @@ export async function resolveFromUrlToken(
 async function finalize(
   connector: AnyConnector,
   connection: Connection,
-  meta: { endpointId: string | null; userId: string; origin: McpContext['origin'] },
+  meta: {
+    endpointId: string | null;
+    userId: string;
+    origin: McpContext['origin'];
+    allowedTools?: string[] | null;
+  },
 ): Promise<McpContext | ResolutionFailure> {
   let credentials: Credentials;
   try {
@@ -137,7 +151,7 @@ async function finalize(
     }
   }
 
-  return { connector, connection, credentials, ...meta };
+  return { connector, connection, credentials, allowedTools: null, ...meta };
 }
 
 /**

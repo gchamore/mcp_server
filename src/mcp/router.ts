@@ -183,6 +183,7 @@ async function serve(
   const server = buildMcpServer(context.connector, {
     connectionId: context.connection.id,
     connectorId: context.connector.id,
+    allowedTools: context.allowedTools,
     endpointId: context.endpointId,
     credentials: context.credentials,
     onToolCall: (event) =>

@@ -17,6 +17,8 @@ import type { Logger } from 'pino';
 export interface McpServerContext {
   connectionId: string;
   connectorId: string;
+  /** Outils retenus au consentement. null ou absent = tous. */
+  allowedTools?: string[] | null;
   /** Nul sur le chemin OAuth : il n'y a pas de point d'accès statique. */
   endpointId: string | null;
   credentials: Credentials;
@@ -47,7 +49,10 @@ export function buildMcpServer(connector: AnyConnector, context: McpServerContex
     connectionId: context.connectionId,
   });
 
+  const allowed = context.allowedTools ? new Set(context.allowedTools) : null;
+
   for (const tool of connector.tools) {
+    if (allowed && !allowed.has(tool.name)) continue;
     registerConnectorTool(server, connector, tool, {
       prefix: '',
       credentials: context.credentials,
