@@ -1,6 +1,7 @@
 import axonaut from './axonaut/index.js';
 import brevo from './brevo/index.js';
 import gmail from './gmail/index.js';
+import { dust } from './dust/index.js';
 import type { AnyConnector } from './types.js';
 
 /**
@@ -18,4 +19,4 @@ import type { AnyConnector } from './types.js';
  * TypeScript et compatibles partout — et le test `connectors.test.ts` échoue si
  * un dossier présent sur le disque a été oublié dans cette liste.
  */
-export const connectors: AnyConnector[] = [axonaut, brevo, gmail];
+export const connectors: AnyConnector[] = [axonaut, brevo, dust, gmail];
